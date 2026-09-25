@@ -43,7 +43,7 @@ class AsyncRetrying[**P, R](BaseRetrying[R, Callable[P, Awaitable[R | UnsetType]
         self.sleep_call = defaults.async_sleep_call
 
     @override
-    def wraps(
+    def _wrap(
         self,
         func: Callable[P, Awaitable[R | UnsetType]],
     ) -> Callable[P, Awaitable[R | UnsetType]]:

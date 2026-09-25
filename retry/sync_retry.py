@@ -42,7 +42,7 @@ class SyncRetrying[**P, R](BaseRetrying[R, Callable[P, R | UnsetType]]):
         self.sleep_call = defaults.sync_sleep_call
 
     @override
-    def wraps(
+    def _wrap(
         self,
         func: Callable[P, R | UnsetType],
     ) -> Callable[P, R | UnsetType]:
