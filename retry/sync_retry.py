@@ -18,6 +18,9 @@ from typing import (
 from ._defaults import (
     defaults,
 )
+from ._types import (
+    UnsetType,
+)
 from .base import (
     BaseRetrying,
 )
@@ -28,7 +31,7 @@ if TYPE_CHECKING:
     )
 
 
-class SyncRetrying[**P, R](BaseRetrying[R, Callable[P, R | None]]):
+class SyncRetrying[**P, R](BaseRetrying[R, Callable[P, R | UnsetType]]):
     """Sync retrying decorator for multiple attempts to execute a function in case of an error."""
 
     __slots__ = ("sleep_call",)
@@ -41,10 +44,10 @@ class SyncRetrying[**P, R](BaseRetrying[R, Callable[P, R | None]]):
     @override
     def wraps(
         self,
-        func: Callable[P, R | None],
-    ) -> Callable[P, R | None]:
+        func: Callable[P, R | UnsetType],
+    ) -> Callable[P, R | UnsetType]:
         @functools.wraps(func)
-        def wrapper(*args: P.args, **kwargs: P.kwargs) -> R | None:
+        def wrapper(*args: P.args, **kwargs: P.kwargs) -> R | UnsetType:
             intercepted_exception: BaseException | None = None
             fname = getattr(func, "__qualname__", "<anonymous>")
             result = self.return_default_value

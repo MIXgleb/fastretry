@@ -19,6 +19,9 @@ from typing import (
 from ._defaults import (
     defaults,
 )
+from ._types import (
+    UnsetType,
+)
 from .base import (
     BaseRetrying,
 )
@@ -29,7 +32,7 @@ if TYPE_CHECKING:
     )
 
 
-class AsyncRetrying[**P, R](BaseRetrying[R, Callable[P, Awaitable[R | None]]]):
+class AsyncRetrying[**P, R](BaseRetrying[R, Callable[P, Awaitable[R | UnsetType]]]):
     """Async retrying decorator for multiple attempts to execute a function in case of an error."""
 
     __slots__ = ("sleep_call",)
@@ -42,10 +45,10 @@ class AsyncRetrying[**P, R](BaseRetrying[R, Callable[P, Awaitable[R | None]]]):
     @override
     def wraps(
         self,
-        func: Callable[P, Awaitable[R | None]],
-    ) -> Callable[P, Awaitable[R | None]]:
+        func: Callable[P, Awaitable[R | UnsetType]],
+    ) -> Callable[P, Awaitable[R | UnsetType]]:
         @functools.wraps(func)
-        async def async_wrapper(*args: P.args, **kwargs: P.kwargs) -> R | None:
+        async def async_wrapper(*args: P.args, **kwargs: P.kwargs) -> R | UnsetType:
             intercepted_exception: BaseException | None = None
             fname = getattr(func, "__qualname__", "<anonymous>")
             result = self.return_default_value
