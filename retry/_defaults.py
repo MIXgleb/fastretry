@@ -17,16 +17,11 @@ Loggers are configured separately via :func:`configure_logging`.
 """
 
 import asyncio
+import contextlib
+import dataclasses as dc
 import logging
 import sys
 import time
-from contextlib import (
-    contextmanager,
-)
-from dataclasses import (
-    dataclass,
-    fields,
-)
 from typing import (
     TYPE_CHECKING,
     Final,
@@ -73,7 +68,7 @@ def _make_default_logger() -> logging.Logger:
 _DEFAULT_LOGGER: Final[logging.Logger] = _make_default_logger()
 
 
-@dataclass(slots=True)
+@dc.dataclass(slots=True)
 class _Defaults:
     # --- retry options (per-decorator, with global defaults) ---
     attempts: int = 1
@@ -126,7 +121,7 @@ class _Defaults:
         """Reset all defaults to their factory values."""
         fresh = type(self)()
 
-        for f in fields(self):
+        for f in dc.fields(self):
             setattr(self, f.name, getattr(fresh, f.name))
 
 
@@ -220,7 +215,7 @@ def reset_defaults() -> None:
     defaults.reset()
 
 
-@contextmanager
+@contextlib.contextmanager
 def temporary_defaults(**kwargs: Unpack[DefaultsKwargs]) -> Generator[None]:
     """
     Temporarily override defaults, restoring them on exit.
@@ -239,7 +234,7 @@ def temporary_defaults(**kwargs: Unpack[DefaultsKwargs]) -> Generator[None]:
         Control to the caller.
 
     """
-    snapshot = {f.name: getattr(defaults, f.name) for f in fields(defaults)}
+    snapshot = {f.name: getattr(defaults, f.name) for f in dc.fields(defaults)}
     defaults.set(**kwargs)
 
     try:
