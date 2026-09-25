@@ -23,15 +23,15 @@ from typing import (
     final,
 )
 
-from ._defaults import (
+from retry._defaults import (
     defaults,
 )
-from ._return_type_check import (
-    ReturnTypeChecker,
-)
-from ._types import (
+from retry._types import (
     UNSET,
     UnsetType,
+)
+from retry._utils._return_type_check import (
+    ReturnTypeChecker,
 )
 
 

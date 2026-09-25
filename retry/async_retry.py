@@ -16,18 +16,18 @@ from typing import (
     override,
 )
 
-from ._defaults import (
+from retry._defaults import (
     defaults,
 )
-from ._types import (
+from retry._types import (
     UnsetType,
 )
-from .base import (
+from retry.base import (
     BaseRetrying,
 )
 
 if TYPE_CHECKING:
-    from ._types import (
+    from retry._types import (
         RetryKwargs,
     )
 

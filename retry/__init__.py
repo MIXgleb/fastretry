@@ -10,13 +10,13 @@ __all__ = (
 )
 
 
-from ._defaults import (
+from retry._defaults import (
     configure_logging,
     configure_retry,
     reset_defaults,
     set_retry_defaults,
     temporary_defaults,
 )
-from ._retry import (
+from retry._retry import (
     retry,
 )

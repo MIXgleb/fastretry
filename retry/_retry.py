@@ -29,15 +29,15 @@ from typing import (
     overload,
 )
 
-from ._types import (
+from retry._types import (
     UNSET,
     RetryKwargs,
     UnsetType,
 )
-from .async_retry import (
+from retry.async_retry import (
     AsyncRetrying,
 )
-from .sync_retry import (
+from retry.sync_retry import (
     SyncRetrying,
 )
 

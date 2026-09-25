@@ -34,7 +34,7 @@ from typing import (
     final,
 )
 
-from ._types import (
+from retry._types import (
     DefaultsKwargs,
     GlobalKwargs,
     LocalKwargs,
