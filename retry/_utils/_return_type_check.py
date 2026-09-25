@@ -3,6 +3,11 @@
 import contextlib
 import types
 import typing
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Union,  # pyright: ignore[reportDeprecated]
+)
 
 from retry._types import (
     UNSET,
@@ -12,14 +17,14 @@ from retry._utils._warnings import (
     warning,
 )
 
-if typing.TYPE_CHECKING:
+if TYPE_CHECKING:
     from collections.abc import (
         Callable,
     )
 
 
-_UNION: tuple[object, ...] = (typing.Union, types.UnionType)  # pyright: ignore[reportDeprecated]
-_UNCHECKABLE: tuple[object, ...] = (typing.Any, object)
+_UNION: tuple[object, ...] = (Union, types.UnionType)  # pyright: ignore[reportDeprecated]
+_UNCHECKABLE: tuple[object, ...] = (Any, object)
 
 
 class ReturnTypeChecker:
@@ -40,11 +45,11 @@ class ReturnTypeChecker:
 
     __slots__ = ("_func", "_hint")
 
-    def __init__(self, func: Callable[..., typing.Any]) -> None:
+    def __init__(self, func: Callable[..., Any]) -> None:
         self._func = func
         self._hint = self._extract_return_hint()
 
-    def _extract_return_hint(self) -> typing.Any | UnsetType:  # ruff: ignore[any-type]
+    def _extract_return_hint(self) -> Any | UnsetType:  # ruff: ignore[any-type]
         """
         Best-effort extraction of the declared return type of ``func``.
 
@@ -59,7 +64,7 @@ class ReturnTypeChecker:
             return hints.get("return", UNSET)
         return UNSET
 
-    def _unwrap_union(self) -> tuple[typing.Any, ...]:
+    def _unwrap_union(self) -> tuple[Any, ...]:
         """
         Flatten a union hint into a tuple of member types.
 
