@@ -2,13 +2,13 @@
 
 import types
 import typing
-import warnings
 from contextlib import suppress
 
-from ._types import (
+from retry._types import (
     UNSET,
     UnsetType,
 )
+from retry._utils._warnings import warning
 
 if typing.TYPE_CHECKING:
     from collections.abc import (
@@ -119,7 +119,9 @@ class ReturnTypeChecker:
 
     def warn_on_return_default_mismatch(
         self,
+        *,
         default_value: object,
+        disable_warnings: bool,
     ) -> None:
         """
         Emit a warning if ``default_value`` doesn't match the declared return type of ``func``.
@@ -132,13 +134,16 @@ class ReturnTypeChecker:
         ----------
         default_value : object
             Value that will be returned on failure
+        disable_warnings : bool, optional
+            Disable all warnings
 
         """
         if self._matches(default_value) is False:
-            warnings.warn(
+            warning(
                 f"\n\treturn_default_value {default_value!r} does not match "
                 f"the declared return type {self._hint!r} of '{self._func.__qualname__}'.\n\t"
                 f"Set return_default_value to a value compatible with the function's "
                 f"return type to avoid returning an unexpected type.",
                 stacklevel=4,
+                disable_warnings=disable_warnings,
             )

@@ -8,7 +8,6 @@ and the shared blocks (``exception_block``, ``failed_block``,
 """
 
 import copy
-import warnings
 from abc import (
     ABC,
     abstractmethod,
@@ -30,8 +29,9 @@ from retry._types import (
     UNSET,
     UnsetType,
 )
-from retry._utils._return_type_check import (
+from retry._utils import (
     ReturnTypeChecker,
+    warning,
 )
 
 
@@ -143,22 +143,23 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         """
         if isinstance(self.return_default_value, UnsetType):
             if re_raise_exception is False:
-                if not self.disable_warnings:
-                    warnings.warn(
-                        "\n\tre_raise_exception=False is set but return_default_value "
-                        "is not provided; the wrapper will return `UNSET` by default.\n\t"
-                        "Set return_default_value to return a specific value, or set "
-                        "re_raise_exception=True to re-raise the last exception.",
-                        stacklevel=7,
-                    )
+                warning(
+                    "\n\tre_raise_exception=False is set but return_default_value "
+                    "is not provided; the wrapper will return `UNSET` by default.\n\t"
+                    "Set return_default_value to return a specific value, or set "
+                    "re_raise_exception=True to re-raise the last exception.",
+                    stacklevel=7,
+                    disable_warnings=self.disable_warnings,
+                )
                 return False
             return True
 
-        if re_raise_exception is True and not self.disable_warnings:
-            warnings.warn(
+        if re_raise_exception is True:
+            warning(
                 "\n\tre_raise_exception=True is ignored because return_default_value "
                 "is set; the wrapper will return the default value on failure.",
                 stacklevel=7,
+                disable_warnings=self.disable_warnings,
             )
         return False
 
@@ -294,6 +295,7 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         if not isinstance(self.return_default_value, UnsetType):
             ReturnTypeChecker(func).warn_on_return_default_mismatch(
                 default_value=self.return_default_value,
+                disable_warnings=self.disable_warnings,
             )
 
         return self._wrap(func)
