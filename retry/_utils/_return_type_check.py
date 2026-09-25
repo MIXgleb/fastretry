@@ -1,14 +1,16 @@
 """Runtime validation of ``return_default_value`` against a function's return type."""
 
+import contextlib
 import types
 import typing
-from contextlib import suppress
 
 from retry._types import (
     UNSET,
     UnsetType,
 )
-from retry._utils._warnings import warning
+from retry._utils._warnings import (
+    warning,
+)
 
 if typing.TYPE_CHECKING:
     from collections.abc import (
@@ -52,7 +54,7 @@ class ReturnTypeChecker:
             Resolved return annotation, or ``UNSET`` if it cannot be obtained.
 
         """
-        with suppress(Exception):
+        with contextlib.suppress(Exception):
             hints = typing.get_type_hints(self._func)
             return hints.get("return", UNSET)
         return UNSET
