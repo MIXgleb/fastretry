@@ -11,6 +11,7 @@ from collections.abc import (
 )
 from typing import (
     TYPE_CHECKING,
+    Final,
     Unpack,
     override,
 )
@@ -39,7 +40,7 @@ class SyncRetrying[**P, R](BaseRetrying[R, Callable[P, R | UnsetType]]):
     @override
     def __init__(self, **kwargs: Unpack[RetryKwargs[R]]) -> None:
         super().__init__(**kwargs)
-        self.sleep_call = defaults.sync_sleep_call
+        self.sleep_call: Final = defaults.sync_sleep_call
 
     @override
     def _wrap(

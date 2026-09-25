@@ -18,6 +18,7 @@ from collections.abc import (
 )
 from typing import (
     Any,
+    Final,
     Self,
     final,
 )
@@ -85,36 +86,36 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
             Re-raise an exception after all attempts
 
         """
-        self.return_default_value = return_default_value
-        self.attempts = self._resolve(
+        self.return_default_value: Final = return_default_value
+        self.attempts: Final = self._resolve(
             passed=attempts,
             default=defaults.attempts,
         )
-        self.delay = self._resolve(
+        self.delay: Final = self._resolve(
             passed=delay,
             default=defaults.delay,
         )
-        self.disable_logging = self._resolve(
+        self.disable_logging: Final = self._resolve(
             passed=disable_logging,
             default=defaults.disable_logging,
         )
-        self.disable_warnings = self._resolve(
+        self.disable_warnings: Final = self._resolve(
             passed=disable_warnings,
             default=defaults.disable_warnings,
         )
-        self.re_raise_exception = self._resolve_re_raise_exception(
+        self.re_raise_exception: Final = self._resolve_re_raise_exception(
             re_raise_exception=re_raise_exception,
         )
 
-        self.disable_info_logging = defaults.disable_info_logging
-        self.disable_warning_logging = defaults.disable_warning_logging
-        self.disable_error_logging = defaults.disable_error_logging
-        self.include_traceback_in_warning_log = defaults.include_traceback_in_warning_log
-        self.include_traceback_in_error_log = defaults.include_traceback_in_error_log
-        self.logger_info = defaults.logger_info
-        self.logger_warning = defaults.logger_warning
-        self.logger_error = defaults.logger_error
-        self.exc_info_kwarg = defaults.exc_info_kwarg
+        self.disable_info_logging: Final = defaults.disable_info_logging
+        self.disable_warning_logging: Final = defaults.disable_warning_logging
+        self.disable_error_logging: Final = defaults.disable_error_logging
+        self.include_traceback_in_warning_log: Final = defaults.include_traceback_in_warning_log
+        self.include_traceback_in_error_log: Final = defaults.include_traceback_in_error_log
+        self.logger_info: Final = defaults.logger_info
+        self.logger_warning: Final = defaults.logger_warning
+        self.logger_error: Final = defaults.logger_error
+        self.exc_info_kwarg: Final = defaults.exc_info_kwarg
 
     def _resolve_re_raise_exception(
         self,
