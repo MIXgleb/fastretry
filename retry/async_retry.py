@@ -73,7 +73,7 @@ class AsyncRetrying[**P, R](BaseRetrying[R, Callable[P, Awaitable[R | None]]]):
     ) -> None:
         if self.delay > 0 and retry_index != self.attempts:
             if (
-                not self.disable_all_logging
+                not self.disable_logging
                 and not self.disable_info_logging
                 and self.logger_info is not None
             ):

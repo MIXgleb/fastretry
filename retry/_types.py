@@ -71,25 +71,18 @@ class RetryOptions(
 
     attempts: int | UnsetType
     delay: float | UnsetType
-    disable_all_logging: bool | UnsetType
-    re_raise_exception: bool | UnsetType
-
-
-class ReturnDefaultValueOption[R](
-    TypedDict,
-    total=False,
-):
-    """The ``return_default_value`` option, generic over the return type."""
-
-    return_default_value: R | UnsetType
+    disable_logging: bool | UnsetType
+    disable_warnings: bool | UnsetType
 
 
 class RetryKwargs[R](
     RetryOptions,
-    ReturnDefaultValueOption[R],
     total=False,
 ):
     """Keyword arguments accepted by :func:`~.retry.retry`."""
+
+    return_default_value: R | UnsetType
+    re_raise_exception: bool | UnsetType
 
 
 class LocalKwargs(

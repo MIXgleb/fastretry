@@ -78,8 +78,8 @@ class _Defaults:
     # --- retry options (per-decorator, with global defaults) ---
     attempts: int = 1
     delay: float = 0
-    disable_all_logging: bool = False
-    re_raise_exception: bool = True
+    disable_logging: bool = False
+    disable_warnings: bool = False
 
     # --- global options (application-wide) ---
     disable_info_logging: bool = True
@@ -172,11 +172,10 @@ def set_retry_defaults(**kwargs: Unpack[LocalKwargs]) -> None:
         Default number of attempts, by default 1
     delay : float, optional
         Default delay between attempts, in seconds, by default 0
-    disable_all_logging : bool, optional
+    disable_logging : bool, optional
         Disable all logging, by default False
-    re_raise_exception : bool, optional
-        Re-raise the last intercepted exception after all attempts,
-        by default True
+    disable_warnings : bool, optional
+        Disable all warnings, by default False
 
     """
     defaults.set(**kwargs)

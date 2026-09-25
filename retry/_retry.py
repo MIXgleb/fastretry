@@ -23,11 +23,16 @@ from collections.abc import (
     Callable,
 )
 from typing import (
+    Any,
+    Literal,
     TypeVar,
     Unpack,
     overload,
 )
 
+from ._return_type_check import (
+    ReturnTypeChecker,
+)
 from ._types import (
     UNSET,
     RetryKwargs,
@@ -41,7 +46,7 @@ from .sync_retry import (
 )
 
 type ReturnType = object
-WrappedFunc = TypeVar("WrappedFunc", bound=Callable[..., Awaitable[ReturnType] | ReturnType])
+WrappedFunc = TypeVar("WrappedFunc", bound=Callable[..., ReturnType])
 
 
 @overload
@@ -51,21 +56,38 @@ def retry(func: WrappedFunc) -> WrappedFunc: ...  # ruff: ignore[non-pep695-gene
 @overload
 def retry(
     *,
+    return_default_value: ReturnType,
+    re_raise_exception: Literal[False] = False,
     attempts: int | UnsetType = UNSET,
-    return_default_value: ReturnType | UnsetType = UNSET,
     delay: float | UnsetType = UNSET,
-    disable_all_logging: bool | UnsetType = UNSET,
-    re_raise_exception: bool | UnsetType = UNSET,
+    disable_logging: bool | UnsetType = UNSET,
+    disable_warnings: bool | UnsetType = UNSET,
 ) -> Callable[[WrappedFunc], WrappedFunc]: ...
 
 
-def retry[**P, R](  # ruff: ignore[undocumented-param]
-    func: Callable[P, R] | None = None,
+@overload
+def retry(
+    *,
+    re_raise_exception: Literal[True] = True,
+    attempts: int | UnsetType = UNSET,
+    delay: float | UnsetType = UNSET,
+    disable_logging: bool | UnsetType = UNSET,
+    disable_warnings: bool | UnsetType = UNSET,
+) -> Callable[[WrappedFunc], WrappedFunc]: ...
+
+
+def retry[**P, R, WrappedFunc: Callable[..., ReturnType]](  # ruff: ignore[undocumented-param]
+    func: WrappedFunc | None = None,
     **kwargs: Unpack[RetryKwargs[R]],
 ) -> (
-    Callable[P, R]
-    | Callable[[Callable[P, R]], Callable[P, R | None] | Callable[P, Awaitable[R | None]]]
+    WrappedFunc | Callable[[WrappedFunc], Callable[P, R | None] | Callable[P, Awaitable[R | None]]]
 ):
+    # func: Callable[P, R] | None = None,
+    # **kwargs: Unpack[RetryKwargs[R]],
+    # ) -> (
+    #     Callable[P, R]
+    #     | Callable[[Callable[P, R]], Callable[P, R | None] | Callable[P, Awaitable[R | None]]]
+    # ):
     """
     Decorate a function to retry it on failure.
 
@@ -82,13 +104,14 @@ def retry[**P, R](  # ruff: ignore[undocumented-param]
     ----------
     attempts : int, optional
         Number of attempts (factory default: 1)
-    return_default_value : ReturnType, optional
-        Default value returned if the function fails after all attempts,
-        by default: None
+    return_default_value : Any, optional
+        Default value returned if the function fails after all attempts
     delay : float, optional
         Delay between attempts in seconds (factory default: 0)
-    disable_all_logging : bool, optional
+    disable_logging : bool, optional
         Disable all logging (factory default: False)
+    disable_warnings : bool, optional
+        Disable all warnings (factory default: False)
     re_raise_exception : bool, optional
         Re-raise the last intercepted exception after all attempts
         (factory default: True)
@@ -98,20 +121,60 @@ def retry[**P, R](  # ruff: ignore[undocumented-param]
     Callable
         A decorator that wraps a function and retries it on failure.
 
+    Notes
+    -----
+    Interaction between ``return_default_value`` and ``re_raise_exception``:
+
+    - If ``return_default_value`` is provided, the wrapper returns it after
+      all attempts fail. ``re_raise_exception=True`` in this case is ignored
+      (a warning is emitted).
+    - If ``return_default_value`` is not provided, the wrapper re-raises the
+      last exception by default. ``re_raise_exception=False`` in this case
+      causes ``UNSET`` to be returned (a warning is emitted).
+    - Passing ``re_raise_exception=False`` without ``return_default_value``
+      is therefore discouraged.
+
+    Type checking of ``return_default_value``:
+
+    When ``return_default_value`` is provided, the decorator performs a
+    best-effort runtime check that its type matches the declared return type
+    of the wrapped function. Only simple types and ``Optional``-unions are
+    checked; complex generics (``list[int]``, ``dict[str, str]``, ...) and
+    unresolvable annotations are skipped silently. A ``UserWarning`` is
+    emitted on a confirmed mismatch.
+
+    Because the check is best-effort, always pass a ``return_default_value``
+    whose type is compatible with the function's declared return type.
+
 
     """
     if func is not None:
         return retry()(func)
 
-    def wrap_async(func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R | None]]:
+    def wrap_async(func: WrappedFunc) -> Callable[P, Awaitable[R | UnsetType]]:
         return AsyncRetrying[P, R](**kwargs).wraps(func)
 
-    def wrap_sync(func: Callable[P, R]) -> Callable[P, R | None]:
+    def wrap_sync(func: WrappedFunc) -> Callable[P, R | UnsetType]:
         return SyncRetrying[P, R](**kwargs).wraps(func)
 
-    def wrap(func: Callable[P, R]) -> Callable[P, R | None] | Callable[P, Awaitable[R | None]]:
+    def wrap(
+        func: WrappedFunc,
+    ) -> Callable[P, R | UnsetType] | Callable[P, Awaitable[R | UnsetType]]:
         if inspect.iscoroutinefunction(func):
             return wrap_async(func)
         return wrap_sync(func)
 
     return wrap
+
+    # def wrap_async(func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R | None]]:
+    #     return AsyncRetrying[P, R](**kwargs).wraps(func)
+
+    # def wrap_sync(func: Callable[P, R]) -> Callable[P, R | None]:
+    #     return SyncRetrying[P, R](**kwargs).wraps(func)
+
+    # def wrap(func: Callable[P, R]) -> Callable[P, R | None] | Callable[P, Awaitable[R | None]]:
+    #     if inspect.iscoroutinefunction(func):
+    #         return wrap_async(func)
+    #     return wrap_sync(func)
+
+    # return wrap

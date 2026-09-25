@@ -8,6 +8,7 @@ and the shared blocks (``exception_block``, ``failed_block``,
 """
 
 import copy
+import warnings
 from abc import (
     ABC,
     abstractmethod,
@@ -25,22 +26,26 @@ from typing import (
 from ._defaults import (
     defaults,
 )
+from ._return_type_check import (
+    ReturnTypeChecker,
+)
 from ._types import (
     UNSET,
     UnsetType,
 )
 
 
-class BaseRetrying[ReturnType, WrappedFunc: Callable[..., Any]](ABC):
+class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
     """Retrying decorator for multiple attempts to execute a function in case of an error."""
 
     __slots__ = (
         "attempts",
         "delay",
-        "disable_all_logging",
         "disable_error_logging",
         "disable_info_logging",
+        "disable_logging",
         "disable_warning_logging",
+        "disable_warnings",
         "exc_info_kwarg",
         "include_traceback_in_error_log",
         "include_traceback_in_warning_log",
@@ -51,13 +56,14 @@ class BaseRetrying[ReturnType, WrappedFunc: Callable[..., Any]](ABC):
         "return_default_value",
     )
 
-    def __init__(
+    def __init__(  # ruff: ignore[too-many-arguments]
         self,
         *,
         attempts: int | UnsetType = UNSET,
-        return_default_value: ReturnType | UnsetType = UNSET,
+        return_default_value: R | UnsetType = UNSET,
         delay: float | UnsetType = UNSET,
-        disable_all_logging: bool | UnsetType = UNSET,
+        disable_logging: bool | UnsetType = UNSET,
+        disable_warnings: bool | UnsetType = UNSET,
         re_raise_exception: bool | UnsetType = UNSET,
     ) -> None:
         """
@@ -67,36 +73,36 @@ class BaseRetrying[ReturnType, WrappedFunc: Callable[..., Any]](ABC):
         ----------
         attempts : int, optional
             Number of attempts
-        return_default_value : ReturnType, optional
+        return_default_value : Any, optional
             Default value returned if the function fails after all attempts,
         delay : float, optional
             Delay between attempts in seconds
-        disable_all_logging : bool, optional
+        disable_logging : bool, optional
             Disable all logging
+        disable_warnings : bool, optional
+            Disable all warnings
         re_raise_exception : bool, optional
             Re-raise an exception after all attempts
 
         """
+        self.return_default_value = return_default_value
         self.attempts = self._resolve(
             passed=attempts,
             default=defaults.attempts,
-        )
-        self.return_default_value = self._resolve(
-            passed=return_default_value,
-            default=None,
         )
         self.delay = self._resolve(
             passed=delay,
             default=defaults.delay,
         )
-        self.disable_all_logging = self._resolve(
-            passed=disable_all_logging,
-            default=defaults.disable_all_logging,
+        self.disable_logging = self._resolve(
+            passed=disable_logging,
+            default=defaults.disable_logging,
         )
-        self.re_raise_exception = self._resolve(
-            passed=re_raise_exception,
-            default=defaults.re_raise_exception,
+        self.disable_warnings = self._resolve(
+            passed=disable_warnings,
+            default=defaults.disable_warnings,
         )
+
         self.disable_info_logging = defaults.disable_info_logging
         self.disable_warning_logging = defaults.disable_warning_logging
         self.disable_error_logging = defaults.disable_error_logging
@@ -107,8 +113,61 @@ class BaseRetrying[ReturnType, WrappedFunc: Callable[..., Any]](ABC):
         self.logger_error = defaults.logger_error
         self.exc_info_kwarg = defaults.exc_info_kwarg
 
+        self.re_raise_exception = self._resolve_re_raise_exception(
+            re_raise_exception=re_raise_exception,
+        )
+
+    def _resolve_re_raise_exception(
+        self,
+        *,
+        re_raise_exception: bool | UnsetType,
+    ) -> bool:
+        """
+        Resolve ``re_raise_exception`` after initialization.
+
+        The ``return_default_value`` and ``re_raise_exception=True`` options are
+        mutually exclusive: a wrapper either returns a value on failure or
+        re-raises the last exception.
+
+        - If ``return_default_value`` is provided, the wrapper returns it after
+          all attempts fail. ``re_raise_exception=True`` in this case is ignored.
+        - If ``return_default_value`` is not provided, the wrapper re-raises the
+          last exception by default. ``re_raise_exception=False`` in this case
+          causes ``UNSET`` to be returned.
+
+        Returns
+        -------
+        bool
+            re_raise_exception value
+
+        """
+        if isinstance(self.return_default_value, UnsetType):
+            if re_raise_exception is False:
+                if not self.disable_warnings:
+                    warnings.warn(
+                        "\n\tre_raise_exception=False is set but return_default_value "
+                        "is not provided; the wrapper will return `UNSET` by default.\n\t"
+                        "Set return_default_value to return a specific value, or set "
+                        "re_raise_exception=True to re-raise the last exception.",
+                        stacklevel=7,
+                    )
+                return False
+            return True
+
+        if re_raise_exception is True and not self.disable_warnings:
+            warnings.warn(
+                "\n\tre_raise_exception=True is ignored because return_default_value "
+                "is set; the wrapper will return the default value on failure.",
+                stacklevel=7,
+            )
+        return False
+
     @staticmethod
-    def _resolve[T](passed: T | UnsetType, default: T) -> T:
+    def _resolve[T](
+        *,
+        passed: T | UnsetType,
+        default: T,
+    ) -> T:
         """
         Resolve a value by priority: passed > factory default.
 
@@ -164,7 +223,7 @@ class BaseRetrying[ReturnType, WrappedFunc: Callable[..., Any]](ABC):
             kwargs[self.exc_info_kwarg] = intercepted_exception
 
         if (
-            not self.disable_all_logging
+            not self.disable_logging
             and not self.disable_warning_logging
             and self.logger_warning is not None
         ):
@@ -197,7 +256,7 @@ class BaseRetrying[ReturnType, WrappedFunc: Callable[..., Any]](ABC):
             kwargs[self.exc_info_kwarg] = intercepted_exception
 
         if (
-            not self.disable_all_logging
+            not self.disable_logging
             and not self.disable_error_logging
             and self.logger_error is not None
         ):
@@ -210,13 +269,16 @@ class BaseRetrying[ReturnType, WrappedFunc: Callable[..., Any]](ABC):
         if self.re_raise_exception and intercepted_exception is not None:
             raise intercepted_exception
 
-    @abstractmethod
+    @final
     def wraps(
         self,
         func: WrappedFunc,
     ) -> WrappedFunc:
         """
         Wrap a function with retry logic.
+
+        Performs shared pre-checks and delegates the actual
+        wrapping to :meth:`_wrap`.
 
         Parameters
         ----------
@@ -229,6 +291,35 @@ class BaseRetrying[ReturnType, WrappedFunc: Callable[..., Any]](ABC):
             Wrapped function with the same signature
 
         """
+        if not isinstance(self.return_default_value, UnsetType):
+            ReturnTypeChecker(func).warn_on_return_default_mismatch(
+                default_value=self.return_default_value,
+            )
+
+        return self._wrap(func)
+
+    @abstractmethod
+    def _wrap(
+        self,
+        func: WrappedFunc,
+    ) -> WrappedFunc:
+        """
+        Implement the wrapping logic for a concrete retry strategy.
+
+        Called by :meth:`wraps` after shared pre-checks.
+
+        Parameters
+        ----------
+        func : Callable[..., Any]
+            Function to wrap
+
+        Returns
+        -------
+        Callable[..., Any]
+            Wrapped function with the same signature
+
+        """
+        raise NotImplementedError
 
     @abstractmethod
     def sleep_block(
@@ -249,3 +340,4 @@ class BaseRetrying[ReturnType, WrappedFunc: Callable[..., Any]](ABC):
             Current attempt index (1-based)
 
         """
+        raise NotImplementedError
