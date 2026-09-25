@@ -32,6 +32,7 @@ from retry._types import (
 )
 from retry._utils import (
     ReturnTypeChecker,
+    log,
     warning,
 )
 
@@ -219,22 +220,13 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
             intercepted exception during function call
 
         """
-        kwargs: dict[str, Any] = {}
-        if self.include_traceback_in_warning_log:
-            kwargs[self.exc_info_kwarg] = intercepted_exception
-
-        if (
-            not self.disable_logging
-            and not self.disable_warning_logging
-            and self.logger_warning is not None
-        ):
-            self.logger_warning(
-                "Error executing the '%s' function. Try %d of %d.",
-                fname,
-                retry_index,
-                self.attempts,
-                **kwargs,
-            )
+        log(
+            self,
+            level="warning",
+            message="Error executing the '%s' function. Try %d of %d.",
+            args=(fname, retry_index, self.attempts),
+            intercepted_exception=intercepted_exception,
+        )
 
     def failed_block(
         self,
@@ -252,20 +244,13 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
             intercepted exception during function call
 
         """
-        kwargs: dict[str, Any] = {}
-        if self.include_traceback_in_error_log and intercepted_exception is not None:
-            kwargs[self.exc_info_kwarg] = intercepted_exception
-
-        if (
-            not self.disable_logging
-            and not self.disable_error_logging
-            and self.logger_error is not None
-        ):
-            self.logger_error(
-                "Failed the execution of the '%s' function.",
-                fname,
-                **kwargs,
-            )
+        log(
+            self,
+            level="error",
+            message="Failed the execution of the '%s' function.",
+            args=(fname,),
+            intercepted_exception=intercepted_exception,
+        )
 
         if self.re_raise_exception and intercepted_exception is not None:
             raise intercepted_exception

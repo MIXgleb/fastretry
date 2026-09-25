@@ -23,6 +23,9 @@ from retry._defaults import (
 from retry._types import (
     UnsetType,
 )
+from retry._utils import (
+    log,
+)
 from retry.base import (
     BaseRetrying,
 )
@@ -76,15 +79,10 @@ class AsyncRetrying[**P, R](BaseRetrying[R, Callable[P, Awaitable[R | UnsetType]
         retry_index: int,
     ) -> None:
         if self.delay > 0 and retry_index != self.attempts:
-            if (
-                not self.disable_logging
-                and not self.disable_info_logging
-                and self.logger_info is not None
-            ):
-                self.logger_info(
-                    "Wait %s seconds between attempts to execute the '%s' function",
-                    self.delay,
-                    fname,
-                )
-
+            log(
+                self,
+                level="info",
+                message="Wait %s seconds between attempts to execute the '%s' function",
+                args=(self.delay, fname),
+            )
             await self.sleep_call(self.delay)
