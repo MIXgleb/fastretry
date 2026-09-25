@@ -148,8 +148,8 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
                     "is not provided; the wrapper will return `UNSET` by default.\n\t"
                     "Set return_default_value to return a specific value, or set "
                     "re_raise_exception=True to re-raise the last exception.",
-                    stacklevel=8,
                     disable_warnings=self.disable_warnings,
+                    stacklevel=8,
                 )
                 return False
             return True
@@ -158,8 +158,8 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
             warning(
                 "\n\tre_raise_exception=True is ignored because return_default_value "
                 "is set; the wrapper will return the default value on failure.",
-                stacklevel=8,
                 disable_warnings=self.disable_warnings,
+                stacklevel=8,
             )
         return False
 

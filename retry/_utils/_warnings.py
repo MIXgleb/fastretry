@@ -6,8 +6,8 @@ import warnings
 def warning(
     message: str,
     *,
-    stacklevel: int,
     disable_warnings: bool,
+    stacklevel: int,
 ) -> None:
     """
     Emit a warning unless warnings are disabled.

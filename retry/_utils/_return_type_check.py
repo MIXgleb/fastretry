@@ -151,6 +151,6 @@ class ReturnTypeChecker:
                 f"the declared return type {self._hint!r} of '{self._func.__qualname__}'.\n\t"
                 f"Set return_default_value to a value compatible with the function's "
                 f"return type to avoid returning an unexpected type.",
-                stacklevel=6,
                 disable_warnings=disable_warnings,
+                stacklevel=6,
             )
