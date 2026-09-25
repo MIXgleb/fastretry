@@ -23,16 +23,12 @@ from collections.abc import (
     Callable,
 )
 from typing import (
-    Any,
     Literal,
     TypeVar,
     Unpack,
     overload,
 )
 
-from ._return_type_check import (
-    ReturnTypeChecker,
-)
 from ._types import (
     UNSET,
     RetryKwargs,
@@ -76,18 +72,13 @@ def retry(
 ) -> Callable[[WrappedFunc], WrappedFunc]: ...
 
 
-def retry[**P, R, WrappedFunc: Callable[..., ReturnType]](  # ruff: ignore[undocumented-param]
-    func: WrappedFunc | None = None,
+def retry[**P, R](  # ruff: ignore[undocumented-param]
+    func: Callable[P, R] | None = None,
     **kwargs: Unpack[RetryKwargs[R]],
 ) -> (
-    WrappedFunc | Callable[[WrappedFunc], Callable[P, R | None] | Callable[P, Awaitable[R | None]]]
+    Callable[P, R]
+    | Callable[[Callable[P, R]], Callable[P, R | UnsetType] | Callable[P, Awaitable[R | UnsetType]]]
 ):
-    # func: Callable[P, R] | None = None,
-    # **kwargs: Unpack[RetryKwargs[R]],
-    # ) -> (
-    #     Callable[P, R]
-    #     | Callable[[Callable[P, R]], Callable[P, R | None] | Callable[P, Awaitable[R | None]]]
-    # ):
     """
     Decorate a function to retry it on failure.
 
@@ -151,30 +142,17 @@ def retry[**P, R, WrappedFunc: Callable[..., ReturnType]](  # ruff: ignore[undoc
     if func is not None:
         return retry()(func)
 
-    def wrap_async(func: WrappedFunc) -> Callable[P, Awaitable[R | UnsetType]]:
+    def wrap_async(func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R | UnsetType]]:
         return AsyncRetrying[P, R](**kwargs).wraps(func)
 
-    def wrap_sync(func: WrappedFunc) -> Callable[P, R | UnsetType]:
+    def wrap_sync(func: Callable[P, R]) -> Callable[P, R | UnsetType]:
         return SyncRetrying[P, R](**kwargs).wraps(func)
 
     def wrap(
-        func: WrappedFunc,
+        func: Callable[P, R],
     ) -> Callable[P, R | UnsetType] | Callable[P, Awaitable[R | UnsetType]]:
         if inspect.iscoroutinefunction(func):
             return wrap_async(func)
         return wrap_sync(func)
 
     return wrap
-
-    # def wrap_async(func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R | None]]:
-    #     return AsyncRetrying[P, R](**kwargs).wraps(func)
-
-    # def wrap_sync(func: Callable[P, R]) -> Callable[P, R | None]:
-    #     return SyncRetrying[P, R](**kwargs).wraps(func)
-
-    # def wrap(func: Callable[P, R]) -> Callable[P, R | None] | Callable[P, Awaitable[R | None]]:
-    #     if inspect.iscoroutinefunction(func):
-    #         return wrap_async(func)
-    #     return wrap_sync(func)
-
-    # return wrap
