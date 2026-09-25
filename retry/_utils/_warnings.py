@@ -1,6 +1,6 @@
 """Custom warning helpers with a ``disable_warnings`` toggle."""
 
-import warnings
+import warnings as _warnings
 
 
 def warning(
@@ -23,4 +23,4 @@ def warning(
 
     """
     if not disable_warnings:
-        warnings.warn(message, stacklevel=stacklevel)
+        _warnings.warn(message, stacklevel=stacklevel)

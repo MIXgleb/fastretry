@@ -41,24 +41,24 @@ from retry.sync_retry import (
     SyncRetrying,
 )
 
-type ReturnType = object
-WrappedFunc = TypeVar("WrappedFunc", bound=Callable[..., ReturnType])
+type _ReturnType = object
+_WrappedFunc = TypeVar("_WrappedFunc", bound=Callable[..., _ReturnType])
 
 
 @overload
-def retry(func: WrappedFunc) -> WrappedFunc: ...  # ruff: ignore[non-pep695-generic-function]
+def retry(func: _WrappedFunc) -> _WrappedFunc: ...  # ruff: ignore[non-pep695-generic-function]
 
 
 @overload
 def retry(
     *,
-    return_default_value: ReturnType,
+    return_default_value: _ReturnType,
     re_raise_exception: Literal[False] = False,
     attempts: int | UnsetType = UNSET,
     delay: float | UnsetType = UNSET,
     disable_logging: bool | UnsetType = UNSET,
     disable_warnings: bool | UnsetType = UNSET,
-) -> Callable[[WrappedFunc], WrappedFunc]: ...
+) -> Callable[[_WrappedFunc], _WrappedFunc]: ...
 
 
 @overload
@@ -69,7 +69,7 @@ def retry(
     delay: float | UnsetType = UNSET,
     disable_logging: bool | UnsetType = UNSET,
     disable_warnings: bool | UnsetType = UNSET,
-) -> Callable[[WrappedFunc], WrappedFunc]: ...
+) -> Callable[[_WrappedFunc], _WrappedFunc]: ...
 
 
 def retry[**P, R](  # ruff: ignore[undocumented-param]
