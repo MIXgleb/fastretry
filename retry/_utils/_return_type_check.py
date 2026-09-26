@@ -14,7 +14,7 @@ from retry._types import (
     UnsetType,
 )
 from retry._utils._warnings import (
-    warning,
+    Warnings,
 )
 
 if TYPE_CHECKING:
@@ -147,12 +147,11 @@ class FunctionTypes:
 
         """
         if self._matches_return_hint(return_default_value) is False:
-            warning(
+            Warnings(disable_warnings=disable_warnings).warn(
                 f"\n\treturn_default_value {return_default_value!r} does not match "
                 f"the declared return type {self._return_hint!r} "
                 f"of '{self._func.__qualname__}'.\n\t"
                 f"Set return_default_value to a value compatible with the function's "
                 f"return type to avoid returning an unexpected type.",
-                disable_warnings=disable_warnings,
                 stacklevel=6,
             )

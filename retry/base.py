@@ -33,7 +33,7 @@ from retry._types import (
 from retry._utils import (
     FunctionTypes,
     Log,
-    warning,
+    Warnings,
 )
 
 
@@ -42,6 +42,7 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
 
     __slots__ = (
         "_log",
+        "_warnings",
         "attempts",
         "delay",
         "disable_error_logging",
@@ -89,6 +90,7 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
 
         """
         self._log = Log(self)
+        self._warnings = Warnings(disable_warnings=self.disable_warnings)
 
         self.return_default_value: Final = return_default_value
         self.attempts: Final = self._resolve(
@@ -121,6 +123,9 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         self.logger_error: Final = defaults.logger_error
         self.logger_traceback_kwarg: Final = defaults.logger_traceback_kwarg
 
+        self._log = Log(self)
+        self._warnings = Warnings(disable_warnings=self.disable_warnings)
+
     def _resolve_re_raise_exception(
         self,
         *,
@@ -147,22 +152,20 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         """
         if isinstance(self.return_default_value, UnsetType):
             if re_raise_exception is False:
-                warning(
+                self._warnings.warn(
                     "\n\tre_raise_exception=False is set but return_default_value "
                     "is not provided; the wrapper will return `UNSET` by default.\n\t"
                     "Set return_default_value to return a specific value, or set "
                     "re_raise_exception=True to re-raise the last exception.",
-                    disable_warnings=self.disable_warnings,
                     stacklevel=8,
                 )
                 return False
             return True
 
         if re_raise_exception is True:
-            warning(
+            self._warnings.warn(
                 "\n\tre_raise_exception=True is ignored because return_default_value "
                 "is set; the wrapper will return the default value on failure.",
-                disable_warnings=self.disable_warnings,
                 stacklevel=8,
             )
         return False

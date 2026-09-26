@@ -15,7 +15,7 @@ from typing import (
 )
 
 from retry._utils._warnings import (
-    warning,
+    Warnings,
 )
 
 if TYPE_CHECKING:
@@ -269,12 +269,11 @@ class Log:
                 if key is None or key not in kwargs:
                     raise
 
-                warning(
+                Warnings(disable_warnings=self._ctx.disable_warnings).warn(
                     f"\n\tLogger for level {level!r} does not accept "
                     f"{key!r} kwarg; logging without it.\n\t"
                     f"Set the correct keyword argument name via "
                     f"configure_logging(logger_traceback_kwarg=...).",
-                    disable_warnings=self._ctx.disable_warnings,
                     stacklevel=7,
                 )
                 kwargs.pop(key)

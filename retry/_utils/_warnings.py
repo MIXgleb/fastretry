@@ -1,26 +1,45 @@
-"""Custom warning helpers with a ``disable_warnings`` toggle."""
-
 import warnings as _warnings
 
 
-def warning(
-    message: str,
-    *,
-    disable_warnings: bool,
-    stacklevel: int,
-) -> None:
+class Warnings:
     """
-    Emit a warning unless warnings are disabled.
+    Warning emitter that respects a ``disable_warnings`` flag.
+
+    Wraps :func:`warnings.warn` and skips emission when warnings are
+    disabled.
 
     Parameters
     ----------
-    message : str
-        Warning message.
     disable_warnings : bool
-        If ``True``, the warning is suppressed.
-    stacklevel : int
-        Passed to :func:`warnings.warn`.
+        If ``True``, all warnings are suppressed.
 
     """
-    if not disable_warnings:
-        _warnings.warn(message, stacklevel=stacklevel)
+
+    __slots__ = ("_disable_warnings",)
+
+    def __init__(
+        self,
+        *,
+        disable_warnings: bool,
+    ) -> None:
+        self._disable_warnings = disable_warnings
+
+    def warn(
+        self,
+        message: str,
+        *,
+        stacklevel: int,
+    ) -> None:
+        """
+        Emit a warning unless warnings are disabled.
+
+        Parameters
+        ----------
+        message : str
+            Warning message.
+        stacklevel : int
+            Passed to :func:`warnings.warn`.
+
+        """
+        if not self._disable_warnings:
+            _warnings.warn(message, stacklevel=stacklevel)
