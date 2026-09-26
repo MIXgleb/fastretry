@@ -271,9 +271,11 @@ class Log:
 
                 warning(
                     f"\n\tLogger for level {level!r} does not accept "
-                    f"{key!r} kwarg; logging without it.",
+                    f"{key!r} kwarg; logging without it.\n\t"
+                    f"Set the correct keyword argument name via "
+                    f"configure_logging(logger_traceback_kwarg=...).",
                     disable_warnings=self._ctx.disable_warnings,
-                    stacklevel=4,
+                    stacklevel=7,
                 )
                 kwargs.pop(key)
             else:
