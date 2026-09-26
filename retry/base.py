@@ -89,10 +89,11 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
             Re-raise an exception after all attempts
 
         """
-        self._log = Log(self)
-        self._warnings = Warnings(disable_warnings=self.disable_warnings)
-
-        self.return_default_value: Final = return_default_value
+        # --- per-decorator options ---
+        self.return_default_value: Final = self._resolve(
+            passed=return_default_value,
+            default=UNSET,
+        )
         self.attempts: Final = self._resolve(
             passed=attempts,
             default=defaults.attempts,
@@ -113,16 +114,20 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
             re_raise_exception=re_raise_exception,
         )
 
+        # --- application-wide options ---
         self.disable_info_logging: Final = defaults.disable_info_logging
         self.disable_warning_logging: Final = defaults.disable_warning_logging
         self.disable_error_logging: Final = defaults.disable_error_logging
         self.include_traceback_in_warning_log: Final = defaults.include_traceback_in_warning_log
         self.include_traceback_in_error_log: Final = defaults.include_traceback_in_error_log
+
+        # --- logger configuration ---
         self.logger_info: Final = defaults.logger_info
         self.logger_warning: Final = defaults.logger_warning
         self.logger_error: Final = defaults.logger_error
         self.logger_traceback_kwarg: Final = defaults.logger_traceback_kwarg
 
+        # --- internal helpers ---
         self._log = Log(self)
         self._warnings = Warnings(disable_warnings=self.disable_warnings)
 
