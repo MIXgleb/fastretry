@@ -1,15 +1,17 @@
 """
 Logging utilities for retry decorators.
 
-Provides :func:`log` — a level-aware helper that centralizes logger
-selection, traceback handling, and signature validation.
+Provides the :class:`Log` helper — a level-aware wrapper around a logging
+configuration that centralizes logger selection, traceback handling, and
+keyword fallback.
 """
 
-import inspect
+import re
 from typing import (
     TYPE_CHECKING,
     Literal,
     Protocol,
+    assert_never,
 )
 
 from retry._utils._warnings import (
@@ -31,13 +33,17 @@ if TYPE_CHECKING:
 
 type _LogLevel = Literal["info", "warning", "error"]
 
+_UNEXPECTED_KWARG_RE = re.compile(
+    r"got an unexpected keyword argument ['\"](?P<name>[^'\"]+)['\"]",
+)
+
 
 class _LogContext(Protocol):
     """
     Interface for objects that expose logging configuration.
 
     Implemented by ``BaseRetrying``. Any object with these attributes can
-    be passed to :func:`log`.
+    be passed to :class:`Log`.
     """
 
     logger_info: LoggerType | None
@@ -53,131 +59,247 @@ class _LogContext(Protocol):
     disable_warnings: bool
 
 
-def _resolve(
-    ctx: _LogContext,
-    level: _LogLevel,
-) -> tuple[LoggerType | None, bool, bool]:
+class Log:
     """
-    Return the logger, disable flag, and traceback flag for a level.
+    Level-aware logging wrapper around a :class:`_LogContext`.
+
+    Provides ``info``, ``warning``, and ``error`` methods that select the
+    appropriate logger and traceback configuration from the context.
 
     Parameters
     ----------
-    ctx : LogContext
-        Logging configuration.
-    level : {"info", "warning", "error"}
-        Log level.
-
-    Returns
-    -------
-    tuple[LoggerType | None, bool, bool]
-        Logger, per-level disable flag, and traceback flag.
+    ctx : _LogContext
+        Logging configuration (usually a ``BaseRetrying`` instance).
 
     """
-    if level == "info":
-        return ctx.logger_info, ctx.disable_info_logging, False
-    if level == "warning":
-        return (
-            ctx.logger_warning,
-            ctx.disable_warning_logging,
-            ctx.include_traceback_in_warning_log,
+
+    __slots__ = ("_ctx",)
+
+    def __init__(self, ctx: _LogContext) -> None:
+        self._ctx = ctx
+
+    def info(
+        self,
+        message: str,
+        *args: object,
+    ) -> None:
+        """
+        Emit an info-level log message.
+
+        Parameters
+        ----------
+        message : str
+            ``%``-style format string.
+        *args : object
+            Format arguments.
+
+        """
+        self._emit(
+            level="info",
+            message=message,
+            args=args,
+            intercepted_exception=None,
         )
-    return (
-        ctx.logger_error,
-        ctx.disable_error_logging,
-        ctx.include_traceback_in_error_log,
-    )
 
+    def warning(
+        self,
+        message: str,
+        *args: object,
+        intercepted_exception: BaseException | None = None,
+    ) -> None:
+        """
+        Emit a warning-level log message.
 
-def accepts_kwarg(
-    func: Callable[..., Any] | None,
-    kwarg: str,
-) -> bool:
-    """
-    Check whether ``func`` accepts a keyword argument named ``kwarg``.
+        Parameters
+        ----------
+        message : str
+            ``%``-style format string.
+        *args : object
+            Format arguments.
+        intercepted_exception : BaseException | None, optional
+            Exception to pass via ``logger_traceback_kwarg`` if traceback
+            logging is enabled.
 
-    Returns ``True`` if the callable has an explicit keyword parameter,
-    a ``**kwargs`` catch-all, or if its signature cannot be inspected
-    (built-ins, C extensions). Returns ``False`` only when the signature
-    is inspectable and clearly lacks the argument.
+        """
+        self._emit(
+            level="warning",
+            message=message,
+            args=args,
+            intercepted_exception=intercepted_exception,
+        )
 
-    Parameters
-    ----------
-    func : Callable | None
-        Callable to inspect. ``None`` yields ``False``.
-    kwarg : str
-        Keyword argument name.
+    def error(
+        self,
+        message: str,
+        *args: object,
+        intercepted_exception: BaseException | None = None,
+    ) -> None:
+        """
+        Emit an error-level log message.
 
-    Returns
-    -------
-    bool
-        Whether ``func`` accepts ``kwarg``.
+        Parameters
+        ----------
+        message : str
+            ``%``-style format string.
+        *args : object
+            Format arguments.
+        intercepted_exception : BaseException | None, optional
+            Exception to pass via ``logger_traceback_kwarg`` if traceback
+            logging is enabled.
 
-    """
-    if func is None:
-        return False
+        """
+        self._emit(
+            level="error",
+            message=message,
+            args=args,
+            intercepted_exception=intercepted_exception,
+        )
 
-    try:
-        signature = inspect.signature(func)
-    except TypeError, ValueError:
-        return True
+    def _emit(
+        self,
+        *,
+        level: _LogLevel,
+        message: str,
+        args: tuple[Any, ...],
+        intercepted_exception: BaseException | None,
+    ) -> None:
+        """Resolve logger and dispatch the message."""
+        logger, disable_level, include_traceback = self._resolve(level)
 
-    for param in signature.parameters.values():
-        if param.kind is inspect.Parameter.VAR_KEYWORD:
-            return True
-        if param.name == kwarg and param.kind in {
-            inspect.Parameter.KEYWORD_ONLY,
-            inspect.Parameter.POSITIONAL_OR_KEYWORD,
-        }:
-            return True
+        if self._ctx.disable_logging or disable_level or logger is None:
+            return
 
-    return False
+        kwargs: dict[str, Any] = {}
 
+        if include_traceback and intercepted_exception is not None:
+            kwargs[self._ctx.logger_traceback_kwarg] = intercepted_exception
 
-def log(
-    ctx: _LogContext,
-    *,
-    level: _LogLevel,
-    message: str,
-    args: tuple[Any, ...] = (),
-    intercepted_exception: BaseException | None = None,
-) -> None:
-    """
-    Emit a log message at the given level if enabled.
+        self._safe_log_with_fallback(
+            logger=logger,
+            message=message,
+            args=args,
+            kwargs=kwargs,
+            level=level,
+        )
 
-    If traceback logging is enabled for the level but the logger does not
-    accept ``ctx.logger_traceback_kwarg``, a warning is emitted and the message is
-    logged without traceback.
+    def _resolve(
+        self,
+        level: _LogLevel,
+    ) -> tuple[LoggerType | None, bool, bool]:
+        """
+        Return the logger, disable flag, and traceback flag for a level.
 
-    Parameters
-    ----------
-    ctx : LogContext
-        Logging configuration.
-    level : {"info", "warning", "error"}
-        Log level.
-    message : str
-        ``%``-style format string.
-    args : tuple[Any, ...], optional
-        Format arguments.
-    intercepted_exception : BaseException | None, optional
-        Exception to pass via ``logger_traceback_kwarg`` if traceback logging is
-        enabled for this level.
+        Parameters
+        ----------
+        level : {"info", "warning", "error"}
+            Log level.
 
-    """
-    kwargs: dict[str, Any] = {}
-    logger, disable_level, include_traceback = _resolve(ctx, level)
+        Returns
+        -------
+        tuple[LoggerType | None, bool, bool]
+            Logger, per-level disable flag, and traceback flag.
 
-    if ctx.disable_logging or disable_level or logger is None:
-        return
+        """
+        ctx = self._ctx
 
-    if include_traceback and intercepted_exception is not None:
-        if accepts_kwarg(logger, ctx.logger_traceback_kwarg):
-            kwargs[ctx.logger_traceback_kwarg] = intercepted_exception
-        else:
-            warning(
-                f"\n\tLogger for level {level!r} does not accept "
-                f"{ctx.logger_traceback_kwarg!r} kwarg; logging without traceback.",
-                stacklevel=3,
-                disable_warnings=ctx.disable_warnings,
-            )
+        match level:
+            case "info":
+                return ctx.logger_info, ctx.disable_info_logging, False
+            case "warning":
+                return (
+                    ctx.logger_warning,
+                    ctx.disable_warning_logging,
+                    ctx.include_traceback_in_warning_log,
+                )
+            case "error":
+                return (
+                    ctx.logger_error,
+                    ctx.disable_error_logging,
+                    ctx.include_traceback_in_error_log,
+                )
+            case _:
+                assert_never(level)
 
-    logger(message, *args, **kwargs)
+    def _safe_log_with_fallback(
+        self,
+        *,
+        logger: Callable[..., Any],
+        message: str,
+        args: tuple[Any, ...],
+        kwargs: dict[str, Any],
+        level: _LogLevel,
+    ) -> None:
+        """
+        Call ``logger``, dropping keyword arguments it does not accept.
+
+        If the logger raises ``TypeError`` because a keyword argument is
+        not accepted, that keyword is removed from ``kwargs``, a warning
+        is emitted, and the call is retried. Any other ``TypeError`` is
+        re-raised.
+
+        Parameters
+        ----------
+        logger : Callable
+            Logger callable to invoke.
+        message : str
+            ``%``-style format string.
+        args : tuple[Any, ...]
+            Format arguments.
+        kwargs : dict[str, Any]
+            Keyword arguments to pass. Modified in place as unsupported
+            keys are dropped.
+        level : _LogLevel
+            Log level, used in warning messages.
+
+        Raises
+        ------
+        TypeError
+            Logger raised ``TypeError`` unrelated to keyword arguments.
+
+        """
+        while kwargs:
+            try:
+                logger(message, *args, **kwargs)
+            except TypeError as exc:
+                if "got an unexpected keyword argument" not in str(exc):
+                    raise
+
+                key = self._extract_unexpected_kwarg(exc)
+
+                if key is None or key not in kwargs:
+                    raise
+
+                warning(
+                    f"\n\tLogger for level {level!r} does not accept "
+                    f"{key!r} kwarg; logging without it.",
+                    disable_warnings=self._ctx.disable_warnings,
+                    stacklevel=4,
+                )
+                kwargs.pop(key)
+            else:
+                return
+
+        logger(message, *args)
+
+    @staticmethod
+    def _extract_unexpected_kwarg(exc: TypeError) -> str | None:
+        """
+        Extract the offending keyword name from a ``TypeError`` message.
+
+        Expected format::
+
+            <callable>() got an unexpected keyword argument '<name>'
+
+        Parameters
+        ----------
+        exc : TypeError
+            Exception to parse.
+
+        Returns
+        -------
+        str | None
+            The keyword name, or ``None`` if the message doesn't match.
+
+        """
+        match = _UNEXPECTED_KWARG_RE.search(str(exc))
+        return match.group("name") if match else None

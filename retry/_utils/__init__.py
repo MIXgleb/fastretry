@@ -1,13 +1,11 @@
 __all__ = (
+    "Log",
     "ReturnTypeChecker",
-    "accepts_kwarg",
-    "log",
     "warning",
 )
 
 from retry._utils._logs import (
-    accepts_kwarg,
-    log,
+    Log,
 )
 from retry._utils._return_type_check import (
     ReturnTypeChecker,

@@ -31,8 +31,8 @@ from retry._types import (
     UnsetType,
 )
 from retry._utils import (
+    Log,
     ReturnTypeChecker,
-    log,
     warning,
 )
 
@@ -41,6 +41,7 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
     """Retrying decorator for multiple attempts to execute a function in case of an error."""
 
     __slots__ = (
+        "_log",
         "attempts",
         "delay",
         "disable_error_logging",
@@ -87,6 +88,8 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
             Re-raise an exception after all attempts
 
         """
+        self._log = Log(self)
+
         self.return_default_value: Final = return_default_value
         self.attempts: Final = self._resolve(
             passed=attempts,
@@ -220,11 +223,11 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
             intercepted exception during function call
 
         """
-        log(
-            self,
-            level="warning",
-            message="Error executing the '%s' function. Try %d of %d.",
-            args=(fname, retry_index, self.attempts),
+        self._log.warning(
+            "Error executing the '%s' function. Try %d of %d.",
+            fname,
+            retry_index,
+            self.attempts,
             intercepted_exception=intercepted_exception,
         )
 
@@ -244,11 +247,9 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
             intercepted exception during function call
 
         """
-        log(
-            self,
-            level="error",
-            message="Failed the execution of the '%s' function.",
-            args=(fname,),
+        self._log.error(
+            "Failed the execution of the '%s' function.",
+            fname,
             intercepted_exception=intercepted_exception,
         )
 
