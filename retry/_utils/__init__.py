@@ -1,6 +1,6 @@
 __all__ = (
+    "FunctionTypes",
     "Log",
-    "ReturnTypeChecker",
     "warning",
 )
 
@@ -8,7 +8,7 @@ from retry._utils._logs import (
     Log,
 )
 from retry._utils._return_type_check import (
-    ReturnTypeChecker,
+    FunctionTypes,
 )
 from retry._utils._warnings import (
     warning,

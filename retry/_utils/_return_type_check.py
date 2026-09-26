@@ -1,4 +1,4 @@
-"""Runtime validation of ``return_default_value`` against a function's return type."""
+"""Runtime access to a function's declared type hints."""
 
 import contextlib
 import types
@@ -27,19 +27,19 @@ _UNION: tuple[object, ...] = (Union, types.UnionType)  # pyright: ignore[reportD
 _UNCHECKABLE: tuple[object, ...] = (Any, object)
 
 
-class ReturnTypeChecker:
+class FunctionTypes:
     """
-    Best-effort runtime check that a value matches a function's return type.
+    Best-effort runtime access to a function's declared type hints.
 
-    Only simple types, unions, and ``None`` are verified. Generic hints
-    (``list[int]``, ``dict[str, str]``) are matched by their base class
-    only; ``Any``, ``object``, and unresolvable annotations are treated
-    as inconclusive.
+    Wraps ``typing.get_type_hints`` and provides helpers for inspecting
+    and validating types. Only simple types, unions, and ``None`` are
+    checked; generics are matched by their base class, and ``Any`` /
+    ``object`` / unresolvable annotations are treated as inconclusive.
 
     Parameters
     ----------
     func : Callable[..., Any]
-        Function whose declared return type is used as the reference.
+        Function whose declared type hints are used as the reference.
 
     """
 
@@ -51,7 +51,7 @@ class ReturnTypeChecker:
 
     def _extract_return_hint(self) -> Any | UnsetType:  # ruff: ignore[any-type]
         """
-        Best-effort extraction of the declared return type of ``func``.
+        Best-effort extraction of the declared return type of the function.
 
         Returns
         -------
@@ -64,7 +64,7 @@ class ReturnTypeChecker:
             return hints.get("return", UNSET)
         return UNSET
 
-    def _unwrap_union(self) -> tuple[Any, ...]:
+    def _unwrap_return_hint(self) -> tuple[Any, ...]:
         """
         Flatten a union hint into a tuple of member types.
 
@@ -83,13 +83,13 @@ class ReturnTypeChecker:
             else (self._return_hint,)
         )
 
-    def _matches(self, default_value: object) -> bool | None:
+    def _matches_return_hint(self, value: object) -> bool | None:
         """
         Check whether ``value`` matches the function's declared return type.
 
         Parameters
         ----------
-        default_value : object
+        value : object
             Value to check against the declared return type.
 
         Returns
@@ -107,17 +107,17 @@ class ReturnTypeChecker:
 
         has_any_or_generic = False
 
-        for member in self._unwrap_union():
+        for member in self._unwrap_return_hint():
             if member in _UNCHECKABLE:
                 has_any_or_generic = True
                 continue
 
             if (origin := typing.get_origin(member)) is not None:
-                if isinstance(default_value, origin):
+                if isinstance(value, origin):
                     has_any_or_generic = True
                 continue
 
-            if isinstance(member, type) and isinstance(default_value, member):
+            if isinstance(member, type) and isinstance(value, member):
                 return True
 
         if has_any_or_generic:
@@ -127,27 +127,28 @@ class ReturnTypeChecker:
     def warn_on_return_default_mismatch(
         self,
         *,
-        default_value: object,
+        return_default_value: object,
         disable_warnings: bool,
     ) -> None:
         """
-        Emit a warning if ``default_value`` doesn't match the declared return type of ``func``.
+        Warn if ``return_default_value`` doesn't match the declared return type.
 
-        The check is best-effort: only simple types, unions, and ``None`` are
-        verified. Generic hints (``list[int]``, ``dict[str, str]``), ``Any``,
-        ``object``, and unresolvable annotations are skipped silently.
+        The check is best-effort: only simple types, unions, and ``None``
+        are verified. Generic hints (``list[int]``, ``dict[str, str]``),
+        ``Any``, ``object``, and unresolvable annotations are skipped
+        silently.
 
         Parameters
         ----------
-        default_value : object
-            Value that will be returned on failure
-        disable_warnings : bool, optional
-            Disable all warnings
+        return_default_value : object
+            Value that will be returned on failure.
+        disable_warnings : bool
+            If ``True``, warnings are suppressed.
 
         """
-        if self._matches(default_value) is False:
+        if self._matches_return_hint(return_default_value) is False:
             warning(
-                f"\n\treturn_default_value {default_value!r} does not match "
+                f"\n\treturn_default_value {return_default_value!r} does not match "
                 f"the declared return type {self._return_hint!r} "
                 f"of '{self._func.__qualname__}'.\n\t"
                 f"Set return_default_value to a value compatible with the function's "

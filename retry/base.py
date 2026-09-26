@@ -31,8 +31,8 @@ from retry._types import (
     UnsetType,
 )
 from retry._utils import (
+    FunctionTypes,
     Log,
-    ReturnTypeChecker,
     warning,
 )
 
@@ -279,8 +279,8 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
 
         """
         if not isinstance(self.return_default_value, UnsetType):
-            ReturnTypeChecker(func).warn_on_return_default_mismatch(
-                default_value=self.return_default_value,
+            FunctionTypes(func).warn_on_return_default_mismatch(
+                return_default_value=self.return_default_value,
                 disable_warnings=self.disable_warnings,
             )
 
