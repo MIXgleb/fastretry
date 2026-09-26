@@ -133,6 +133,145 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
             re_raise_exception=re_raise_exception,
         )
 
+    @final
+    def copy(self) -> Self:
+        """
+        Copy this object.
+
+        Returns
+        -------
+        Self
+            copied instance of the class
+
+        """
+        return copy.copy(self)
+
+    @final
+    def wraps(
+        self,
+        func: WrappedFunc,
+    ) -> WrappedFunc:
+        """
+        Wrap a function with retry logic.
+
+        Performs shared pre-checks and delegates the actual
+        wrapping to :meth:`_wrap`.
+
+        Parameters
+        ----------
+        func : Callable[..., Any]
+            Function to wrap
+
+        Returns
+        -------
+        Callable[..., Any]
+            Wrapped function with the same signature
+
+        """
+        if not isinstance(self.return_default_value, UnsetType):
+            FunctionTypes(func).warn_on_return_default_mismatch(
+                return_default_value=self.return_default_value,
+                disable_warnings=self.disable_warnings,
+            )
+
+        return self._wrap(func)
+
+    def exception_block(
+        self,
+        fname: str,
+        retry_index: int,
+        intercepted_exception: BaseException,
+    ) -> None:
+        """
+        Block is called after one failed attempt.
+
+        Parameters
+        ----------
+        fname : str
+            name of the called function
+        retry_index : int
+            attempt index
+        intercepted_exception : BaseException
+            intercepted exception during function call
+
+        """
+        self._log.warning(
+            "Error executing the '%s' function. Try %d of %d.",
+            fname,
+            retry_index,
+            self.attempts,
+            intercepted_exception=intercepted_exception,
+        )
+
+    def failed_block(
+        self,
+        fname: str,
+        intercepted_exception: BaseException | None,
+    ) -> None:
+        """
+        Block is called after all failed attempts.
+
+        Parameters
+        ----------
+        fname : str
+            name of the called function
+        intercepted_exception : BaseException | None
+            intercepted exception during function call
+
+        """
+        self._log.error(
+            "Failed the execution of the '%s' function.",
+            fname,
+            intercepted_exception=intercepted_exception,
+        )
+
+        if self.re_raise_exception and intercepted_exception is not None:
+            raise intercepted_exception
+
+    @abstractmethod
+    def sleep_block(
+        self,
+        fname: str,
+        retry_index: int,
+    ) -> Awaitable[None] | None:
+        """
+        Sleep between attempts.
+
+        Does nothing if ``delay`` is zero or if this is the last attempt.
+
+        Parameters
+        ----------
+        fname : str
+            Name of the wrapped function, used for logging
+        retry_index : int
+            Current attempt index (1-based)
+
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def _wrap(
+        self,
+        func: WrappedFunc,
+    ) -> WrappedFunc:
+        """
+        Implement the wrapping logic for a concrete retry strategy.
+
+        Called by :meth:`wraps` after shared pre-checks.
+
+        Parameters
+        ----------
+        func : Callable[..., Any]
+            Function to wrap
+
+        Returns
+        -------
+        Callable[..., Any]
+            Wrapped function with the same signature
+
+        """
+        raise NotImplementedError
+
     def _resolve_re_raise_exception(
         self,
         *,
@@ -200,142 +339,3 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
 
         """
         return passed if not isinstance(passed, UnsetType) else default
-
-    @final
-    def copy(self) -> Self:
-        """
-        Copy this object.
-
-        Returns
-        -------
-        Self
-            copied instance of the class
-
-        """
-        return copy.copy(self)
-
-    def exception_block(
-        self,
-        fname: str,
-        retry_index: int,
-        intercepted_exception: BaseException,
-    ) -> None:
-        """
-        Block is called after one failed attempt.
-
-        Parameters
-        ----------
-        fname : str
-            name of the called function
-        retry_index : int
-            attempt index
-        intercepted_exception : BaseException
-            intercepted exception during function call
-
-        """
-        self._log.warning(
-            "Error executing the '%s' function. Try %d of %d.",
-            fname,
-            retry_index,
-            self.attempts,
-            intercepted_exception=intercepted_exception,
-        )
-
-    def failed_block(
-        self,
-        fname: str,
-        intercepted_exception: BaseException | None,
-    ) -> None:
-        """
-        Block is called after all failed attempts.
-
-        Parameters
-        ----------
-        fname : str
-            name of the called function
-        intercepted_exception : BaseException | None
-            intercepted exception during function call
-
-        """
-        self._log.error(
-            "Failed the execution of the '%s' function.",
-            fname,
-            intercepted_exception=intercepted_exception,
-        )
-
-        if self.re_raise_exception and intercepted_exception is not None:
-            raise intercepted_exception
-
-    @final
-    def wraps(
-        self,
-        func: WrappedFunc,
-    ) -> WrappedFunc:
-        """
-        Wrap a function with retry logic.
-
-        Performs shared pre-checks and delegates the actual
-        wrapping to :meth:`_wrap`.
-
-        Parameters
-        ----------
-        func : Callable[..., Any]
-            Function to wrap
-
-        Returns
-        -------
-        Callable[..., Any]
-            Wrapped function with the same signature
-
-        """
-        if not isinstance(self.return_default_value, UnsetType):
-            FunctionTypes(func).warn_on_return_default_mismatch(
-                return_default_value=self.return_default_value,
-                disable_warnings=self.disable_warnings,
-            )
-
-        return self._wrap(func)
-
-    @abstractmethod
-    def _wrap(
-        self,
-        func: WrappedFunc,
-    ) -> WrappedFunc:
-        """
-        Implement the wrapping logic for a concrete retry strategy.
-
-        Called by :meth:`wraps` after shared pre-checks.
-
-        Parameters
-        ----------
-        func : Callable[..., Any]
-            Function to wrap
-
-        Returns
-        -------
-        Callable[..., Any]
-            Wrapped function with the same signature
-
-        """
-        raise NotImplementedError
-
-    @abstractmethod
-    def sleep_block(
-        self,
-        fname: str,
-        retry_index: int,
-    ) -> Awaitable[None] | None:
-        """
-        Sleep between attempts.
-
-        Does nothing if ``delay`` is zero or if this is the last attempt.
-
-        Parameters
-        ----------
-        fname : str
-            Name of the wrapped function, used for logging
-        retry_index : int
-            Current attempt index (1-based)
-
-        """
-        raise NotImplementedError

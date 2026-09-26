@@ -49,6 +49,38 @@ class FunctionTypes:
         self._func = func
         self._return_hint = self._extract_return_hint()
 
+    def warn_on_return_default_mismatch(
+        self,
+        *,
+        return_default_value: object,
+        disable_warnings: bool,
+    ) -> None:
+        """
+        Warn if ``return_default_value`` doesn't match the declared return type.
+
+        The check is best-effort: only simple types, unions, and ``None``
+        are verified. Generic hints (``list[int]``, ``dict[str, str]``),
+        ``Any``, ``object``, and unresolvable annotations are skipped
+        silently.
+
+        Parameters
+        ----------
+        return_default_value : object
+            Value that will be returned on failure.
+        disable_warnings : bool
+            If ``True``, warnings are suppressed.
+
+        """
+        if self._matches_return_hint(return_default_value) is False:
+            Warnings(disable_warnings=disable_warnings).warn(
+                f"\n\treturn_default_value {return_default_value!r} does not match "
+                f"the declared return type {self._return_hint!r} "
+                f"of '{self._func.__qualname__}'.\n\t"
+                f"Set return_default_value to a value compatible with the function's "
+                f"return type to avoid returning an unexpected type.",
+                stacklevel=6,
+            )
+
     def _extract_return_hint(self) -> Any | UnsetType:  # ruff: ignore[any-type]
         """
         Best-effort extraction of the declared return type of the function.
@@ -123,35 +155,3 @@ class FunctionTypes:
         if has_any_or_generic:
             return None
         return False
-
-    def warn_on_return_default_mismatch(
-        self,
-        *,
-        return_default_value: object,
-        disable_warnings: bool,
-    ) -> None:
-        """
-        Warn if ``return_default_value`` doesn't match the declared return type.
-
-        The check is best-effort: only simple types, unions, and ``None``
-        are verified. Generic hints (``list[int]``, ``dict[str, str]``),
-        ``Any``, ``object``, and unresolvable annotations are skipped
-        silently.
-
-        Parameters
-        ----------
-        return_default_value : object
-            Value that will be returned on failure.
-        disable_warnings : bool
-            If ``True``, warnings are suppressed.
-
-        """
-        if self._matches_return_hint(return_default_value) is False:
-            Warnings(disable_warnings=disable_warnings).warn(
-                f"\n\treturn_default_value {return_default_value!r} does not match "
-                f"the declared return type {self._return_hint!r} "
-                f"of '{self._func.__qualname__}'.\n\t"
-                f"Set return_default_value to a value compatible with the function's "
-                f"return type to avoid returning an unexpected type.",
-                stacklevel=6,
-            )
