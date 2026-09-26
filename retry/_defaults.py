@@ -88,10 +88,10 @@ class _Defaults:
     async_sleep_call: Callable[[float], Awaitable[None]] = asyncio.sleep
 
     # --- logging ---
-    logger_traceback_kwarg: str = "exc_info"
     logger_info: LoggerType | None = _DEFAULT_LOGGER.info
     logger_warning: LoggerType | None = _DEFAULT_LOGGER.warning
     logger_error: LoggerType | None = _DEFAULT_LOGGER.error
+    logger_traceback_kwarg: str = "exc_info"
 
     @final
     def set(self, **kwargs: Unpack[DefaultsKwargs]) -> None:
