@@ -43,11 +43,11 @@ class ReturnTypeChecker:
 
     """
 
-    __slots__ = ("_func", "_hint")
+    __slots__ = ("_func", "_return_hint")
 
     def __init__(self, func: Callable[..., Any]) -> None:
         self._func = func
-        self._hint = self._extract_return_hint()
+        self._return_hint = self._extract_return_hint()
 
     def _extract_return_hint(self) -> Any | UnsetType:  # ruff: ignore[any-type]
         """
@@ -78,9 +78,9 @@ class ReturnTypeChecker:
 
         """
         return (
-            typing.get_args(self._hint)
-            if typing.get_origin(self._hint) in _UNION
-            else (self._hint,)
+            typing.get_args(self._return_hint)
+            if typing.get_origin(self._return_hint) in _UNION
+            else (self._return_hint,)
         )
 
     def _matches(self, default_value: object) -> bool | None:
@@ -102,7 +102,7 @@ class ReturnTypeChecker:
                 type arguments cannot be verified at runtime.
 
         """
-        if isinstance(self._hint, UnsetType):
+        if isinstance(self._return_hint, UnsetType):
             return None
 
         has_any_or_generic = False
@@ -148,7 +148,8 @@ class ReturnTypeChecker:
         if self._matches(default_value) is False:
             warning(
                 f"\n\treturn_default_value {default_value!r} does not match "
-                f"the declared return type {self._hint!r} of '{self._func.__qualname__}'.\n\t"
+                f"the declared return type {self._return_hint!r} "
+                f"of '{self._func.__qualname__}'.\n\t"
                 f"Set return_default_value to a value compatible with the function's "
                 f"return type to avoid returning an unexpected type.",
                 disable_warnings=disable_warnings,
