@@ -126,7 +126,7 @@ class LoggingKwargs(
     logger_info: LoggerType | UnsetType | None
     logger_warning: LoggerType | UnsetType | None
     logger_error: LoggerType | UnsetType | None
-    exc_info_kwarg: str | UnsetType
+    logger_traceback_kwarg: str | UnsetType
 
 
 class DefaultsKwargs(

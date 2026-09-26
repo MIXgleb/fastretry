@@ -43,7 +43,7 @@ class _LogContext(Protocol):
     logger_info: LoggerType | None
     logger_warning: LoggerType | None
     logger_error: LoggerType | None
-    exc_info_kwarg: str
+    logger_traceback_kwarg: str
     disable_logging: bool
     disable_info_logging: bool
     disable_warning_logging: bool
@@ -145,7 +145,7 @@ def log(
     Emit a log message at the given level if enabled.
 
     If traceback logging is enabled for the level but the logger does not
-    accept ``ctx.exc_info_kwarg``, a warning is emitted and the message is
+    accept ``ctx.logger_traceback_kwarg``, a warning is emitted and the message is
     logged without traceback.
 
     Parameters
@@ -159,7 +159,7 @@ def log(
     args : tuple[Any, ...], optional
         Format arguments.
     intercepted_exception : BaseException | None, optional
-        Exception to pass via ``exc_info_kwarg`` if traceback logging is
+        Exception to pass via ``logger_traceback_kwarg`` if traceback logging is
         enabled for this level.
 
     """
@@ -170,12 +170,12 @@ def log(
         return
 
     if include_traceback and intercepted_exception is not None:
-        if accepts_kwarg(logger, ctx.exc_info_kwarg):
-            kwargs[ctx.exc_info_kwarg] = intercepted_exception
+        if accepts_kwarg(logger, ctx.logger_traceback_kwarg):
+            kwargs[ctx.logger_traceback_kwarg] = intercepted_exception
         else:
             warning(
                 f"\n\tLogger for level {level!r} does not accept "
-                f"{ctx.exc_info_kwarg!r} kwarg; logging without traceback.",
+                f"{ctx.logger_traceback_kwarg!r} kwarg; logging without traceback.",
                 stacklevel=3,
                 disable_warnings=ctx.disable_warnings,
             )

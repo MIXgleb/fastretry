@@ -88,7 +88,7 @@ class _Defaults:
     async_sleep_call: Callable[[float], Awaitable[None]] = asyncio.sleep
 
     # --- logging ---
-    exc_info_kwarg: str = "exc_info"
+    logger_traceback_kwarg: str = "exc_info"
     logger_info: LoggerType | None = _DEFAULT_LOGGER.info
     logger_warning: LoggerType | None = _DEFAULT_LOGGER.warning
     logger_error: LoggerType | None = _DEFAULT_LOGGER.error
@@ -145,7 +145,7 @@ def configure_logging(**kwargs: Unpack[LoggingKwargs]) -> None:
         Callable for warning-level messages
     logger_error : LoggerType | None, optional
         Callable for error-level messages
-    exc_info_kwarg : str, optional
+    logger_traceback_kwarg : str, optional
         Name of the keyword argument used to pass the exception to the logger,
         by default "exc_info"
 

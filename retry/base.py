@@ -48,11 +48,11 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         "disable_logging",
         "disable_warning_logging",
         "disable_warnings",
-        "exc_info_kwarg",
         "include_traceback_in_error_log",
         "include_traceback_in_warning_log",
         "logger_error",
         "logger_info",
+        "logger_traceback_kwarg",
         "logger_warning",
         "re_raise_exception",
         "return_default_value",
@@ -116,7 +116,7 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         self.logger_info: Final = defaults.logger_info
         self.logger_warning: Final = defaults.logger_warning
         self.logger_error: Final = defaults.logger_error
-        self.exc_info_kwarg: Final = defaults.exc_info_kwarg
+        self.logger_traceback_kwarg: Final = defaults.logger_traceback_kwarg
 
     def _resolve_re_raise_exception(
         self,
