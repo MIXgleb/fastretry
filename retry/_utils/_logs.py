@@ -9,8 +9,6 @@ keyword fallback.
 import re
 from typing import (
     TYPE_CHECKING,
-    Literal,
-    Protocol,
     assert_never,
 )
 
@@ -27,55 +25,34 @@ if TYPE_CHECKING:
     )
 
     from retry._types import (
+        LogContext,
         LoggerType,
+        LogLevel,
     )
 
-
-type _LogLevel = Literal["info", "warning", "error"]
 
 _UNEXPECTED_KWARG_RE = re.compile(
     r"got an unexpected keyword argument ['\"](?P<name>[^'\"]+)['\"]",
 )
 
 
-class _LogContext(Protocol):
-    """
-    Interface for objects that expose logging configuration.
-
-    Implemented by ``BaseRetrying``. Any object with these attributes can
-    be passed to :class:`Log`.
-    """
-
-    logger_info: LoggerType | None
-    logger_warning: LoggerType | None
-    logger_error: LoggerType | None
-    logger_traceback_kwarg: str
-    disable_logging: bool
-    disable_info_logging: bool
-    disable_warning_logging: bool
-    disable_error_logging: bool
-    include_traceback_in_warning_log: bool
-    include_traceback_in_error_log: bool
-    disable_warnings: bool
-
-
 class Log:
     """
-    Level-aware logging wrapper around a :class:`_LogContext`.
+    Level-aware logging wrapper around a :class:`LogContext`.
 
     Provides ``info``, ``warning``, and ``error`` methods that select the
     appropriate logger and traceback configuration from the context.
 
     Parameters
     ----------
-    ctx : _LogContext
+    ctx : LogContext
         Logging configuration (usually a ``BaseRetrying`` instance).
 
     """
 
     __slots__ = ("_ctx",)
 
-    def __init__(self, ctx: _LogContext) -> None:
+    def __init__(self, ctx: LogContext) -> None:
         self._ctx = ctx
 
     def info(
@@ -158,7 +135,7 @@ class Log:
     def _emit(
         self,
         *,
-        level: _LogLevel,
+        level: LogLevel,
         message: str,
         args: tuple[Any, ...],
         intercepted_exception: BaseException | None,
@@ -184,7 +161,7 @@ class Log:
 
     def _resolve(
         self,
-        level: _LogLevel,
+        level: LogLevel,
     ) -> tuple[LoggerType | None, bool, bool]:
         """
         Return the logger, disable flag, and traceback flag for a level.
@@ -227,7 +204,7 @@ class Log:
         message: str,
         args: tuple[Any, ...],
         kwargs: dict[str, Any],
-        level: _LogLevel,
+        level: LogLevel,
     ) -> None:
         """
         Call ``logger``, dropping keyword arguments it does not accept.
@@ -248,7 +225,7 @@ class Log:
         kwargs : dict[str, Any]
             Keyword arguments to pass. Modified in place as unsupported
             keys are dropped.
-        level : _LogLevel
+        level : LogLevel
             Log level, used in warning messages.
 
         Raises

@@ -10,6 +10,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Final,
+    Literal,
     Protocol,
     TypedDict,
     final,
@@ -21,6 +22,9 @@ if TYPE_CHECKING:
         Awaitable,
         Callable,
     )
+
+
+type LogLevel = Literal["info", "warning", "error"]
 
 
 @final
@@ -53,6 +57,27 @@ class LoggerType(Protocol):
 
     def __call__(self, *args: Any, **kwargs: Any) -> None:  # ruff: ignore[any-type]
         """Call the logger with an optional %-style format."""
+
+
+class LogContext(Protocol):
+    """
+    Interface for objects that expose logging configuration.
+
+    Implemented by ``BaseRetrying``. Any object with these attributes can
+    be passed to :class:`Log`.
+    """
+
+    logger_info: LoggerType | None
+    logger_warning: LoggerType | None
+    logger_error: LoggerType | None
+    logger_traceback_kwarg: str
+    disable_logging: bool
+    disable_info_logging: bool
+    disable_warning_logging: bool
+    disable_error_logging: bool
+    include_traceback_in_warning_log: bool
+    include_traceback_in_error_log: bool
+    disable_warnings: bool
 
 
 class RetryOptions(
