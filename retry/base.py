@@ -249,17 +249,17 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         *,
         fname: str,
         retry_index: int,
-        calculator: DelayCalculator,
+        delay_calculator: DelayCalculator,
     ) -> Awaitable[None] | None:
         """
         Sleep between attempts.
 
         Does nothing on the last attempt. The delay is computed by
-        ``calculator`` using the configured delay and jitter strategy.
+        ``delay_calculator`` using the configured delay and jitter strategy.
 
         Parameters
         ----------
-        calculator : DelayCalculator
+        delay_calculator : DelayCalculator
             Delay calculator tracking the previous attempt's delay.
         fname : str
             Name of the wrapped function, used for logging.

@@ -53,7 +53,7 @@ class SyncRetrying[**P, R](BaseRetrying[R, Callable[P, R | UnsetType]]):
             intercepted_exception: BaseException | None = None
             fname = getattr(func, "__qualname__", "<anonymous>")
             result = self.return_default_value
-            calculator = DelayCalculator(
+            delay_calculator = DelayCalculator(
                 delay=self.delay,
                 jitter=self.jitter,
             )
@@ -71,7 +71,7 @@ class SyncRetrying[**P, R](BaseRetrying[R, Callable[P, R | UnsetType]]):
                     self.sleep_block(
                         fname=fname,
                         retry_index=retry_index,
-                        calculator=calculator,
+                        delay_calculator=delay_calculator,
                     )
                     intercepted_exception = exc
             else:
@@ -88,14 +88,14 @@ class SyncRetrying[**P, R](BaseRetrying[R, Callable[P, R | UnsetType]]):
     def sleep_block(
         self,
         *,
-        calculator: DelayCalculator,
+        delay_calculator: DelayCalculator,
         fname: str,
         retry_index: int,
     ) -> None:
         if retry_index == self.attempts:
             return
 
-        if (computed := calculator.compute(retry_index)) <= 0:
+        if (computed := delay_calculator.compute(retry_index)) <= 0:
             return
 
         self._log.info(
