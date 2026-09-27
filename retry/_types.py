@@ -25,7 +25,6 @@ if TYPE_CHECKING:
     )
 
 
-type LogKind = Literal["success", "retry", "failure", "sleep"]
 type Delay = float | ExponentialDelay
 type JitterStrategy = Literal["full", "equal", "decorrelated", "none"]
 
@@ -60,25 +59,6 @@ class LoggerType(Protocol):
 
     def __call__(self, *args: Any, **kwargs: Any) -> None:  # ruff: ignore[any-type]
         """Call the logger with an optional %-style format."""
-
-
-class LogContext(Protocol):
-    """
-    Interface for objects that expose logging configuration.
-
-    Implemented by ``BaseRetrying``. Any object with these attributes can
-    be passed to :class:`Log`.
-    """
-
-    logger_success: LoggerType | None
-    logger_retry: LoggerType | None
-    logger_failure: LoggerType | None
-    logger_sleep: LoggerType | None
-    logger_traceback_kwarg: str
-    disable_logging: bool
-    include_traceback_in_retry_log: bool
-    include_traceback_in_failure_log: bool
-    disable_warnings: bool
 
 
 class RetryOptions(

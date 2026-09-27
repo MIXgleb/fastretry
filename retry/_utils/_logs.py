@@ -10,6 +10,7 @@ import re
 from typing import (
     TYPE_CHECKING,
     Literal,
+    Protocol,
     assert_never,
     overload,
 )
@@ -27,15 +28,33 @@ if TYPE_CHECKING:
     )
 
     from retry._types import (
-        LogContext,
         LoggerType,
-        LogKind,
     )
 
+type LogKind = Literal["success", "retry", "failure", "sleep"]
 
 _UNEXPECTED_KWARG_RE = re.compile(
     r"got an unexpected keyword argument ['\"](?P<name>[^'\"]+)['\"]",
 )
+
+
+class LogContext(Protocol):
+    """
+    Interface for objects that expose logging configuration.
+
+    Implemented by ``BaseRetrying``. Any object with these attributes can
+    be passed to :class:`Log`.
+    """
+
+    logger_success: LoggerType | None
+    logger_retry: LoggerType | None
+    logger_failure: LoggerType | None
+    logger_sleep: LoggerType | None
+    logger_traceback_kwarg: str
+    disable_logging: bool
+    include_traceback_in_retry_log: bool
+    include_traceback_in_failure_log: bool
+    disable_warnings: bool
 
 
 class Log:
