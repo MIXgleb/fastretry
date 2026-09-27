@@ -74,7 +74,6 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         jitter: JitterStrategy | UnsetType = UNSET,
         disable_logging: bool | UnsetType = UNSET,
         disable_warnings: bool | UnsetType = UNSET,
-        re_raise_exception: bool | UnsetType = UNSET,
     ) -> None:
         """
         Initialize the retry decorator.
@@ -97,8 +96,6 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
             Disable all logging
         disable_warnings : bool, optional
             Disable all warnings
-        re_raise_exception : bool, optional
-            Re-raise an exception after all attempts
 
         """
         # --- per-decorator options ---
@@ -142,9 +139,7 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
 
         # --- derived options ---
         self.jitter: Final = self._resolve_jitter(jitter=jitter)
-        self.re_raise_exception: Final = self._resolve_re_raise_exception(
-            re_raise_exception=re_raise_exception
-        )
+        self.re_raise_exception: Final = self._resolve_re_raise_exception()
 
     @final
     def copy(self) -> Self:
@@ -292,49 +287,27 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         """
         raise NotImplementedError
 
-    def _resolve_re_raise_exception(
-        self,
-        *,
-        re_raise_exception: bool | UnsetType,
-    ) -> bool:
+    def _resolve_re_raise_exception(self) -> bool:
         """
-        Resolve ``re_raise_exception`` after initialization.
+        Compute ``re_raise_exception`` from ``return_default_value``.
 
-        The ``return_default_value`` and ``re_raise_exception=True`` options are
-        mutually exclusive: a wrapper either returns a value on failure or
-        re-raises the last exception.
+        The two options are mutually exclusive: a wrapper either returns a
+        value on failure or re-raises the last exception.
 
-        - If ``return_default_value`` is provided, the wrapper returns it after
-          all attempts fail. ``re_raise_exception=True`` in this case is ignored.
-        - If ``return_default_value`` is not provided, the wrapper re-raises the
-          last exception by default. ``re_raise_exception=False`` in this case
-          causes ``UNSET`` to be returned.
+        - If ``return_default_value`` is provided, ``re_raise_exception`` is
+        ``False``: the wrapper returns the default value after all attempts
+        fail.
+        - If ``return_default_value`` is not provided, ``re_raise_exception``
+        is ``True``: the wrapper re-raises the last exception.
 
         Returns
         -------
         bool
-            re_raise_exception value
+            ``True`` when the wrapper should re-raise the last exception,
+            ``False`` when it should return ``return_default_value``.
 
         """
-        if isinstance(self.return_default_value, UnsetType):
-            if re_raise_exception is False:
-                self._warnings.warn(
-                    "\n\tre_raise_exception=False is set but return_default_value "
-                    "is not provided; the wrapper will return `UNSET` by default.\n\t"
-                    "Set return_default_value to return a specific value, or set "
-                    "re_raise_exception=True to re-raise the last exception.",
-                    stacklevel=8,
-                )
-                return False
-            return True
-
-        if re_raise_exception is True:
-            self._warnings.warn(
-                "\n\tre_raise_exception=True is ignored because return_default_value "
-                "is set; the wrapper will return the default value on failure.",
-                stacklevel=8,
-            )
-        return False
+        return isinstance(self.return_default_value, UnsetType)
 
     def _resolve_jitter(
         self,

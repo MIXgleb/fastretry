@@ -110,7 +110,6 @@ class RetryKwargs[R](
     """Keyword arguments accepted by :func:`~.retry.retry`."""
 
     return_default_value: R | UnsetType
-    re_raise_exception: bool | UnsetType
     jitter: JitterStrategy | UnsetType
 
 

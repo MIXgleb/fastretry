@@ -23,7 +23,6 @@ from collections.abc import (
     Callable,
 )
 from typing import (
-    Literal,
     TypeVar,
     Unpack,
     overload,
@@ -54,21 +53,8 @@ def retry(func: _WrappedFunc) -> _WrappedFunc: ...  # ruff: ignore[non-pep695-ge
 @overload
 def retry(
     *,
-    return_default_value: _ReturnType,
-    re_raise_exception: Literal[False] = False,
     attempts: int | UnsetType = UNSET,
-    delay: Delay | UnsetType = UNSET,
-    jitter: JitterStrategy | UnsetType = UNSET,
-    disable_logging: bool | UnsetType = UNSET,
-    disable_warnings: bool | UnsetType = UNSET,
-) -> Callable[[_WrappedFunc], _WrappedFunc]: ...
-
-
-@overload
-def retry(
-    *,
-    re_raise_exception: Literal[True] = True,
-    attempts: int | UnsetType = UNSET,
+    return_default_value: _ReturnType | UnsetType = UNSET,
     delay: Delay | UnsetType = UNSET,
     jitter: JitterStrategy | UnsetType = UNSET,
     disable_logging: bool | UnsetType = UNSET,
@@ -100,7 +86,9 @@ def retry[**P, R](  # ruff: ignore[undocumented-param]
     attempts : int, optional
         Number of attempts (factory default: 1)
     return_default_value : Any, optional
-        Default value returned if the function fails after all attempts
+        Default value returned if the function fails after all attempts.
+        When provided, the wrapper returns it instead of re-raising the
+        last exception.
     delay : Delay, optional
         Delay between attempts in seconds. A plain ``float`` gives a
         fixed delay (factory default: 0); an ``ExponentialDelay``
@@ -114,9 +102,6 @@ def retry[**P, R](  # ruff: ignore[undocumented-param]
         Disable all logging (factory default: False)
     disable_warnings : bool, optional
         Disable all warnings (factory default: False)
-    re_raise_exception : bool, optional
-        Re-raise the last intercepted exception after all attempts
-        (factory default: True)
 
     Returns
     -------
@@ -125,18 +110,14 @@ def retry[**P, R](  # ruff: ignore[undocumented-param]
 
     Notes
     -----
-    Interaction between ``return_default_value`` and ``re_raise_exception``:
+    **Interaction between ``return_default_value`` and re-raising**
 
-    - If ``return_default_value`` is provided, the wrapper returns it after
-      all attempts fail. ``re_raise_exception=True`` in this case is ignored
-      (a warning is emitted).
-    - If ``return_default_value`` is not provided, the wrapper re-raises the
-      last exception by default. ``re_raise_exception=False`` in this case
-      causes ``UNSET`` to be returned (a warning is emitted).
-    - Passing ``re_raise_exception=False`` without ``return_default_value``
-      is therefore discouraged.
+    - If ``return_default_value`` is provided, the wrapper returns it
+      after all attempts fail.
+    - If ``return_default_value`` is not provided, the wrapper re-raises
+      the last exception.
 
-    Type checking of ``return_default_value``:
+    **Type checking of ``return_default_value``**
 
     When ``return_default_value`` is provided, the decorator performs a
     best-effort runtime check that its type matches the declared return type
@@ -147,7 +128,6 @@ def retry[**P, R](  # ruff: ignore[undocumented-param]
 
     Because the check is best-effort, always pass a ``return_default_value``
     whose type is compatible with the function's declared return type.
-
 
     """
     if func is not None:
