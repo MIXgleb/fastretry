@@ -101,9 +101,9 @@ class AsyncRetrying[**P, R](BaseRetrying[R, Callable[P, Awaitable[R | UnsetType]
         if (computed := delay_calculator.compute(retry_index)) <= 0:
             return
 
-        self._log.info(
-            "Wait %s seconds between attempts to execute the '%s' function",
-            computed,
-            fname,
+        self._log.record(
+            log_kind="sleep",
+            message="Wait %s seconds between attempts to execute the '%s' function",
+            args=(computed, fname),
         )
         await self.sleep_call(computed)

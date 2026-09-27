@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     )
 
 
-type LogLevel = Literal["info", "warning", "error"]
+type LogKind = Literal["success", "retry", "failure", "sleep"]
 type Delay = float | ExponentialDelay
 type JitterStrategy = Literal["full", "equal", "decorrelated", "none"]
 
@@ -70,16 +70,14 @@ class LogContext(Protocol):
     be passed to :class:`Log`.
     """
 
-    logger_info: LoggerType | None
-    logger_warning: LoggerType | None
-    logger_error: LoggerType | None
+    logger_success: LoggerType | None
+    logger_retry: LoggerType | None
+    logger_failure: LoggerType | None
+    logger_sleep: LoggerType | None
     logger_traceback_kwarg: str
     disable_logging: bool
-    enable_info_logging: bool
-    enable_warning_logging: bool
-    enable_error_logging: bool
-    include_traceback_in_warning_log: bool
-    include_traceback_in_error_log: bool
+    include_traceback_in_retry_log: bool
+    include_traceback_in_failure_log: bool
     disable_warnings: bool
 
 
@@ -136,11 +134,6 @@ class GlobalKwargs(
     :func:`~._config.configure_retry`.
     """
 
-    enable_info_logging: bool | UnsetType
-    enable_warning_logging: bool | UnsetType
-    enable_error_logging: bool | UnsetType
-    include_traceback_in_warning_log: bool | UnsetType
-    include_traceback_in_error_log: bool | UnsetType
     jitter_for_exponential: JitterStrategy | UnsetType
     jitter_for_fixed: JitterStrategy | UnsetType
     sync_sleep_call: Callable[[float], None] | UnsetType
@@ -153,10 +146,13 @@ class LoggingKwargs(
 ):
     """Options related to logging, configured via :func:`~._config.configure_logging`."""
 
-    logger_info: LoggerType | UnsetType | None
-    logger_warning: LoggerType | UnsetType | None
-    logger_error: LoggerType | UnsetType | None
-    logger_traceback_kwarg: str | UnsetType
+    logger_success: LoggerType | None
+    logger_retry: LoggerType | None
+    logger_failure: LoggerType | None
+    logger_sleep: LoggerType | None
+    include_traceback_in_retry_log: bool | UnsetType
+    include_traceback_in_failure_log: bool | UnsetType
+    logger_traceback_kwarg: str
 
 
 class DefaultsKwargs(

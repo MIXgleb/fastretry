@@ -79,13 +79,6 @@ class _Defaults:
     disable_warnings: bool = False
 
     # --- global options (application-wide) ---
-    enable_info_logging: bool = False
-    enable_warning_logging: bool = True
-    enable_error_logging: bool = True
-
-    include_traceback_in_warning_log: bool = False
-    include_traceback_in_error_log: bool = True
-
     jitter_for_exponential: JitterStrategy = "none"
     jitter_for_fixed: JitterStrategy = "none"
 
@@ -93,9 +86,14 @@ class _Defaults:
     async_sleep_call: Callable[[float], Awaitable[None]] = asyncio.sleep
 
     # --- logging ---
-    logger_info: LoggerType | None = _DEFAULT_LOGGER.info
-    logger_warning: LoggerType | None = _DEFAULT_LOGGER.warning
-    logger_error: LoggerType | None = _DEFAULT_LOGGER.error
+    logger_sleep: LoggerType | None = None
+    logger_success: LoggerType | None = None
+    logger_retry: LoggerType | None = _DEFAULT_LOGGER.warning
+    logger_failure: LoggerType | None = _DEFAULT_LOGGER.error
+
+    include_traceback_in_retry_log: bool = False
+    include_traceback_in_failure_log: bool = True
+
     logger_traceback_kwarg: str = "exc_info"
 
     @final
@@ -140,19 +138,25 @@ def configure_logging(**kwargs: Unpack[LoggingKwargs]) -> None:
     By default, all loggers are built-in ``logging.Logger`` methods
     writing to stdout.
 
-    Pass ``None`` to disable logging entirely.
+    Pass ``None`` to disable a specific logger.
 
     Parameters
     ----------
-    logger_info : LoggerType | None, optional
-        Callable for info-level messages
-    logger_warning : LoggerType | None, optional
-        Callable for warning-level messages
-    logger_error : LoggerType | None, optional
-        Callable for error-level messages
+    logger_success : LoggerType | None, optional
+        Callable for messages emitted after a successful attempt.
+    logger_retry : LoggerType | None, optional
+        Callable for messages emitted after a failed attempt, before sleeping.
+    logger_failure : LoggerType | None, optional
+        Callable for messages emitted after all attempts have failed.
+    logger_sleep : LoggerType | None, optional
+        Callable for messages emitted before sleeping between attempts.
+    include_traceback_in_retry_log : bool, optional
+        Include traceback in retry logs, by default False.
+    include_traceback_in_failure_log : bool, optional
+        Include traceback in failure logs, by default True.
     logger_traceback_kwarg : str, optional
-        Name of the keyword argument used to pass the exception to the logger,
-        by default "exc_info"
+        Name of the keyword argument used to pass the exception to the
+        logger, by default "exc_info".
 
     """
     defaults.set(**kwargs)
@@ -190,16 +194,6 @@ def configure_retry(**kwargs: Unpack[GlobalKwargs]) -> None:
 
     Parameters
     ----------
-    enable_info_logging : bool, optional
-        Disable info-level logging, by default False
-    enable_warning_logging : bool, optional
-        Disable warning-level logging, by default True
-    enable_error_logging : bool, optional
-        Disable error-level logging, by default True
-    include_traceback_in_warning_log : bool, optional
-        Include traceback in warning logs, by default False
-    include_traceback_in_error_log : bool, optional
-        Include traceback in error logs, by default True
     jitter_for_exponential : JitterStrategy, optional
         Default jitter strategy for exponential delay, by default "full"
     jitter_for_fixed : JitterStrategy, optional

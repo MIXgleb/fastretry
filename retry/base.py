@@ -51,16 +51,14 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         "delay",
         "disable_logging",
         "disable_warnings",
-        "enable_error_logging",
-        "enable_info_logging",
-        "enable_warning_logging",
-        "include_traceback_in_error_log",
-        "include_traceback_in_warning_log",
+        "include_traceback_in_failure_log",
+        "include_traceback_in_retry_log",
         "jitter",
-        "logger_error",
-        "logger_info",
+        "logger_failure",
+        "logger_retry",
+        "logger_sleep",
+        "logger_success",
         "logger_traceback_kwarg",
-        "logger_warning",
         "re_raise_exception",
         "return_default_value",
     )
@@ -121,16 +119,14 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         )
 
         # --- application-wide options ---
-        self.enable_info_logging: Final = defaults.enable_info_logging
-        self.enable_warning_logging: Final = defaults.enable_warning_logging
-        self.enable_error_logging: Final = defaults.enable_error_logging
-        self.include_traceback_in_warning_log: Final = defaults.include_traceback_in_warning_log
-        self.include_traceback_in_error_log: Final = defaults.include_traceback_in_error_log
+        self.include_traceback_in_retry_log: Final = defaults.include_traceback_in_retry_log
+        self.include_traceback_in_failure_log: Final = defaults.include_traceback_in_failure_log
 
         # --- logger configuration ---
-        self.logger_info: Final = defaults.logger_info
-        self.logger_warning: Final = defaults.logger_warning
-        self.logger_error: Final = defaults.logger_error
+        self.logger_success: Final = defaults.logger_success
+        self.logger_retry: Final = defaults.logger_retry
+        self.logger_failure: Final = defaults.logger_failure
+        self.logger_sleep: Final = defaults.logger_sleep
         self.logger_traceback_kwarg: Final = defaults.logger_traceback_kwarg
 
         # --- internal helpers ---
@@ -206,11 +202,10 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
             intercepted exception during function call
 
         """
-        self._log.warning(
-            "Error executing the '%s' function. Try %d of %d.",
-            fname,
-            retry_index,
-            self.attempts,
+        self._log.record(
+            log_kind="retry",
+            message="Error executing the '%s' function. Try %d of %d.",
+            args=(fname, retry_index, self.attempts),
             intercepted_exception=intercepted_exception,
         )
 
@@ -231,9 +226,10 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
             intercepted exception during function call
 
         """
-        self._log.error(
-            "Failed the execution of the '%s' function.",
-            fname,
+        self._log.record(
+            log_kind="failure",
+            message="Failed the execution of the '%s' function.",
+            args=(fname,),
             intercepted_exception=intercepted_exception,
         )
 

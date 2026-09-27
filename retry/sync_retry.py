@@ -100,9 +100,9 @@ class SyncRetrying[**P, R](BaseRetrying[R, Callable[P, R | UnsetType]]):
         if (computed := delay_calculator.compute(retry_index)) <= 0:
             return
 
-        self._log.info(
-            "Wait %s seconds between attempts to execute the '%s' function",
-            computed,
-            fname,
+        self._log.record(
+            log_kind="sleep",
+            message="Wait %s seconds between attempts to execute the '%s' function",
+            args=(computed, fname),
         )
         self.sleep_call(computed)
