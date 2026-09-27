@@ -82,7 +82,7 @@ class Log:
         self,
         message: str,
         *args: object,
-        intercepted_exception: BaseException | None = None,
+        intercepted_exception: Exception | None = None,
     ) -> None:
         """
         Emit a warning-level log message.
@@ -93,7 +93,7 @@ class Log:
             ``%``-style format string.
         *args : object
             Format arguments.
-        intercepted_exception : BaseException | None, optional
+        intercepted_exception : Exception | None, optional
             Exception to pass via ``logger_traceback_kwarg`` if traceback
             logging is enabled.
 
@@ -109,7 +109,7 @@ class Log:
         self,
         message: str,
         *args: object,
-        intercepted_exception: BaseException | None = None,
+        intercepted_exception: Exception | None = None,
     ) -> None:
         """
         Emit an error-level log message.
@@ -120,7 +120,7 @@ class Log:
             ``%``-style format string.
         *args : object
             Format arguments.
-        intercepted_exception : BaseException | None, optional
+        intercepted_exception : Exception | None, optional
             Exception to pass via ``logger_traceback_kwarg`` if traceback
             logging is enabled.
 
@@ -138,7 +138,7 @@ class Log:
         level: LogLevel,
         message: str,
         args: tuple[Any, ...],
-        intercepted_exception: BaseException | None,
+        intercepted_exception: Exception | None,
     ) -> None:
         """Resolve logger and dispatch the message."""
         logger, disable_level, include_traceback = self._resolve(level)

@@ -53,7 +53,7 @@ class AsyncRetrying[**P, R](BaseRetrying[R, Callable[P, Awaitable[R | UnsetType]
     ) -> Callable[P, Awaitable[R | UnsetType]]:
         @functools.wraps(func)
         async def async_wrapper(*args: P.args, **kwargs: P.kwargs) -> R | UnsetType:
-            intercepted_exception: BaseException | None = None
+            intercepted_exception: Exception | None = None
             fname = getattr(func, "__qualname__", "<anonymous>")
             result = self.return_default_value
             delay_calculator = DelayCalculator(
@@ -65,7 +65,7 @@ class AsyncRetrying[**P, R](BaseRetrying[R, Callable[P, Awaitable[R | UnsetType]
                 try:
                     result = await func(*args, **kwargs)
                     break
-                except BaseException as exc:  # ruff: ignore[blind-except]
+                except Exception as exc:  # ruff: ignore[blind-except]
                     self.exception_block(
                         fname=fname,
                         retry_index=retry_index,

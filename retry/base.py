@@ -162,8 +162,10 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         """
         Wrap a function with retry logic.
 
-        Performs shared pre-checks and delegates the actual
-        wrapping to :meth:`_wrap`.
+        Performs shared pre-checks and delegates the actual wrapping to
+        :meth:`_wrap`. Only ``Exception`` subclasses are retried; all
+        ``BaseException`` subclasses (such as ``KeyboardInterrupt``,
+        ``SystemExit``, and ``asycnio.CancelError``) propagate immediately.
 
         Parameters
         ----------
@@ -189,7 +191,7 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         *,
         fname: str,
         retry_index: int,
-        intercepted_exception: BaseException,
+        intercepted_exception: Exception,
     ) -> None:
         """
         Block is called after one failed attempt.
@@ -200,7 +202,7 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
             name of the called function
         retry_index : int
             attempt index
-        intercepted_exception : BaseException
+        intercepted_exception : Exception
             intercepted exception during function call
 
         """
@@ -216,7 +218,7 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         self,
         *,
         fname: str,
-        intercepted_exception: BaseException | None,
+        intercepted_exception: Exception | None,
     ) -> None:
         """
         Block is called after all failed attempts.
@@ -225,7 +227,7 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         ----------
         fname : str
             name of the called function
-        intercepted_exception : BaseException | None
+        intercepted_exception : Exception | None
             intercepted exception during function call
 
         """

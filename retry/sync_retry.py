@@ -52,7 +52,7 @@ class SyncRetrying[**P, R](BaseRetrying[R, Callable[P, R | UnsetType]]):
     ) -> Callable[P, R | UnsetType]:
         @functools.wraps(func)
         def wrapper(*args: P.args, **kwargs: P.kwargs) -> R | UnsetType:
-            intercepted_exception: BaseException | None = None
+            intercepted_exception: Exception | None = None
             fname = getattr(func, "__qualname__", "<anonymous>")
             result = self.return_default_value
             delay_calculator = DelayCalculator(
@@ -64,7 +64,7 @@ class SyncRetrying[**P, R](BaseRetrying[R, Callable[P, R | UnsetType]]):
                 try:
                     result = func(*args, **kwargs)
                     break
-                except BaseException as exc:  # ruff: ignore[blind-except]
+                except Exception as exc:  # ruff: ignore[blind-except]
                     self.exception_block(
                         fname=fname,
                         retry_index=retry_index,
