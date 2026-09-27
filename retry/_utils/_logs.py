@@ -141,9 +141,9 @@ class Log:
         intercepted_exception: Exception | None,
     ) -> None:
         """Resolve logger and dispatch the message."""
-        logger, disable_level, include_traceback = self._resolve(level)
+        logger, enable_level, include_traceback = self._resolve(level)
 
-        if self._ctx.disable_logging or disable_level or logger is None:
+        if self._ctx.disable_logging or not enable_level or logger is None:
             return
 
         kwargs: dict[str, Any] = {}
@@ -181,17 +181,17 @@ class Log:
 
         match level:
             case "info":
-                return ctx.logger_info, ctx.disable_info_logging, False
+                return ctx.logger_info, ctx.enable_info_logging, False
             case "warning":
                 return (
                     ctx.logger_warning,
-                    ctx.disable_warning_logging,
+                    ctx.enable_warning_logging,
                     ctx.include_traceback_in_warning_log,
                 )
             case "error":
                 return (
                     ctx.logger_error,
-                    ctx.disable_error_logging,
+                    ctx.enable_error_logging,
                     ctx.include_traceback_in_error_log,
                 )
             case _:

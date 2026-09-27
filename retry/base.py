@@ -49,11 +49,11 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         "_warnings",
         "attempts",
         "delay",
-        "disable_error_logging",
-        "disable_info_logging",
         "disable_logging",
-        "disable_warning_logging",
         "disable_warnings",
+        "enable_error_logging",
+        "enable_info_logging",
+        "enable_warning_logging",
         "include_traceback_in_error_log",
         "include_traceback_in_warning_log",
         "jitter",
@@ -121,9 +121,9 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         )
 
         # --- application-wide options ---
-        self.disable_info_logging: Final = defaults.disable_info_logging
-        self.disable_warning_logging: Final = defaults.disable_warning_logging
-        self.disable_error_logging: Final = defaults.disable_error_logging
+        self.enable_info_logging: Final = defaults.enable_info_logging
+        self.enable_warning_logging: Final = defaults.enable_warning_logging
+        self.enable_error_logging: Final = defaults.enable_error_logging
         self.include_traceback_in_warning_log: Final = defaults.include_traceback_in_warning_log
         self.include_traceback_in_error_log: Final = defaults.include_traceback_in_error_log
 

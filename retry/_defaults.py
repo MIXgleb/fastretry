@@ -79,9 +79,9 @@ class _Defaults:
     disable_warnings: bool = False
 
     # --- global options (application-wide) ---
-    disable_info_logging: bool = True
-    disable_warning_logging: bool = False
-    disable_error_logging: bool = False
+    enable_info_logging: bool = False
+    enable_warning_logging: bool = True
+    enable_error_logging: bool = True
 
     include_traceback_in_warning_log: bool = False
     include_traceback_in_error_log: bool = True
@@ -190,12 +190,12 @@ def configure_retry(**kwargs: Unpack[GlobalKwargs]) -> None:
 
     Parameters
     ----------
-    disable_info_logging : bool, optional
-        Disable info-level logging, by default True
-    disable_warning_logging : bool, optional
-        Disable warning-level logging, by default False
-    disable_error_logging : bool, optional
-        Disable error-level logging, by default False
+    enable_info_logging : bool, optional
+        Disable info-level logging, by default False
+    enable_warning_logging : bool, optional
+        Disable warning-level logging, by default True
+    enable_error_logging : bool, optional
+        Disable error-level logging, by default True
     include_traceback_in_warning_log : bool, optional
         Include traceback in warning logs, by default False
     include_traceback_in_error_log : bool, optional

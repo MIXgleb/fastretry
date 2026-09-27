@@ -75,9 +75,9 @@ class LogContext(Protocol):
     logger_error: LoggerType | None
     logger_traceback_kwarg: str
     disable_logging: bool
-    disable_info_logging: bool
-    disable_warning_logging: bool
-    disable_error_logging: bool
+    enable_info_logging: bool
+    enable_warning_logging: bool
+    enable_error_logging: bool
     include_traceback_in_warning_log: bool
     include_traceback_in_error_log: bool
     disable_warnings: bool
@@ -136,9 +136,9 @@ class GlobalKwargs(
     :func:`~._config.configure_retry`.
     """
 
-    disable_info_logging: bool | UnsetType
-    disable_warning_logging: bool | UnsetType
-    disable_error_logging: bool | UnsetType
+    enable_info_logging: bool | UnsetType
+    enable_warning_logging: bool | UnsetType
+    enable_error_logging: bool | UnsetType
     include_traceback_in_warning_log: bool | UnsetType
     include_traceback_in_error_log: bool | UnsetType
     jitter_for_exponential: JitterStrategy | UnsetType
