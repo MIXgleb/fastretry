@@ -138,8 +138,8 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         self._warnings = Warnings(disable_warnings=self.disable_warnings)
 
         # --- derived options ---
-        self.jitter: Final = self._resolve_jitter(jitter=jitter)
-        self.re_raise_exception: Final = self._resolve_re_raise_exception()
+        self.jitter: Final = self._derive_jitter(jitter=jitter)
+        self.re_raise_exception: Final = self._derive_re_raise_exception()
 
     @final
     def copy(self) -> Self:
@@ -287,7 +287,7 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         """
         raise NotImplementedError
 
-    def _resolve_re_raise_exception(self) -> bool:
+    def _derive_re_raise_exception(self) -> bool:
         """
         Compute ``re_raise_exception`` from ``return_default_value``.
 
@@ -309,7 +309,7 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         """
         return isinstance(self.return_default_value, UnsetType)
 
-    def _resolve_jitter(
+    def _derive_jitter(
         self,
         *,
         jitter: JitterStrategy | UnsetType,
