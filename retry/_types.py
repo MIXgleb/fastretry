@@ -11,6 +11,7 @@ from typing import (
     Any,
     Final,
     Literal,
+    NamedTuple,
     Protocol,
     TypedDict,
     final,
@@ -25,6 +26,8 @@ if TYPE_CHECKING:
 
 
 type LogLevel = Literal["info", "warning", "error"]
+type Delay = float | ExponentialDelay
+type JitterStrategy = Literal["full", "equal", "decorrelated", "none"]
 
 
 @final
@@ -95,7 +98,7 @@ class RetryOptions(
     """
 
     attempts: int | UnsetType
-    delay: float | UnsetType
+    delay: Delay | UnsetType
     disable_logging: bool | UnsetType
     disable_warnings: bool | UnsetType
 
@@ -108,6 +111,7 @@ class RetryKwargs[R](
 
     return_default_value: R | UnsetType
     re_raise_exception: bool | UnsetType
+    jitter: JitterStrategy | UnsetType
 
 
 class LocalKwargs(
@@ -138,6 +142,8 @@ class GlobalKwargs(
     disable_error_logging: bool | UnsetType
     include_traceback_in_warning_log: bool | UnsetType
     include_traceback_in_error_log: bool | UnsetType
+    jitter_for_exponential: JitterStrategy | UnsetType
+    jitter_for_fixed: JitterStrategy | UnsetType
     sync_sleep_call: Callable[[float], None] | UnsetType
     async_sleep_call: Callable[[float], Awaitable[None]] | UnsetType
 
@@ -161,3 +167,31 @@ class DefaultsKwargs(
     total=False,
 ):
     """All keyword arguments accepted by :meth:`_Defaults.set`."""
+
+
+class ExponentialDelay(NamedTuple):
+    """
+    Exponential backoff configuration.
+
+    The effective delay for attempt ``n`` (1-based) is::
+
+        delay * backoff_factor ** (n - 1)
+
+    capped at ``max_delay`` when it is set.
+
+    Parameters
+    ----------
+    delay : float
+        Base delay in seconds. Must be positive.
+    backoff_factor : float, optional
+        Multiplier applied on each subsequent attempt, by default 2.0.
+        Values ``<= 1.0`` effectively disable exponential growth.
+    max_delay : float | None, optional
+        Upper bound for the computed delay, by default None (no cap).
+        Must be positive when set.
+
+    """
+
+    delay: float
+    backoff_factor: float = 2.0
+    max_delay: float | None = None

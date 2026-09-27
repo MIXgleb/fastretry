@@ -23,6 +23,7 @@ from retry._defaults import (
 from retry._types import (
     UnsetType,
 )
+from retry._utils import DelayCalculator
 from retry.base import (
     BaseRetrying,
 )
@@ -53,17 +54,32 @@ class AsyncRetrying[**P, R](BaseRetrying[R, Callable[P, Awaitable[R | UnsetType]
             intercepted_exception: BaseException | None = None
             fname = getattr(func, "__qualname__", "<anonymous>")
             result = self.return_default_value
+            calculator = DelayCalculator(
+                delay=self.delay,
+                jitter=self.jitter,
+            )
 
             for retry_index in range(1, self.attempts + 1):
                 try:
                     result = await func(*args, **kwargs)
                     break
                 except BaseException as exc:  # ruff: ignore[blind-except]
-                    self.exception_block(fname, retry_index, exc)
-                    await self.sleep_block(fname, retry_index)
+                    self.exception_block(
+                        fname=fname,
+                        retry_index=retry_index,
+                        intercepted_exception=exc,
+                    )
+                    await self.sleep_block(
+                        fname=fname,
+                        retry_index=retry_index,
+                        calculator=calculator,
+                    )
                     intercepted_exception = exc
             else:
-                self.failed_block(fname, intercepted_exception)
+                self.failed_block(
+                    fname=fname,
+                    intercepted_exception=intercepted_exception,
+                )
 
             return result
 
@@ -72,13 +88,20 @@ class AsyncRetrying[**P, R](BaseRetrying[R, Callable[P, Awaitable[R | UnsetType]
     @override
     async def sleep_block(
         self,
+        *,
         fname: str,
         retry_index: int,
+        calculator: DelayCalculator,
     ) -> None:
-        if self.delay > 0 and retry_index != self.attempts:
-            self._log.info(
-                "Wait %s seconds between attempts to execute the '%s' function",
-                self.delay,
-                fname,
-            )
-            await self.sleep_call(self.delay)
+        if retry_index == self.attempts:
+            return
+
+        if (computed := calculator.compute(retry_index)) <= 0:
+            return
+
+        self._log.info(
+            "Wait %s seconds between attempts to execute the '%s' function",
+            computed,
+            fname,
+        )
+        await self.sleep_call(computed)

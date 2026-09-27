@@ -28,9 +28,13 @@ from retry._defaults import (
 )
 from retry._types import (
     UNSET,
+    Delay,
+    ExponentialDelay,
+    JitterStrategy,
     UnsetType,
 )
 from retry._utils import (
+    DelayCalculator,
     FunctionTypes,
     Log,
     Warnings,
@@ -52,6 +56,7 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         "disable_warnings",
         "include_traceback_in_error_log",
         "include_traceback_in_warning_log",
+        "jitter",
         "logger_error",
         "logger_info",
         "logger_traceback_kwarg",
@@ -65,7 +70,8 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         *,
         attempts: int | UnsetType = UNSET,
         return_default_value: R | UnsetType = UNSET,
-        delay: float | UnsetType = UNSET,
+        delay: Delay | UnsetType = UNSET,
+        jitter: JitterStrategy | UnsetType = UNSET,
         disable_logging: bool | UnsetType = UNSET,
         disable_warnings: bool | UnsetType = UNSET,
         re_raise_exception: bool | UnsetType = UNSET,
@@ -79,8 +85,14 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
             Number of attempts
         return_default_value : Any, optional
             Default value returned if the function fails after all attempts,
-        delay : float, optional
-            Delay between attempts in seconds
+        delay : Delay, optional
+            Delay between attempts in seconds. May be a plain ``float`` for a
+            fixed delay or an :class:`~._utils._delay.ExponentialDelay` for
+            exponential backoff.
+        jitter : JitterStrategy, optional
+            Jitter strategy overriding the default for the given delay type.
+            When omitted, ``jitter_for_exponential`` or ``jitter_for_fixed``
+            from the global defaults is used.
         disable_logging : bool, optional
             Disable all logging
         disable_warnings : bool, optional
@@ -129,8 +141,9 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         self._warnings = Warnings(disable_warnings=self.disable_warnings)
 
         # --- derived options ---
+        self.jitter: Final = self._resolve_jitter(jitter=jitter)
         self.re_raise_exception: Final = self._resolve_re_raise_exception(
-            re_raise_exception=re_raise_exception,
+            re_raise_exception=re_raise_exception
         )
 
     @final
@@ -178,6 +191,7 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
 
     def exception_block(
         self,
+        *,
         fname: str,
         retry_index: int,
         intercepted_exception: BaseException,
@@ -205,6 +219,7 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
 
     def failed_block(
         self,
+        *,
         fname: str,
         intercepted_exception: BaseException | None,
     ) -> None:
@@ -231,20 +246,25 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
     @abstractmethod
     def sleep_block(
         self,
+        *,
         fname: str,
         retry_index: int,
+        calculator: DelayCalculator,
     ) -> Awaitable[None] | None:
         """
         Sleep between attempts.
 
-        Does nothing if ``delay`` is zero or if this is the last attempt.
+        Does nothing on the last attempt. The delay is computed by
+        ``calculator`` using the configured delay and jitter strategy.
 
         Parameters
         ----------
+        calculator : DelayCalculator
+            Delay calculator tracking the previous attempt's delay.
         fname : str
-            Name of the wrapped function, used for logging
+            Name of the wrapped function, used for logging.
         retry_index : int
-            Current attempt index (1-based)
+            Current attempt index (1-based).
 
         """
         raise NotImplementedError
@@ -315,6 +335,38 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
                 stacklevel=8,
             )
         return False
+
+    def _resolve_jitter(
+        self,
+        *,
+        jitter: JitterStrategy | UnsetType,
+    ) -> JitterStrategy:
+        """
+        Resolve the jitter strategy after initialization.
+
+        If ``jitter`` is not provided, the strategy is chosen based on the
+        delay type: ``defaults.jitter_for_exponential`` for
+        :class:`~._utils._delay.ExponentialDelay`, or
+        ``defaults.jitter_for_fixed`` for a plain ``float`` delay.
+
+        Parameters
+        ----------
+        jitter : JitterStrategy | UnsetType
+            Explicit jitter strategy, or ``UNSET`` to fall back to the
+            default for the configured delay type.
+
+        Returns
+        -------
+        JitterStrategy
+            Resolved jitter strategy.
+
+        """
+        if not isinstance(jitter, UnsetType):
+            return jitter
+
+        if isinstance(self.delay, ExponentialDelay):
+            return defaults.jitter_for_exponential
+        return defaults.jitter_for_fixed
 
     @staticmethod
     def _resolve[T](

@@ -31,6 +31,8 @@ from typing import (
 
 from retry._types import (
     UNSET,
+    Delay,
+    JitterStrategy,
     RetryKwargs,
     UnsetType,
 )
@@ -55,7 +57,8 @@ def retry(
     return_default_value: _ReturnType,
     re_raise_exception: Literal[False] = False,
     attempts: int | UnsetType = UNSET,
-    delay: float | UnsetType = UNSET,
+    delay: Delay | UnsetType = UNSET,
+    jitter: JitterStrategy | UnsetType = UNSET,
     disable_logging: bool | UnsetType = UNSET,
     disable_warnings: bool | UnsetType = UNSET,
 ) -> Callable[[_WrappedFunc], _WrappedFunc]: ...
@@ -66,7 +69,8 @@ def retry(
     *,
     re_raise_exception: Literal[True] = True,
     attempts: int | UnsetType = UNSET,
-    delay: float | UnsetType = UNSET,
+    delay: Delay | UnsetType = UNSET,
+    jitter: JitterStrategy | UnsetType = UNSET,
     disable_logging: bool | UnsetType = UNSET,
     disable_warnings: bool | UnsetType = UNSET,
 ) -> Callable[[_WrappedFunc], _WrappedFunc]: ...
@@ -97,8 +101,15 @@ def retry[**P, R](  # ruff: ignore[undocumented-param]
         Number of attempts (factory default: 1)
     return_default_value : Any, optional
         Default value returned if the function fails after all attempts
-    delay : float, optional
-        Delay between attempts in seconds (factory default: 0)
+    delay : Delay, optional
+        Delay between attempts in seconds. A plain ``float`` gives a
+        fixed delay (factory default: 0); an ``ExponentialDelay``
+        enables exponential backoff with ``backoff_factor=2.0`` and
+        no upper bound.
+    jitter : JitterStrategy, optional
+        Jitter strategy for the delay. When omitted, the default for
+        the configured delay type is used (``"none"`` for exponential,
+        ``"none"`` for fixed).
     disable_logging : bool, optional
         Disable all logging (factory default: False)
     disable_warnings : bool, optional
@@ -129,8 +140,8 @@ def retry[**P, R](  # ruff: ignore[undocumented-param]
 
     When ``return_default_value`` is provided, the decorator performs a
     best-effort runtime check that its type matches the declared return type
-    of the wrapped function. Only simple types and ``Optional``-unions are
-    checked; complex generics (``list[int]``, ``dict[str, str]``, ...) and
+    of the wrapped function. Only simple types and unions are checked;
+    complex generics (``list[int]``, ``dict[str, str]``, ...) and
     unresolvable annotations are skipped silently. A ``UserWarning`` is
     emitted on a confirmed mismatch.
 

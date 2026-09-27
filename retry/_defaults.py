@@ -31,7 +31,9 @@ from typing import (
 
 from retry._types import (
     DefaultsKwargs,
+    Delay,
     GlobalKwargs,
+    JitterStrategy,
     LocalKwargs,
     LoggerType,
     LoggingKwargs,
@@ -72,7 +74,7 @@ _DEFAULT_LOGGER: Final[logging.Logger] = _make_default_logger()
 class _Defaults:
     # --- retry options (per-decorator, with global defaults) ---
     attempts: int = 1
-    delay: float = 0
+    delay: Delay = 0
     disable_logging: bool = False
     disable_warnings: bool = False
 
@@ -83,6 +85,9 @@ class _Defaults:
 
     include_traceback_in_warning_log: bool = False
     include_traceback_in_error_log: bool = True
+
+    jitter_for_exponential: JitterStrategy = "none"
+    jitter_for_fixed: JitterStrategy = "none"
 
     sync_sleep_call: Callable[[float], None] = time.sleep
     async_sleep_call: Callable[[float], Awaitable[None]] = asyncio.sleep
@@ -165,7 +170,7 @@ def set_retry_defaults(**kwargs: Unpack[LocalKwargs]) -> None:
     ----------
     attempts : int, optional
         Default number of attempts, by default 1
-    delay : float, optional
+    delay : Delay, optional
         Default delay between attempts, in seconds, by default 0
     disable_logging : bool, optional
         Disable all logging, by default False
@@ -195,6 +200,10 @@ def configure_retry(**kwargs: Unpack[GlobalKwargs]) -> None:
         Include traceback in warning logs, by default False
     include_traceback_in_error_log : bool, optional
         Include traceback in error logs, by default True
+    jitter_for_exponential : JitterStrategy, optional
+        Default jitter strategy for exponential delay, by default "full"
+    jitter_for_fixed : JitterStrategy, optional
+        Default jitter strategy for fixed delay, by default "none"
     sync_sleep_call : Callable[[float], None], optional
         Sync function used to sleep between attempts,
         by default ``time.sleep``
