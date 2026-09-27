@@ -22,7 +22,9 @@ from retry._defaults import (
 from retry._types import (
     UnsetType,
 )
-from retry._utils import DelayCalculator
+from retry._utils import (
+    DelayCalculator,
+)
 from retry.base import (
     BaseRetrying,
 )
