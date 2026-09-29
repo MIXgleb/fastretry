@@ -396,6 +396,35 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         if not self.re_raise_exception or attempt_stats.last_exception is None:
             attempt_stats.result = self.return_default_value
 
+    def _raise_if_needed(
+        self,
+        *,
+        stats: RetryStats,
+    ) -> None:
+        """
+        Raise a single :exc:`ExceptionGroup` if re-raising is enabled.
+
+        Does nothing when ``re_raise_exception`` is ``False`` or there are
+        no caught exceptions. Otherwise, raises an :exc:`ExceptionGroup`
+        containing every exception from the failed attempts, in order.
+
+        Parameters
+        ----------
+        stats : RetryStats
+            Current retry statistics.
+
+        Raises
+        ------
+        ExceptionGroup
+            Containing all exceptions from ``stats.attempt.exceptions``.
+
+        """
+        attempt_stats = stats.attempt
+
+        if self.re_raise_exception and attempt_stats.exceptions:
+            msg = f"All {attempt_stats.retry_index} attempts failed"
+            raise ExceptionGroup(msg, attempt_stats.exceptions)
+
     def _derive_jitter(
         self,
         *,

@@ -144,12 +144,23 @@ def retry[**P, R](  # ruff: ignore[undocumented-param]
 
     Notes
     -----
-    **Interaction between ``return_default_value`` and re-raising**
+    **Failure handling**
 
-    - If ``return_default_value`` is provided, the wrapper returns it
-      after all attempts fail.
-    - If ``return_default_value`` is not provided, the wrapper re-raises
-      the last exception.
+    When all attempts fail:
+
+    - If ``return_default_value`` is provided, the wrapper returns it.
+    - Otherwise, the wrapper raises an :exc:`ExceptionGroup` containing
+      every exception from every attempt, in the order they were raised.
+      A single failed attempt still produces an ``ExceptionGroup`` with
+      one member, so the failure type is always the same.
+
+    Use ``except*`` to handle specific exception types::
+
+        try:
+            foo()
+        except* ValueError as eg:
+            for exc in eg.exceptions:
+                ...
 
     **Type checking of ``return_default_value``**
 

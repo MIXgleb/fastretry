@@ -87,9 +87,7 @@ class AsyncRetrying[**P, R](BaseRetrying[R, Callable[P, Awaitable[R | UnsetType]
 
             self._prepare_failure(stats=stats)
             await self._call_callback(callback=on_failure, stats=stats)
-
-            if self.re_raise_exception and attempt_stats.last_exception is not None:
-                raise attempt_stats.last_exception
+            self._raise_if_needed(stats=stats)
             return self.return_default_value
 
         return async_wrapper
