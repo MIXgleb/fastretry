@@ -23,12 +23,14 @@ from collections.abc import (
     Callable,
 )
 from typing import (
-    TYPE_CHECKING,
     TypeVar,
     Unpack,
     overload,
 )
 
+from retry._types import (
+    RetryKwargs,
+)
 from retry._utils import (
     UNSET,
     Delay,
@@ -42,11 +44,6 @@ from retry.async_retry import (
 from retry.sync_retry import (
     SyncRetrying,
 )
-
-if TYPE_CHECKING:
-    from retry._types import (
-        RetryKwargs,
-    )
 
 type _ReturnType = object
 _WrappedFunc = TypeVar("_WrappedFunc", bound=Callable[..., _ReturnType])

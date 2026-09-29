@@ -1,17 +1,14 @@
 import dataclasses as dc
+from collections.abc import (
+    Callable,
+)
 from typing import (
-    TYPE_CHECKING,
     TypedDict,
 )
 
-if TYPE_CHECKING:
-    from collections.abc import (
-        Callable,
-    )
-
-    from retry._utils._stats import (
-        RetryStats,
-    )
+from retry._utils._stats import (
+    RetryStats,
+)
 
 
 class RetryCallbacks(TypedDict, total=False):

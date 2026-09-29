@@ -15,7 +15,6 @@ from collections.abc import (
     Callable,
 )
 from typing import (
-    TYPE_CHECKING,
     Final,
     Unpack,
     override,
@@ -23,6 +22,9 @@ from typing import (
 
 from retry._defaults import (
     defaults,
+)
+from retry._types import (
+    RetryKwargs,
 )
 from retry._utils import (
     AttemptState,
@@ -33,11 +35,6 @@ from retry._utils import (
 from retry.base import (
     BaseRetrying,
 )
-
-if TYPE_CHECKING:
-    from retry._types import (
-        RetryKwargs,
-    )
 
 
 class SyncRetrying[**P, R](BaseRetrying[R, Callable[P, R | UnsetType]]):

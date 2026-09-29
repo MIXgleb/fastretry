@@ -1,29 +1,25 @@
 import dataclasses as dc
 import traceback
+from collections.abc import (
+    Awaitable,
+    Callable,
+    Mapping,
+)
 from typing import (
-    TYPE_CHECKING,
     Any,
 )
 
+from retry._utils._delay import (
+    Delay,
+    JitterStrategy,
+)
+from retry._utils._logs import (
+    Log,
+)
 from retry._utils._unset import (
     UNSET,
     UnsetType,
 )
-
-if TYPE_CHECKING:
-    from collections.abc import (
-        Awaitable,
-        Callable,
-        Mapping,
-    )
-
-    from retry._utils._delay import (
-        Delay,
-        JitterStrategy,
-    )
-    from retry._utils._logs import (
-        Log,
-    )
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -251,7 +247,7 @@ class RetryStats:
         kwargs: Mapping[str, Any],
         fname: str,
         started_at: float,
-    ) -> RetryStats:
+    ) -> "RetryStats":
         """
         Return a fresh copy of this template for a single call.
 

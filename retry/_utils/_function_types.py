@@ -3,8 +3,10 @@
 import contextlib
 import types
 import typing
+from collections.abc import (
+    Callable,
+)
 from typing import (
-    TYPE_CHECKING,
     Any,
     Union,  # pyright: ignore[reportDeprecated]
 )
@@ -16,12 +18,6 @@ from retry._utils._unset import (
 from retry._utils._warnings import (
     Warnings,
 )
-
-if TYPE_CHECKING:
-    from collections.abc import (
-        Callable,
-    )
-
 
 _UNION: tuple[object, ...] = (Union, types.UnionType)  # pyright: ignore[reportDeprecated]
 _UNCHECKABLE: tuple[object, ...] = (Any, object)

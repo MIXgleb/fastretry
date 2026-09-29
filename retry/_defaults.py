@@ -22,13 +22,23 @@ import dataclasses as dc
 import logging
 import sys
 import time
+from collections.abc import (
+    Awaitable,
+    Callable,
+    Generator,
+)
 from typing import (
-    TYPE_CHECKING,
     Final,
     Unpack,
     final,
 )
 
+from retry._types import (
+    DefaultsKwargs,
+    GlobalKwargs,
+    LocalKwargs,
+    LoggingKwargs,
+)
 from retry._utils import (
     Delay,
     JitterStrategy,
@@ -38,20 +48,6 @@ from retry._utils import (
     default_on_failure,
     default_on_retry,
 )
-
-if TYPE_CHECKING:
-    from collections.abc import (
-        Awaitable,
-        Callable,
-        Generator,
-    )
-
-    from retry._types import (
-        DefaultsKwargs,
-        GlobalKwargs,
-        LocalKwargs,
-        LoggingKwargs,
-    )
 
 
 def _make_default_logger() -> logging.Logger:

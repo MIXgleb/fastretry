@@ -6,25 +6,22 @@ This module contains type aliases, type variables, protocols, and the
 "no value provided" from an explicit ``None``.
 """
 
+from collections.abc import (
+    Awaitable,
+    Callable,
+)
 from typing import (
-    TYPE_CHECKING,
     TypedDict,
 )
 
-if TYPE_CHECKING:
-    from collections.abc import (
-        Awaitable,
-        Callable,
-    )
-
-    from retry._utils import (
-        Delay,
-        JitterStrategy,
-        LoggerType,
-        RetryCallbacks,
-        RetryStats,
-        UnsetType,
-    )
+from retry._utils import (
+    Delay,
+    JitterStrategy,
+    LoggerType,
+    RetryCallbacks,
+    RetryStats,
+    UnsetType,
+)
 
 
 class RetryOptions(TypedDict, total=False):

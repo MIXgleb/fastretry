@@ -8,8 +8,11 @@ keyword fallback.
 
 import dataclasses as dc
 import re
+from collections.abc import (
+    Callable,
+)
 from typing import (
-    TYPE_CHECKING,
+    Any,
     Literal,
     Protocol,
     assert_never,
@@ -19,14 +22,6 @@ from typing import (
 from retry._utils._warnings import (
     Warnings,
 )
-
-if TYPE_CHECKING:
-    from collections.abc import (
-        Callable,
-    )
-    from typing import (
-        Any,
-    )
 
 type _LogKind = Literal["success", "retry", "failure", "sleep"]
 
@@ -123,18 +118,18 @@ class Log:
         }
 
     @overload
-    def use(self, log_kind: Literal["retry"]) -> _BoundLog[Literal["retry"]]: ...
+    def use(self, log_kind: Literal["retry"]) -> '_BoundLog[Literal["retry"]]': ...
 
     @overload
-    def use(self, log_kind: Literal["failure"]) -> _BoundLog[Literal["failure"]]: ...
+    def use(self, log_kind: Literal["failure"]) -> '_BoundLog[Literal["failure"]]': ...
 
     @overload
-    def use(self, log_kind: Literal["sleep"]) -> _BoundLog[Literal["sleep"]]: ...
+    def use(self, log_kind: Literal["sleep"]) -> '_BoundLog[Literal["sleep"]]': ...
 
     @overload
-    def use(self, log_kind: Literal["success"]) -> _BoundLog[Literal["success"]]: ...
+    def use(self, log_kind: Literal["success"]) -> '_BoundLog[Literal["success"]]': ...
 
-    def use(self, log_kind: _LogKind) -> _BoundLog[Any]:
+    def use(self, log_kind: _LogKind) -> "_BoundLog[Any]":
         """
         Select a logger kind.
 
@@ -363,14 +358,14 @@ class _BoundLog[LK: _LogKind]:
 
     @overload
     def __call__(
-        self: _BoundLog[Literal["success", "sleep"]],
+        self: '_BoundLog[Literal["success", "sleep"]]',
         message: str,
         *args: object,
     ) -> None: ...
 
     @overload
     def __call__(
-        self: _BoundLog[Literal["retry", "failure"]],
+        self: '_BoundLog[Literal["retry", "failure"]]',
         message: str,
         *args: object,
         last_exception: Exception | None,
