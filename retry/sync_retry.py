@@ -5,9 +5,12 @@ Synchronous retry decorator.
 ``time.sleep`` (or a user-provided sync sleep callable) between attempts.
 """
 
+import asyncio
 import functools
+import inspect
 import time
 from collections.abc import (
+    Awaitable,
     Callable,
 )
 from typing import (
@@ -21,9 +24,9 @@ from retry._defaults import (
     defaults,
 )
 from retry._utils import (
-    UNSET,
     AttemptState,
     DelayCalculator,
+    RetryStats,
     UnsetType,
 )
 from retry.base import (
@@ -68,44 +71,34 @@ class SyncRetrying[**P, R](BaseRetrying[R, Callable[P, R | UnsetType]]):
                 started_at=time.monotonic(),
             )
             attempt_stats = stats.attempt
-            result = self.return_default_value
 
             for retry_index in range(1, self.attempts + 1):
                 attempt_stats.retry_index = retry_index
 
                 try:
                     result = func(*args, **kwargs)
-                    attempt_stats.result = result
-                    attempt_stats.elapsed = time.monotonic() - attempt_stats.started_at
-                    on_success(stats)
-                    break
                 except Exception as exc:  # ruff: ignore[blind-except]
-                    attempt_stats.intercepted_exception = exc
-                    attempt_stats.elapsed = time.monotonic() - attempt_stats.started_at
-                    attempt_stats.computed_delay = UNSET
+                    self._prepare_retry(stats=stats, exc=exc, delay_calculator=delay_calculator)
+                    self._call_callback(callback=on_retry, stats=stats)
+                    self._sleep(attempt_stats=attempt_stats)
+                else:
+                    self._prepare_success(stats=stats, result=result)
+                    self._call_callback(callback=on_success, stats=stats)
+                    return result
 
-                    if retry_index < self.attempts:
-                        attempt_stats.computed_delay = delay_calculator.compute(retry_index)
+            self._prepare_failure(stats=stats)
+            self._call_callback(callback=on_failure, stats=stats)
 
-                    on_retry(stats)
-                    self.sleep_block(attempt_stats)
-            else:
-                attempt_stats.elapsed = time.monotonic() - attempt_stats.started_at
-
-                if self.re_raise_exception and attempt_stats.intercepted_exception is not None:
-                    on_failure(stats)
-                    raise attempt_stats.intercepted_exception
-
-                attempt_stats.result = result
-                on_failure(stats)
-
-            return result
+            if self.re_raise_exception and attempt_stats.intercepted_exception is not None:
+                raise attempt_stats.intercepted_exception
+            return self.return_default_value
 
         return wrapper
 
     @override
-    def sleep_block(
+    def _sleep(
         self,
+        *,
         attempt_stats: AttemptState,
     ) -> None:
         if attempt_stats.retry_index == self.attempts:
@@ -120,3 +113,26 @@ class SyncRetrying[**P, R](BaseRetrying[R, Callable[P, R | UnsetType]]):
             args=(attempt_stats.computed_delay, attempt_stats.fname),
         )
         self.sleep_call(attempt_stats.computed_delay)
+
+    @override
+    def _call_callback(
+        self,
+        *,
+        callback: Callable[[RetryStats], Awaitable[None] | None],
+        stats: RetryStats,
+    ) -> None:
+        result = callback(stats)
+        if inspect.isawaitable(result):
+            try:
+                asyncio.get_running_loop()
+            except RuntimeError:
+                asyncio.run(result)
+            else:
+                if inspect.iscoroutine(result):
+                    result.close()
+
+                msg = (
+                    f"Async callback {callback!r} cannot be awaited from a "
+                    f"running event loop inside SyncRetrying."
+                )
+                raise TypeError(msg)

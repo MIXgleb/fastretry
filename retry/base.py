@@ -8,6 +8,7 @@ and the shared blocks (``exception_block``, ``failed_block``,
 """
 
 import copy
+import time
 from abc import (
     ABC,
     abstractmethod,
@@ -32,6 +33,7 @@ from retry._utils import (
     CallOptions,
     DecoratorOptions,
     Delay,
+    DelayCalculator,
     ExponentialDelay,
     FunctionTypes,
     GlobalOptions,
@@ -149,7 +151,7 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
 
         # --- derived options ---
         self.jitter: Final = self._derive_jitter(jitter=jitter)
-        self.re_raise_exception: Final = self._derive_re_raise_exception()
+        self.re_raise_exception: Final = isinstance(self.return_default_value, UnsetType)
         self._stats: Final = RetryStats(
             log=self._log,
             decorator=DecoratorOptions(
@@ -248,25 +250,6 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         return self._wrap(func)
 
     @abstractmethod
-    def sleep_block(
-        self,
-        attempt_stats: AttemptState,
-    ) -> Awaitable[None] | None:
-        """
-        Sleep between attempts.
-
-        Does nothing on the last attempt. Computes the delay via
-        ``delay_calculator``.
-
-        Parameters
-        ----------
-        attempt_stats : AttemptState
-            Per-attempt state, including the computed delay.
-
-        """
-        raise NotImplementedError
-
-    @abstractmethod
     def _wrap(
         self,
         func: WrappedFunc,
@@ -289,27 +272,124 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         """
         raise NotImplementedError
 
-    def _derive_re_raise_exception(self) -> bool:
+    @abstractmethod
+    def _sleep(
+        self,
+        *,
+        attempt_stats: AttemptState,
+    ) -> Awaitable[None] | None:
         """
-        Compute ``re_raise_exception`` from ``return_default_value``.
+        Sleep between attempts.
 
-        The two options are mutually exclusive: a wrapper either returns a
-        value on failure or re-raises the last exception.
+        Does nothing on the last attempt. Computes the delay via
+        ``delay_calculator``.
 
-        - If ``return_default_value`` is provided, ``re_raise_exception`` is
-        ``False``: the wrapper returns the default value after all attempts
-        fail.
-        - If ``return_default_value`` is not provided, ``re_raise_exception``
-        is ``True``: the wrapper re-raises the last exception.
+        Parameters
+        ----------
+        attempt_stats : AttemptState
+            Per-attempt state, including the computed delay.
+
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def _call_callback(
+        self,
+        *,
+        callback: Callable[[RetryStats], Awaitable[None] | None],
+        stats: RetryStats,
+    ) -> Awaitable[None] | None:
+        """
+        Invoke a retry callback.
+
+        Subclasses decide whether to await an awaitable result:
+        :class:`SyncRetrying` runs the callback inline and awaits if needed;
+        :class:`AsyncRetrying` always awaits.
+
+        Parameters
+        ----------
+        callback : Callable[[RetryStats], Awaitable[None] | None]
+            Callback to invoke.
+        stats : RetryStats
+            Current retry statistics.
 
         Returns
         -------
-        bool
-            ``True`` when the wrapper should re-raise the last exception,
-            ``False`` when it should return ``return_default_value``.
+        Awaitable[None] | None
+            Awaitable when the callback is async, ``None`` otherwise.
 
         """
-        return isinstance(self.return_default_value, UnsetType)
+        raise NotImplementedError
+
+    def _prepare_success(  # ruff: ignore[no-self-use]
+        self,
+        *,
+        stats: RetryStats,
+        result: object,
+    ) -> None:
+        """
+        Record a successful attempt in ``stats``.
+
+        Parameters
+        ----------
+        stats : RetryStats
+            Current retry statistics.
+        result : object
+            Result returned by the wrapped function.
+
+        """
+        attempt_stats = stats.attempt
+        attempt_stats.result = result
+        attempt_stats.elapsed = time.monotonic() - attempt_stats.started_at
+
+    def _prepare_retry(
+        self,
+        *,
+        stats: RetryStats,
+        exc: Exception,
+        delay_calculator: DelayCalculator,
+    ) -> None:
+        """
+        Record a failed attempt in ``stats``.
+
+        Parameters
+        ----------
+        stats : RetryStats
+            Current retry statistics.
+        exc : Exception
+            Exception raised by the wrapped function.
+        delay_calculator : DelayCalculator
+            Calculator used to compute the delay before the next attempt.
+
+        """
+        attempt_stats = stats.attempt
+        attempt_stats.intercepted_exception = exc
+        attempt_stats.exceptions.append(exc)
+        attempt_stats.elapsed = time.monotonic() - attempt_stats.started_at
+        attempt_stats.computed_delay = UNSET
+
+        if attempt_stats.retry_index < self.attempts:
+            attempt_stats.computed_delay = delay_calculator.compute(attempt_stats.retry_index)
+
+    def _prepare_failure(
+        self,
+        *,
+        stats: RetryStats,
+    ) -> None:
+        """
+        Record the final failure in ``stats``.
+
+        Parameters
+        ----------
+        stats : RetryStats
+            Current retry statistics.
+
+        """
+        attempt_stats = stats.attempt
+        attempt_stats.elapsed = time.monotonic() - attempt_stats.started_at
+
+        if not self.re_raise_exception or attempt_stats.intercepted_exception is None:
+            attempt_stats.result = self.return_default_value
 
     def _derive_jitter(
         self,
