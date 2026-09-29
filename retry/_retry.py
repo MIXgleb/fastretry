@@ -113,12 +113,29 @@ def retry[**P, R](  # ruff: ignore[undocumented-param]
         Mapping of retry lifecycle callbacks. Keys are ``"on_retry"``,
         ``"on_success"``, and ``"on_failure"``; each value is a callable
         ``(stats: RetryStats) -> None`` or ``None`` to disable that event.
+        Callbacks may be synchronous or asynchronous.
 
         You may pass a plain ``dict`` with any subset of these keys, or
         build a :class:`RetryCallbacks` instance directly.
 
         Omitted keys fall back to the defaults. Passing ``None`` for
         a key disables the callback for that event.
+
+        Async callbacks are handled differently depending on the wrapped
+        function:
+
+        - On a coroutine function, they are awaited in the same event loop
+          (cheap).
+        - On a regular function, they are executed synchronously: via
+          :func:`asyncio.run` when no event loop is running (cheap), or in
+          a separate thread with its own loop when a loop is already
+          running (expensive — it blocks the caller until the callback
+          completes).
+
+        The latter case is a deliberate trade-off: mixing async callbacks
+        with sync functions inside a running event loop is supported, but
+        costs a thread per invocation. Prefer synchronous callbacks for
+        sync functions, or move the async work outside the retry cycle.
 
     Returns
     -------

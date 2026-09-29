@@ -6,6 +6,7 @@ Synchronous retry decorator.
 """
 
 import asyncio
+import concurrent.futures
 import functools
 import inspect
 import time
@@ -122,17 +123,15 @@ class SyncRetrying[**P, R](BaseRetrying[R, Callable[P, R | UnsetType]]):
         stats: RetryStats,
     ) -> None:
         result = callback(stats)
-        if inspect.isawaitable(result):
-            try:
-                asyncio.get_running_loop()
-            except RuntimeError:
-                asyncio.run(result)
-            else:
-                if inspect.iscoroutine(result):
-                    result.close()
 
-                msg = (
-                    f"Async callback {callback!r} cannot be awaited from a "
-                    f"running event loop inside SyncRetrying."
-                )
-                raise TypeError(msg)
+        if not inspect.isawaitable(result):
+            return
+
+        try:
+            _ = asyncio.get_running_loop()
+        except RuntimeError:
+            asyncio.run(result)
+        else:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                future = pool.submit(asyncio.run, result)
+                future.result()

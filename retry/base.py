@@ -302,9 +302,14 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         """
         Invoke a retry callback.
 
-        Subclasses decide whether to await an awaitable result:
-        :class:`SyncRetrying` runs the callback inline and awaits if needed;
-        :class:`AsyncRetrying` always awaits.
+        Subclasses decide how to handle an awaitable result:
+
+        - :class:`AsyncRetrying` always awaits it.
+        - :class:`SyncRetrying` runs it synchronously. When no event loop is
+        running, :func:`asyncio.run` is used; when a loop is already
+        running, the coroutine is executed in a separate thread with its
+        own loop. The latter is expensive and blocks the caller until the
+        callback completes.
 
         Parameters
         ----------
