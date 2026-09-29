@@ -77,17 +77,21 @@ class AsyncRetrying[**P, R](BaseRetrying[R, Callable[P, Awaitable[R | UnsetType]
                 try:
                     result = await func(*args, **kwargs)
                 except Exception as exc:  # ruff: ignore[blind-except]
-                    self._prepare_retry(stats=stats, exc=exc, delay_calculator=delay_calculator)
+                    self._prepare_retry(
+                        attempt_stats=attempt_stats,
+                        exc=exc,
+                        delay_calculator=delay_calculator,
+                    )
                     await self._call_callback(callback=on_retry, stats=stats)
                     await self._sleep(attempt_stats=attempt_stats)
                 else:
-                    self._prepare_success(stats=stats, result=result)
+                    self._prepare_success(attempt_stats=attempt_stats, result=result)
                     await self._call_callback(callback=on_success, stats=stats)
                     return result
 
-            self._prepare_failure(stats=stats)
+            self._prepare_failure(attempt_stats=attempt_stats)
             await self._call_callback(callback=on_failure, stats=stats)
-            self._raise_if_needed(stats=stats)
+            self._raise_if_needed(attempt_stats=attempt_stats)
             return self.return_default_value
 
         return async_wrapper
