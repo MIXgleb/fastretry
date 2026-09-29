@@ -26,18 +26,24 @@ from typing import (
 from retry._defaults import (
     defaults,
 )
-from retry._types import (
+from retry._utils import (
     UNSET,
+    AttemptState,
+    CallOptions,
+    DecoratorOptions,
     Delay,
     ExponentialDelay,
-    JitterStrategy,
-    UnsetType,
-)
-from retry._utils import (
-    DelayCalculator,
     FunctionTypes,
+    GlobalOptions,
+    JitterStrategy,
     Log,
+    LoggerConfig,
+    ResolvedRetryCallbacks,
+    RetryCallbacks,
+    RetryStats,
+    UnsetType,
     Warnings,
+    noop_callback,
 )
 
 
@@ -45,7 +51,9 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
     """Retrying decorator for multiple attempts to execute a function in case of an error."""
 
     __slots__ = (
+        "_callbacks",
         "_log",
+        "_stats",
         "_warnings",
         "attempts",
         "delay",
@@ -72,6 +80,7 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         jitter: JitterStrategy | UnsetType = UNSET,
         disable_logging: bool | UnsetType = UNSET,
         disable_warnings: bool | UnsetType = UNSET,
+        callbacks: RetryCallbacks | UnsetType = UNSET,
     ) -> None:
         """
         Initialize the retry decorator.
@@ -94,16 +103,20 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
             Disable all logging
         disable_warnings : bool, optional
             Disable all warnings
+        callbacks : RetryCallbacks, optional
+            Callbacks invoked during retry processing. When omitted, defaults
+            from :mod:`~._utils._callbacks` are used. Individual callbacks may
+            be set to ``None`` to disable them.
 
         """
         # --- per-decorator options ---
-        self.return_default_value: Final = self._resolve(
-            passed=return_default_value,
-            default=UNSET,
-        )
         self.attempts: Final = self._resolve(
             passed=attempts,
             default=defaults.attempts,
+        )
+        self.return_default_value: Final = self._resolve(
+            passed=return_default_value,
+            default=UNSET,
         )
         self.delay: Final = self._resolve(
             passed=delay,
@@ -117,10 +130,9 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
             passed=disable_warnings,
             default=defaults.disable_warnings,
         )
-
-        # --- application-wide options ---
-        self.include_traceback_in_retry_log: Final = defaults.include_traceback_in_retry_log
-        self.include_traceback_in_failure_log: Final = defaults.include_traceback_in_failure_log
+        self._callbacks: Final = self._resolve_callbacks(
+            callbacks=callbacks,
+        )
 
         # --- logger configuration ---
         self.logger_success: Final = defaults.logger_success
@@ -128,14 +140,67 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         self.logger_failure: Final = defaults.logger_failure
         self.logger_sleep: Final = defaults.logger_sleep
         self.logger_traceback_kwarg: Final = defaults.logger_traceback_kwarg
+        self.include_traceback_in_retry_log: Final = defaults.include_traceback_in_retry_log
+        self.include_traceback_in_failure_log: Final = defaults.include_traceback_in_failure_log
 
         # --- internal helpers ---
-        self._log = Log(self)
+        self._log = Log(self.logger_config)
         self._warnings = Warnings(disable_warnings=self.disable_warnings)
 
         # --- derived options ---
         self.jitter: Final = self._derive_jitter(jitter=jitter)
         self.re_raise_exception: Final = self._derive_re_raise_exception()
+        self._stats: Final = RetryStats(
+            log=self._log,
+            decorator=DecoratorOptions(
+                attempts=self.attempts,
+                return_default_value=self.return_default_value,
+                delay=self.delay,
+                jitter=self.jitter,
+                disable_logging=self.disable_logging,
+                disable_warnings=self.disable_warnings,
+                re_raise_exception=self.re_raise_exception,
+            ),
+            global_options=GlobalOptions(
+                jitter_for_exponential=defaults.jitter_for_exponential,
+                jitter_for_fixed=defaults.jitter_for_fixed,
+                sync_sleep_call=defaults.sync_sleep_call,
+                async_sleep_call=defaults.async_sleep_call,
+                include_traceback_in_retry_log=self.include_traceback_in_retry_log,
+                include_traceback_in_failure_log=self.include_traceback_in_failure_log,
+                logger_traceback_kwarg=self.logger_traceback_kwarg,
+            ),
+            call=CallOptions(),
+            attempt=AttemptState(),
+        )
+
+    @final
+    @property
+    def logger_config(self) -> LoggerConfig:
+        """
+        Immutable snapshot of the logging configuration.
+
+        Built on demand from the current logging-related attributes. Passed
+        to :class:`~._utils._logs.Log` so that the logger cannot mutate the
+        retry configuration.
+
+        Returns
+        -------
+        LoggerConfig
+            Snapshot of the logging configuration.
+
+        """
+        return LoggerConfig(
+            logger_retry=self.logger_retry,
+            logger_failure=self.logger_failure,
+            logger_sleep=self.logger_sleep,
+            logger_success=self.logger_success,
+            logger_traceback_kwarg=self.logger_traceback_kwarg,
+            include_traceback_in_retry_log=self.include_traceback_in_retry_log,
+            include_traceback_in_failure_log=self.include_traceback_in_failure_log,
+            disable_logging=self.disable_logging,
+            disable_warnings=self.disable_warnings,
+        )
 
     @final
     def copy(self) -> Self:
@@ -182,82 +247,21 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
 
         return self._wrap(func)
 
-    def exception_block(
-        self,
-        *,
-        fname: str,
-        retry_index: int,
-        intercepted_exception: Exception,
-    ) -> None:
-        """
-        Block is called after one failed attempt.
-
-        Parameters
-        ----------
-        fname : str
-            name of the called function
-        retry_index : int
-            attempt index
-        intercepted_exception : Exception
-            intercepted exception during function call
-
-        """
-        self._log.record(
-            log_kind="retry",
-            message="Error executing the '%s' function. Try %d of %d.",
-            args=(fname, retry_index, self.attempts),
-            intercepted_exception=intercepted_exception,
-        )
-
-    def failed_block(
-        self,
-        *,
-        fname: str,
-        intercepted_exception: Exception | None,
-    ) -> None:
-        """
-        Block is called after all failed attempts.
-
-        Parameters
-        ----------
-        fname : str
-            name of the called function
-        intercepted_exception : Exception | None
-            intercepted exception during function call
-
-        """
-        self._log.record(
-            log_kind="failure",
-            message="Failed the execution of the '%s' function.",
-            args=(fname,),
-            intercepted_exception=intercepted_exception,
-        )
-
-        if self.re_raise_exception and intercepted_exception is not None:
-            raise intercepted_exception
-
     @abstractmethod
     def sleep_block(
         self,
-        *,
-        fname: str,
-        retry_index: int,
-        delay_calculator: DelayCalculator,
+        attempt_stats: AttemptState,
     ) -> Awaitable[None] | None:
         """
         Sleep between attempts.
 
-        Does nothing on the last attempt. The delay is computed by
-        ``delay_calculator`` using the configured delay and jitter strategy.
+        Does nothing on the last attempt. Computes the delay via
+        ``delay_calculator``.
 
         Parameters
         ----------
-        delay_calculator : DelayCalculator
-            Delay calculator tracking the previous attempt's delay.
-        fname : str
-            Name of the wrapped function, used for logging.
-        retry_index : int
-            Current attempt index (1-based).
+        attempt_stats : AttemptState
+            Per-attempt state, including the computed delay.
 
         """
         raise NotImplementedError
@@ -338,6 +342,42 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         if isinstance(self.delay, ExponentialDelay):
             return defaults.jitter_for_exponential
         return defaults.jitter_for_fixed
+
+    @staticmethod
+    def _resolve_callbacks(
+        *,
+        callbacks: RetryCallbacks | UnsetType,
+    ) -> ResolvedRetryCallbacks:
+        """
+        Resolve the callbacks for a decorator.
+
+        Resolution order for each callback: per-decorator value, then global
+        default (from ``defaults.on_retry`` / ``on_success`` / ``on_failure``).
+        ``None`` values disable the callback by substituting a no-op.
+
+        Parameters
+        ----------
+        callbacks : RetryCallbacks | UnsetType
+            Per-decorator callback overrides, or ``UNSET`` to use only the
+            global defaults.
+
+        Returns
+        -------
+        ResolvedRetryCallbacks
+            Fully resolved callbacks with all three fields populated.
+
+        """
+        if isinstance(callbacks, UnsetType):
+            return ResolvedRetryCallbacks(
+                on_success=defaults.on_success or noop_callback,
+                on_retry=defaults.on_retry or noop_callback,
+                on_failure=defaults.on_failure or noop_callback,
+            )
+        return ResolvedRetryCallbacks(
+            on_success=callbacks.get("on_success", defaults.on_success) or noop_callback,
+            on_retry=callbacks.get("on_retry", defaults.on_retry) or noop_callback,
+            on_failure=callbacks.get("on_failure", defaults.on_failure) or noop_callback,
+        )
 
     @staticmethod
     def _resolve[T](

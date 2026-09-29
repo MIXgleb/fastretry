@@ -8,14 +8,7 @@ This module contains type aliases, type variables, protocols, and the
 
 from typing import (
     TYPE_CHECKING,
-    Any,
-    Final,
-    Literal,
-    NamedTuple,
-    Protocol,
     TypedDict,
-    final,
-    override,
 )
 
 if TYPE_CHECKING:
@@ -24,47 +17,17 @@ if TYPE_CHECKING:
         Callable,
     )
 
-
-type Delay = float | ExponentialDelay
-type JitterStrategy = Literal["full", "equal", "decorrelated", "none"]
-
-
-@final
-class UnsetType:
-    """
-    Sentinel type meaning "no value provided".
-
-    Used instead of ``None`` to distinguish "user did not pass anything"
-    from "user explicitly passed ``None``" (which may be a valid value,
-    e.g. for ``return_default_value``).
-    """
-
-    __slots__ = ()
-
-    @override
-    def __repr__(self) -> str:
-        return "<unset>"
+    from retry._utils import (
+        Delay,
+        JitterStrategy,
+        LoggerType,
+        RetryCallbacks,
+        RetryStats,
+        UnsetType,
+    )
 
 
-UNSET: Final[UnsetType] = UnsetType()
-
-
-class LoggerType(Protocol):
-    """
-    Signature of a logger callable.
-
-    Accepts optional positional ``%``-style arguments,
-    and arbitrary keyword arguments (e.g. ``exc_info``).
-    """
-
-    def __call__(self, *args: Any, **kwargs: Any) -> None:  # ruff: ignore[any-type]
-        """Call the logger with an optional %-style format."""
-
-
-class RetryOptions(
-    TypedDict,
-    total=False,
-):
+class RetryOptions(TypedDict, total=False):
     """
     Options accepted by ``@retry(...)``.
 
@@ -81,20 +44,15 @@ class RetryOptions(
     disable_warnings: bool | UnsetType
 
 
-class RetryKwargs[R](
-    RetryOptions,
-    total=False,
-):
+class RetryKwargs[R](RetryOptions, total=False):
     """Keyword arguments accepted by :func:`~.retry.retry`."""
 
     return_default_value: R | UnsetType
     jitter: JitterStrategy | UnsetType
+    callbacks: RetryCallbacks | UnsetType
 
 
-class LocalKwargs(
-    RetryOptions,
-    total=False,
-):
+class LocalKwargs(RetryOptions, total=False):
     """
     Options accepted by ``@retry(...)``.
 
@@ -102,11 +60,12 @@ class LocalKwargs(
     :func:`~._config.set_retry_defaults`.
     """
 
+    on_success: Callable[[RetryStats], None] | None
+    on_retry: Callable[[RetryStats], None] | None
+    on_failure: Callable[[RetryStats], None] | None
 
-class GlobalKwargs(
-    TypedDict,
-    total=False,
-):
+
+class GlobalKwargs(TypedDict, total=False):
     """
     Options that exist only in :data:`~._config.defaults`, not in :class:`~.base.BaseRetrying`.
 
@@ -136,37 +95,9 @@ class LoggingKwargs(
 
 
 class DefaultsKwargs(
-    RetryOptions,
+    LocalKwargs,
     GlobalKwargs,
     LoggingKwargs,
     total=False,
 ):
     """All keyword arguments accepted by :meth:`_Defaults.set`."""
-
-
-class ExponentialDelay(NamedTuple):
-    """
-    Exponential backoff configuration.
-
-    The effective delay for attempt ``n`` (1-based) is::
-
-        delay * backoff_factor ** (n - 1)
-
-    capped at ``max_delay`` when it is set.
-
-    Parameters
-    ----------
-    delay : float
-        Base delay in seconds. Must be positive.
-    backoff_factor : float, optional
-        Multiplier applied on each subsequent attempt, by default 2.0.
-        Values ``<= 1.0`` effectively disable exponential growth.
-    max_delay : float | None, optional
-        Upper bound for the computed delay, by default None (no cap).
-        Must be positive when set.
-
-    """
-
-    delay: float
-    backoff_factor: float = 2.0
-    max_delay: float | None = None

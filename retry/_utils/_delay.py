@@ -8,19 +8,41 @@ including jitter.
 
 import random
 from typing import (
-    TYPE_CHECKING,
+    Literal,
+    NamedTuple,
     assert_never,
 )
 
-from retry._types import (
-    ExponentialDelay,
-)
+type Delay = float | ExponentialDelay
+type JitterStrategy = Literal["full", "equal", "decorrelated", "none"]
 
-if TYPE_CHECKING:
-    from retry._types import (
-        Delay,
-        JitterStrategy,
-    )
+
+class ExponentialDelay(NamedTuple):
+    """
+    Exponential backoff configuration.
+
+    The effective delay for attempt ``n`` (1-based) is::
+
+        delay * backoff_factor ** (n - 1)
+
+    capped at ``max_delay`` when it is set.
+
+    Parameters
+    ----------
+    delay : float
+        Base delay in seconds. Must be positive.
+    backoff_factor : float, optional
+        Multiplier applied on each subsequent attempt, by default 2.0.
+        Values ``<= 1.0`` effectively disable exponential growth.
+    max_delay : float | None, optional
+        Upper bound for the computed delay, by default None (no cap).
+        Must be positive when set.
+
+    """
+
+    delay: float
+    backoff_factor: float = 2.0
+    max_delay: float | None = None
 
 
 class DelayCalculator:

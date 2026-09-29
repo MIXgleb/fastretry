@@ -6,6 +6,7 @@ Asynchronous retry decorator.
 """
 
 import functools
+import time
 from collections.abc import (
     Awaitable,
     Callable,
@@ -20,11 +21,11 @@ from typing import (
 from retry._defaults import (
     defaults,
 )
-from retry._types import (
-    UnsetType,
-)
 from retry._utils import (
+    UNSET,
+    AttemptState,
     DelayCalculator,
+    UnsetType,
 )
 from retry.base import (
     BaseRetrying,
@@ -51,37 +52,53 @@ class AsyncRetrying[**P, R](BaseRetrying[R, Callable[P, Awaitable[R | UnsetType]
         self,
         func: Callable[P, Awaitable[R | UnsetType]],
     ) -> Callable[P, Awaitable[R | UnsetType]]:
+        on_success = self._callbacks.on_success
+        on_retry = self._callbacks.on_retry
+        on_failure = self._callbacks.on_failure
+        delay_calculator = DelayCalculator(
+            delay=self.delay,
+            jitter=self.jitter,
+        )
+
         @functools.wraps(func)
         async def async_wrapper(*args: P.args, **kwargs: P.kwargs) -> R | UnsetType:
-            intercepted_exception: Exception | None = None
-            fname = getattr(func, "__qualname__", "<anonymous>")
-            result = self.return_default_value
-            delay_calculator = DelayCalculator(
-                delay=self.delay,
-                jitter=self.jitter,
+            stats = self._stats.for_call(
+                args=args,
+                kwargs=kwargs,
+                fname=getattr(func, "__qualname__", "<anonymous>"),
+                started_at=time.monotonic(),
             )
+            attempt_stats = stats.attempt
+            result = self.return_default_value
 
             for retry_index in range(1, self.attempts + 1):
+                attempt_stats.retry_index = retry_index
+
                 try:
                     result = await func(*args, **kwargs)
+                    attempt_stats.result = result
+                    attempt_stats.elapsed = time.monotonic() - attempt_stats.started_at
+                    on_success(stats)
                     break
                 except Exception as exc:  # ruff: ignore[blind-except]
-                    self.exception_block(
-                        fname=fname,
-                        retry_index=retry_index,
-                        intercepted_exception=exc,
-                    )
-                    await self.sleep_block(
-                        fname=fname,
-                        retry_index=retry_index,
-                        delay_calculator=delay_calculator,
-                    )
-                    intercepted_exception = exc
+                    attempt_stats.intercepted_exception = exc
+                    attempt_stats.elapsed = time.monotonic() - attempt_stats.started_at
+                    attempt_stats.computed_delay = UNSET
+
+                    if retry_index < self.attempts:
+                        attempt_stats.computed_delay = delay_calculator.compute(retry_index)
+
+                    on_retry(stats)
+                    await self.sleep_block(attempt_stats)
             else:
-                self.failed_block(
-                    fname=fname,
-                    intercepted_exception=intercepted_exception,
-                )
+                attempt_stats.elapsed = time.monotonic() - attempt_stats.started_at
+
+                if self.re_raise_exception and attempt_stats.intercepted_exception is not None:
+                    on_failure(stats)
+                    raise attempt_stats.intercepted_exception
+
+                attempt_stats.result = result
+                on_failure(stats)
 
             return result
 
@@ -90,20 +107,17 @@ class AsyncRetrying[**P, R](BaseRetrying[R, Callable[P, Awaitable[R | UnsetType]
     @override
     async def sleep_block(
         self,
-        *,
-        fname: str,
-        retry_index: int,
-        delay_calculator: DelayCalculator,
+        attempt_stats: AttemptState,
     ) -> None:
-        if retry_index == self.attempts:
+        if attempt_stats.retry_index == self.attempts:
             return
 
-        if (computed := delay_calculator.compute(retry_index)) <= 0:
+        if isinstance(attempt_stats.computed_delay, UnsetType) or attempt_stats.computed_delay <= 0:
             return
 
         self._log.record(
             log_kind="sleep",
             message="Wait %s seconds between attempts to execute the '%s' function",
-            args=(computed, fname),
+            args=(attempt_stats.computed_delay, attempt_stats.fname),
         )
-        await self.sleep_call(computed)
+        await self.sleep_call(attempt_stats.computed_delay)

@@ -29,15 +29,14 @@ from typing import (
     final,
 )
 
-from retry._types import (
-    DefaultsKwargs,
+from retry._utils import (
     Delay,
-    GlobalKwargs,
     JitterStrategy,
-    LocalKwargs,
     LoggerType,
-    LoggingKwargs,
+    RetryStats,
     UnsetType,
+    default_on_failure,
+    default_on_retry,
 )
 
 if TYPE_CHECKING:
@@ -45,6 +44,13 @@ if TYPE_CHECKING:
         Awaitable,
         Callable,
         Generator,
+    )
+
+    from retry._types import (
+        DefaultsKwargs,
+        GlobalKwargs,
+        LocalKwargs,
+        LoggingKwargs,
     )
 
 
@@ -77,6 +83,9 @@ class _Defaults:
     delay: Delay = 0
     disable_logging: bool = False
     disable_warnings: bool = False
+    on_success: Callable[[RetryStats], None] | None = None
+    on_retry: Callable[[RetryStats], None] | None = default_on_retry
+    on_failure: Callable[[RetryStats], None] | None = default_on_failure
 
     # --- global options (application-wide) ---
     jitter_for_exponential: JitterStrategy = "none"
@@ -168,7 +177,8 @@ def set_retry_defaults(**kwargs: Unpack[LocalKwargs]) -> None:
 
     These options can also be passed per-decorator via ``@retry(...)``.
     Each parameter, if provided, replaces the corresponding factory
-    default for all subsequently created retry decorators.
+    default for all subsequently created retry decorators. Per-decorator
+    values take precedence over these defaults.
 
     Parameters
     ----------
@@ -180,6 +190,17 @@ def set_retry_defaults(**kwargs: Unpack[LocalKwargs]) -> None:
         Disable all logging, by default False
     disable_warnings : bool, optional
         Disable all warnings, by default False
+    on_success : Callable[[RetryStats], None] | None, optional
+        Default callback invoked after a successful attempt. Pass
+        ``None`` to disable it. When omitted, no callback is invoked.
+    on_retry : Callable[[RetryStats], None] | None, optional
+        Default callback invoked after a failed attempt, before sleeping.
+        Pass ``None`` to disable it. When omitted, the built-in default
+        is used.
+    on_failure : Callable[[RetryStats], None] | None, optional
+        Default callback invoked after all attempts have failed. Pass
+        ``None`` to disable it. When omitted, the built-in default is
+        used.
 
     """
     defaults.set(**kwargs)

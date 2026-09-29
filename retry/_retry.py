@@ -23,16 +23,17 @@ from collections.abc import (
     Callable,
 )
 from typing import (
+    TYPE_CHECKING,
     TypeVar,
     Unpack,
     overload,
 )
 
-from retry._types import (
+from retry._utils import (
     UNSET,
     Delay,
     JitterStrategy,
-    RetryKwargs,
+    RetryCallbacks,
     UnsetType,
 )
 from retry.async_retry import (
@@ -41,6 +42,11 @@ from retry.async_retry import (
 from retry.sync_retry import (
     SyncRetrying,
 )
+
+if TYPE_CHECKING:
+    from retry._types import (
+        RetryKwargs,
+    )
 
 type _ReturnType = object
 _WrappedFunc = TypeVar("_WrappedFunc", bound=Callable[..., _ReturnType])
@@ -59,6 +65,7 @@ def retry(
     jitter: JitterStrategy | UnsetType = UNSET,
     disable_logging: bool | UnsetType = UNSET,
     disable_warnings: bool | UnsetType = UNSET,
+    callbacks: RetryCallbacks | UnsetType = UNSET,
 ) -> Callable[[_WrappedFunc], _WrappedFunc]: ...
 
 
@@ -78,7 +85,7 @@ def retry[**P, R](  # ruff: ignore[undocumented-param]
     selected automatically.
 
     Options not passed explicitly fall back to the global retry
-    defaults (see :func:`~._config.set_retry_defaults`). The factory
+    defaults (see :func:`set_retry_defaults`). The factory
     values are listed below.
 
     Parameters
@@ -102,6 +109,16 @@ def retry[**P, R](  # ruff: ignore[undocumented-param]
         Disable all logging (factory default: False)
     disable_warnings : bool, optional
         Disable all warnings (factory default: False)
+    callbacks : RetryCallbacks, optional
+        Mapping of retry lifecycle callbacks. Keys are ``"on_retry"``,
+        ``"on_success"``, and ``"on_failure"``; each value is a callable
+        ``(stats: RetryStats) -> None`` or ``None`` to disable that event.
+
+        You may pass a plain ``dict`` with any subset of these keys, or
+        build a :class:`RetryCallbacks` instance directly.
+
+        Omitted keys fall back to the defaults. Passing ``None`` for
+        a key disables the callback for that event.
 
     Returns
     -------
