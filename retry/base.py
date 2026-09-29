@@ -326,6 +326,7 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         """
         raise NotImplementedError
 
+    @final
     def _prepare_success(  # ruff: ignore[no-self-use]
         self,
         *,
@@ -346,6 +347,7 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         stats_attempt.result = result
         stats_attempt.elapsed = time.monotonic() - stats_attempt.started_at
 
+    @final
     def _prepare_retry(
         self,
         *,
@@ -374,6 +376,7 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         if stats_attempt.retry_index < self.attempts:
             stats_attempt.computed_delay = delay_calculator.compute(stats_attempt.retry_index)
 
+    @final
     def _prepare_failure(
         self,
         *,
@@ -393,6 +396,7 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         if not self.re_raise_exception or stats_attempt.last_exception is None:
             stats_attempt.result = self.return_default_value
 
+    @final
     def _raise_if_needed(
         self,
         *,
@@ -420,6 +424,7 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
             msg = f"All {stats_attempt.retry_index} attempts failed"
             raise ExceptionGroup(msg, stats_attempt.exceptions)
 
+    @final
     def _derive_jitter(
         self,
         *,
@@ -452,6 +457,7 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
             return defaults.jitter_for_exponential
         return defaults.jitter_for_fixed
 
+    @final
     @staticmethod
     def _resolve_callbacks(
         *,
@@ -488,6 +494,7 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
             on_failure=callbacks.get("on_failure", defaults.on_failure) or noop_callback,
         )
 
+    @final
     @staticmethod
     def _resolve[T](
         *,
