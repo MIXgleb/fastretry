@@ -126,7 +126,7 @@ class SyncRetrying[**P, R](BaseRetrying[R, Callable[P, R | UnsetType]]):
     ) -> None:
         result = callback(stats)
 
-        if not inspect.isawaitable(result):
+        if not inspect.iscoroutine(result):
             return
 
         try:
