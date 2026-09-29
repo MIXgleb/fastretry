@@ -99,7 +99,7 @@ class Log:
 
         log = Log(config)
         log.use("retry")("Error executing '%s'", fname)
-        log.use("failure")("Failed: %s", fname, intercepted_exception=exc)
+        log.use("failure")("Failed: %s", fname, last_exception=exc)
 
     Parameters
     ----------
@@ -165,7 +165,7 @@ class Log:
         log_kind: _LogKind,
         message: str,
         args: tuple[Any, ...],
-        intercepted_exception: Exception | None = None,
+        last_exception: Exception | None = None,
     ) -> None:
         """
         Record a log message for ``log_kind`` and dispatch it.
@@ -178,7 +178,7 @@ class Log:
         When traceback logging is enabled for the kind and an exception is
         provided, the exception is passed via ``logger_traceback_kwarg``.
 
-        ``intercepted_exception`` is meaningful only for the ``"retry"`` and
+        ``last_exception`` is meaningful only for the ``"retry"`` and
         ``"failure"`` kinds, where the logger may accept a traceback keyword
         argument. Passing it for ``"sleep"`` or ``"success"`` is silently
         ignored. Omitting it for ``"retry"`` or ``"failure"`` is allowed —
@@ -192,7 +192,7 @@ class Log:
             ``%``-style format string.
         args : tuple[Any, ...]
             Format arguments.
-        intercepted_exception : Exception | None, optional
+        last_exception : Exception | None, optional
             Exception to pass via ``logger_traceback_kwarg`` if traceback
             logging is enabled for the kind. Ignored for ``"sleep"`` and
             ``"success"``. For ``"retry"`` and ``"failure"`` it is optional;
@@ -206,8 +206,8 @@ class Log:
 
         kwargs: dict[str, Any] = {}
 
-        if include_traceback and intercepted_exception is not None:
-            kwargs[self._config.logger_traceback_kwarg] = intercepted_exception
+        if include_traceback and last_exception is not None:
+            kwargs[self._config.logger_traceback_kwarg] = last_exception
 
         self._safe_log_with_fallback(
             logger=logger,
@@ -373,14 +373,14 @@ class _BoundLog[LK: _LogKind]:
         self: _BoundLog[Literal["retry", "failure"]],
         message: str,
         *args: object,
-        intercepted_exception: Exception | None,
+        last_exception: Exception | None,
     ) -> None: ...
 
     def __call__(
         self,
         message: str,
         *args: object,
-        intercepted_exception: Exception | None = None,
+        last_exception: Exception | None = None,
     ) -> None:
         """
         Emit a log message using the bound logger kind.
@@ -391,7 +391,7 @@ class _BoundLog[LK: _LogKind]:
             ``%``-style format string.
         *args : object
             Format arguments.
-        intercepted_exception : Exception | None, optional
+        last_exception : Exception | None, optional
             Exception to pass via ``logger_traceback_kwarg`` if traceback
             logging is enabled for the bound kind. Only meaningful for
             ``"retry"`` and ``"failure"``; ignored for ``"sleep"`` and
@@ -402,5 +402,5 @@ class _BoundLog[LK: _LogKind]:
             log_kind=self._log_kind,
             message=message,
             args=args,
-            intercepted_exception=intercepted_exception,
+            last_exception=last_exception,
         )

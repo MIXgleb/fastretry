@@ -363,7 +363,7 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
 
         """
         attempt_stats = stats.attempt
-        attempt_stats.intercepted_exception = exc
+        attempt_stats.last_exception = exc
         attempt_stats.exceptions.append(exc)
         attempt_stats.elapsed = time.monotonic() - attempt_stats.started_at
         attempt_stats.computed_delay = UNSET
@@ -388,7 +388,7 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         attempt_stats = stats.attempt
         attempt_stats.elapsed = time.monotonic() - attempt_stats.started_at
 
-        if not self.re_raise_exception or attempt_stats.intercepted_exception is None:
+        if not self.re_raise_exception or attempt_stats.last_exception is None:
             attempt_stats.result = self.return_default_value
 
     def _derive_jitter(

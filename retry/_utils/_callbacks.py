@@ -89,7 +89,7 @@ def default_on_retry(stats: RetryStats) -> None:
             attempt_stats.retry_index,
             stats.decorator.attempts,
         ),
-        intercepted_exception=attempt_stats.intercepted_exception,
+        last_exception=attempt_stats.last_exception,
     )
 
 
@@ -112,7 +112,7 @@ def default_on_failure(stats: RetryStats) -> None:
         log_kind="failure",
         message="Failed the execution of the '%s' function.",
         args=(attempt_stats.fname,),
-        intercepted_exception=attempt_stats.intercepted_exception,
+        last_exception=attempt_stats.last_exception,
     )
 
 

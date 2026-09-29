@@ -130,30 +130,35 @@ class AttemptState:
     ----------
     fname : str
         Qualified name of the wrapped function, or ``"<anonymous>"``.
-    started_at : float
-        Monotonic timestamp captured at the start of the call.
     retry_index : int
         1-based index of the current attempt.
+    started_at : float
+        Monotonic timestamp captured at the start of the call.
     elapsed : float
         Seconds elapsed since ``started_at``.
     computed_delay : float | UnsetType
         Delay computed for the upcoming attempt, or ``UNSET`` if not yet
         computed.
-    intercepted_exception : Exception | None
-        Exception from the most recent attempt, or ``None``.
-    result :  object | UnsetType
+    result : object | UnsetType
         Result of the successful call, or ``UNSET`` if the call has not
         succeeded.
+    last_exception : Exception | None
+        Exception from the most recent attempt, or ``None`` if no attempt
+        has failed yet.
+    exceptions : list[Exception]
+        All exceptions raised across attempts, in order. Empty until the
+        first failure.
 
     """
 
     fname: str = ""
-    started_at: float = 0.0
     retry_index: int = 0
+    started_at: float = 0.0
     elapsed: float = 0.0
-    intercepted_exception: Exception | None = None
     computed_delay: float | UnsetType = UNSET
     result: object | UnsetType = UNSET
+    last_exception: Exception | None = None
+    exceptions: list[Exception] = dc.field(default_factory=list[Exception])
 
 
 @dc.dataclass(slots=True)
