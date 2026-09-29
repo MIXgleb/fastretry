@@ -1,4 +1,5 @@
 import dataclasses as dc
+import traceback
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -159,6 +160,57 @@ class AttemptState:
     result: object | UnsetType = UNSET
     last_exception: Exception | None = None
     exceptions: list[Exception] = dc.field(default_factory=list[Exception])
+
+    @property
+    def exceptions_with_traceback(self) -> tuple[str, ...]:
+        """
+        Formatted tracebacks of all caught exceptions.
+
+        Each item is a string produced by :func:`traceback.format_exception`
+        for the corresponding exception in :attr:`exceptions`. Useful for
+        logging or displaying the full history of failures.
+
+        Returns
+        -------
+        tuple[str, ...]
+            One formatted traceback per caught exception, in order.
+
+        """
+        return tuple(
+            "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
+            for exc in self.exceptions
+        )
+
+    def format_exception(
+        self,
+        exc: Exception | UnsetType | None = UNSET,
+    ) -> str:
+        """
+        Format a traceback for an exception.
+
+        Parameters
+        ----------
+        exc : Exception | None | UnsetType, optional
+            Exception to format. When omitted (``UNSET``), the value of
+            :attr:`last_exception` is used. Pass ``None`` explicitly to get
+            a human-readable message indicating no exception was recorded.
+
+        Returns
+        -------
+        str
+            Formatted traceback, or ``"<no exception>"`` when the chosen
+            exception is ``None``.
+
+        """
+        if isinstance(exc, UnsetType):
+            exc = self.last_exception
+
+        if exc is None:
+            return "<no exception>"
+
+        return "".join(
+            traceback.format_exception(type(exc), exc, exc.__traceback__),
+        )
 
 
 @dc.dataclass(slots=True)
