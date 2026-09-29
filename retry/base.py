@@ -276,7 +276,7 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
     def _sleep(
         self,
         *,
-        attempt_stats: AttemptState,
+        stats_attempt: AttemptState,
     ) -> Awaitable[None] | None:
         """
         Sleep between attempts.
@@ -286,7 +286,7 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
 
         Parameters
         ----------
-        attempt_stats : AttemptState
+        stats_attempt : AttemptState
             Per-attempt state.
 
         """
@@ -329,7 +329,7 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
     def _prepare_success(  # ruff: ignore[no-self-use]
         self,
         *,
-        attempt_stats: AttemptState,
+        stats_attempt: AttemptState,
         result: object,
     ) -> None:
         """
@@ -337,19 +337,19 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
 
         Parameters
         ----------
-        attempt_stats : AttemptState
+        stats_attempt : AttemptState
             Per-attempt state.
         result : object
             Result returned by the wrapped function.
 
         """
-        attempt_stats.result = result
-        attempt_stats.elapsed = time.monotonic() - attempt_stats.started_at
+        stats_attempt.result = result
+        stats_attempt.elapsed = time.monotonic() - stats_attempt.started_at
 
     def _prepare_retry(
         self,
         *,
-        attempt_stats: AttemptState,
+        stats_attempt: AttemptState,
         exc: Exception,
         delay_calculator: DelayCalculator,
     ) -> None:
@@ -358,7 +358,7 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
 
         Parameters
         ----------
-        attempt_stats : AttemptState
+        stats_attempt : AttemptState
             Per-attempt state.
         exc : Exception
             Exception raised by the wrapped function.
@@ -366,37 +366,37 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
             Calculator used to compute the delay before the next attempt.
 
         """
-        attempt_stats.last_exception = exc
-        attempt_stats.exceptions.append(exc)
-        attempt_stats.elapsed = time.monotonic() - attempt_stats.started_at
-        attempt_stats.computed_delay = UNSET
+        stats_attempt.last_exception = exc
+        stats_attempt.exceptions.append(exc)
+        stats_attempt.elapsed = time.monotonic() - stats_attempt.started_at
+        stats_attempt.computed_delay = UNSET
 
-        if attempt_stats.retry_index < self.attempts:
-            attempt_stats.computed_delay = delay_calculator.compute(attempt_stats.retry_index)
+        if stats_attempt.retry_index < self.attempts:
+            stats_attempt.computed_delay = delay_calculator.compute(stats_attempt.retry_index)
 
     def _prepare_failure(
         self,
         *,
-        attempt_stats: AttemptState,
+        stats_attempt: AttemptState,
     ) -> None:
         """
         Record the final failure in ``stats``.
 
         Parameters
         ----------
-        attempt_stats : AttemptState
+        stats_attempt : AttemptState
             Per-attempt state.
 
         """
-        attempt_stats.elapsed = time.monotonic() - attempt_stats.started_at
+        stats_attempt.elapsed = time.monotonic() - stats_attempt.started_at
 
-        if not self.re_raise_exception or attempt_stats.last_exception is None:
-            attempt_stats.result = self.return_default_value
+        if not self.re_raise_exception or stats_attempt.last_exception is None:
+            stats_attempt.result = self.return_default_value
 
     def _raise_if_needed(
         self,
         *,
-        attempt_stats: AttemptState,
+        stats_attempt: AttemptState,
     ) -> None:
         """
         Raise a single :exc:`ExceptionGroup` if re-raising is enabled.
@@ -407,7 +407,7 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
 
         Parameters
         ----------
-        attempt_stats : AttemptState
+        stats_attempt : AttemptState
             Per-attempt state.
 
         Raises
@@ -416,9 +416,9 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
             Containing all exceptions from ``stats.attempt.exceptions``.
 
         """
-        if self.re_raise_exception and attempt_stats.exceptions:
-            msg = f"All {attempt_stats.retry_index} attempts failed"
-            raise ExceptionGroup(msg, attempt_stats.exceptions)
+        if self.re_raise_exception and stats_attempt.exceptions:
+            msg = f"All {stats_attempt.retry_index} attempts failed"
+            raise ExceptionGroup(msg, stats_attempt.exceptions)
 
     def _derive_jitter(
         self,

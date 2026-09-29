@@ -79,17 +79,17 @@ def default_on_retry(stats: RetryStats) -> None:
         Current retry statistics.
 
     """
-    attempt_stats = stats.attempt
+    stats_attempt = stats.attempt
 
     stats.log.record(
         log_kind="retry",
         message="Error executing the '%s' function. Try %d of %d.",
         args=(
-            attempt_stats.fname,
-            attempt_stats.retry_index,
+            stats_attempt.fname,
+            stats_attempt.retry_index,
             stats.decorator.attempts,
         ),
-        last_exception=attempt_stats.last_exception,
+        last_exception=stats_attempt.last_exception,
     )
 
 
@@ -106,13 +106,13 @@ def default_on_failure(stats: RetryStats) -> None:
         Current retry statistics.
 
     """
-    attempt_stats = stats.attempt
+    stats_attempt = stats.attempt
 
     stats.log.record(
         log_kind="failure",
         message="Failed the execution of the '%s' function.",
-        args=(attempt_stats.fname,),
-        last_exception=attempt_stats.last_exception,
+        args=(stats_attempt.fname,),
+        last_exception=stats_attempt.last_exception,
     )
 
 

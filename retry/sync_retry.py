@@ -71,29 +71,29 @@ class SyncRetrying[**P, R](BaseRetrying[R, Callable[P, R | UnsetType]]):
                 fname=getattr(func, "__qualname__", "<anonymous>"),
                 started_at=time.monotonic(),
             )
-            attempt_stats = stats.attempt
+            stats_attempt = stats.attempt
 
             for retry_index in range(1, self.attempts + 1):
-                attempt_stats.retry_index = retry_index
+                stats_attempt.retry_index = retry_index
 
                 try:
                     result = func(*args, **kwargs)
                 except Exception as exc:  # ruff: ignore[blind-except]
                     self._prepare_retry(
-                        attempt_stats=attempt_stats,
+                        stats_attempt=stats_attempt,
                         exc=exc,
                         delay_calculator=delay_calculator,
                     )
                     self._call_callback(callback=on_retry, stats=stats)
-                    self._sleep(attempt_stats=attempt_stats)
+                    self._sleep(stats_attempt=stats_attempt)
                 else:
-                    self._prepare_success(attempt_stats=attempt_stats, result=result)
+                    self._prepare_success(stats_attempt=stats_attempt, result=result)
                     self._call_callback(callback=on_success, stats=stats)
                     return result
 
-            self._prepare_failure(attempt_stats=attempt_stats)
+            self._prepare_failure(stats_attempt=stats_attempt)
             self._call_callback(callback=on_failure, stats=stats)
-            self._raise_if_needed(attempt_stats=attempt_stats)
+            self._raise_if_needed(stats_attempt=stats_attempt)
             return self.return_default_value
 
         return wrapper
@@ -102,20 +102,20 @@ class SyncRetrying[**P, R](BaseRetrying[R, Callable[P, R | UnsetType]]):
     def _sleep(
         self,
         *,
-        attempt_stats: AttemptState,
+        stats_attempt: AttemptState,
     ) -> None:
-        if attempt_stats.retry_index == self.attempts:
+        if stats_attempt.retry_index == self.attempts:
             return
 
-        if isinstance(attempt_stats.computed_delay, UnsetType) or attempt_stats.computed_delay <= 0:
+        if isinstance(stats_attempt.computed_delay, UnsetType) or stats_attempt.computed_delay <= 0:
             return
 
         self._log.record(
             log_kind="sleep",
             message="Wait %s seconds between attempts to execute the '%s' function",
-            args=(attempt_stats.computed_delay, attempt_stats.fname),
+            args=(stats_attempt.computed_delay, stats_attempt.fname),
         )
-        self.sleep_call(attempt_stats.computed_delay)
+        self.sleep_call(stats_attempt.computed_delay)
 
     @override
     def _call_callback(
