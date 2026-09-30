@@ -23,10 +23,10 @@ class RetryOptions(TypedDict, total=False):
     Options accepted by ``@retry(...)``.
 
     These options are also stored as global retry defaults via
-    :func:`~._config.set_retry_defaults`.
+    :func:`~._defaults.set_retry_defaults`.
 
     All keys are optional. Missing keys fall back to the values in
-    :data:`~._config.defaults`.
+    :data:`~._defaults.defaults`.
     """
 
     attempts: int | UnsetType
@@ -48,7 +48,7 @@ class LocalKwargs(RetryOptions, total=False):
     Options accepted by ``@retry(...)``.
 
     These options are also stored as global retry defaults via
-    :func:`~._config.set_retry_defaults`.
+    :func:`~._defaults.set_retry_defaults`.
     """
 
     on_success: Callable[[RetryStats], None] | None
@@ -58,10 +58,10 @@ class LocalKwargs(RetryOptions, total=False):
 
 class GlobalKwargs(TypedDict, total=False):
     """
-    Options that exist only in :data:`~._config.defaults`, not in :class:`~.base.BaseRetrying`.
+    Options that exist only in :data:`~._defaults.defaults`, not in :class:`~.base.BaseRetrying`.
 
     These are configured application-wide via
-    :func:`~._config.configure_retry`.
+    :func:`~._defaults.configure_retry`.
     """
 
     jitter_for_exponential: JitterStrategy
@@ -74,7 +74,7 @@ class LoggingKwargs(
     TypedDict,
     total=False,
 ):
-    """Options related to logging, configured via :func:`~._config.configure_logging`."""
+    """Options related to logging, configured via :func:`~._defaults.configure_logging`."""
 
     logger_success: LoggerType | None
     logger_retry: LoggerType | None

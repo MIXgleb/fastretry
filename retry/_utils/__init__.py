@@ -1,3 +1,5 @@
+"""Internal utilities for the retry package."""
+
 __all__ = (
     "UNSET",
     "AttemptState",

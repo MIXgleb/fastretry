@@ -212,7 +212,7 @@ def configure_retry(**kwargs: Unpack[GlobalKwargs]) -> None:
     Parameters
     ----------
     jitter_for_exponential : JitterStrategy, optional
-        Default jitter strategy for exponential delay, by default "full"
+        Default jitter strategy for exponential delay, by default "none"
     jitter_for_fixed : JitterStrategy, optional
         Default jitter strategy for fixed delay, by default "none"
     sync_sleep_call : Callable[[float], None], optional

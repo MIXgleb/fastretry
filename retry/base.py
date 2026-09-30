@@ -1,9 +1,8 @@
 """
 Abstract base class for retry decorators.
 
-``BaseRetrying`` holds the shared state (attempts, delay, logging flags)
-and the shared blocks (``exception_block``, ``failed_block``,
-``copy``). Concrete sync and async implementations live in
+``BaseRetrying`` holds the shared state and the shared blocks.
+Concrete sync and async implementations live in
 :mod:`~.sync_retry` and :mod:`~.async_retry`.
 """
 
@@ -265,7 +264,7 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         Performs shared pre-checks and delegates the actual wrapping to
         :meth:`_wrap`. Only ``Exception`` subclasses are retried; all
         ``BaseException`` subclasses (such as ``KeyboardInterrupt``,
-        ``SystemExit``, and ``asycnio.CancelError``) propagate immediately.
+        ``SystemExit``, and ``asyncio.CancelledError``) propagate immediately.
 
         Parameters
         ----------
