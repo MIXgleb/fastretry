@@ -78,7 +78,7 @@ def default_on_retry(stats: RetryStats) -> None:
     """
     stats_attempt = stats.attempt
 
-    stats.log.record(
+    _ = stats.log.record(
         log_kind="retry",
         message="Error executing the '%s' function. Try %d of %d.",
         args=(
@@ -105,7 +105,7 @@ def default_on_failure(stats: RetryStats) -> None:
     """
     stats_attempt = stats.attempt
 
-    stats.log.record(
+    _ = stats.log.record(
         log_kind="failure",
         message="Failed the execution of the '%s' function.",
         args=(stats_attempt.fname,),

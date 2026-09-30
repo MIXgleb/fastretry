@@ -161,7 +161,7 @@ class Log:
         message: str,
         args: tuple[Any, ...],
         last_exception: Exception | None = None,
-    ) -> None:
+    ) -> bool:
         """
         Record a log message for ``log_kind`` and dispatch it.
 
@@ -193,11 +193,17 @@ class Log:
             ``"success"``. For ``"retry"`` and ``"failure"`` it is optional;
             when omitted, no traceback is attached.
 
+        Returns
+        -------
+        bool
+            ``True`` if the message was dispatched to a logger, ``False``
+            if logging is disabled or the logger for ``log_kind`` is ``None``.
+
         """
         logger, include_traceback = self._resolve(log_kind)
 
         if self._config.disable_logging or logger is None:
-            return
+            return False
 
         kwargs: dict[str, Any] = {}
 
@@ -211,6 +217,7 @@ class Log:
             kwargs=kwargs,
             log_kind=log_kind,
         )
+        return True
 
     def _resolve(
         self,
@@ -361,7 +368,7 @@ class _BoundLog[LK: _LogKind]:
         self: '_BoundLog[Literal["success", "sleep"]]',
         message: str,
         *args: object,
-    ) -> None: ...
+    ) -> bool: ...
 
     @overload
     def __call__(
@@ -369,14 +376,14 @@ class _BoundLog[LK: _LogKind]:
         message: str,
         *args: object,
         last_exception: Exception | None,
-    ) -> None: ...
+    ) -> bool: ...
 
     def __call__(
         self,
         message: str,
         *args: object,
         last_exception: Exception | None = None,
-    ) -> None:
+    ) -> bool:
         """
         Emit a log message using the bound logger kind.
 
@@ -392,8 +399,14 @@ class _BoundLog[LK: _LogKind]:
             ``"retry"`` and ``"failure"``; ignored for ``"sleep"`` and
             ``"success"``.
 
+        Returns
+        -------
+        bool
+            ``True`` if the message was dispatched to a logger, ``False``
+            if logging is disabled or the logger for ``log_kind`` is ``None``.
+
         """
-        self._log.record(
+        return self._log.record(
             log_kind=self._log_kind,
             message=message,
             args=args,
