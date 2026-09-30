@@ -375,24 +375,6 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
             The swallowed exception.
 
         """
-        record = self._log.record
-
-        if record(
-            log_kind="failure",
-            message="Swallowed exception in %s.",
-            args=(operation,),
-            last_exception=exc,
-        ):
-            return
-
-        if record(
-            log_kind="retry",
-            message="Swallowed exception in %s.",
-            args=(operation,),
-            last_exception=exc,
-        ):
-            return
-
         self._warnings.warn(
             f"\n\tNo logger available for swallowed exception in {operation}: "
             f"{exc!r}.\n\t"
@@ -400,12 +382,30 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
             f"falling back to the default logger.",
             stacklevel=5,
         )
-        DEFAULT_LOGGER.error(
-            "Swallowed exception in %s: %r",
-            operation,
-            exc,
-            exc_info=exc,
-        )
+
+        if not self._disable_logging:
+            if self._log.record(
+                log_kind="failure",
+                message="Swallowed exception in %s.",
+                args=(operation,),
+                last_exception=exc,
+            ):
+                return
+
+            if self._log.record(
+                log_kind="retry",
+                message="Swallowed exception in %s.",
+                args=(operation,),
+                last_exception=exc,
+            ):
+                return
+
+            DEFAULT_LOGGER.error(
+                "Swallowed exception in %s: %r",
+                operation,
+                exc,
+                exc_info=exc,
+            )
 
     @final
     def _prepare_success(  # ruff: ignore[no-self-use]
