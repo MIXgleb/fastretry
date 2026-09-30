@@ -198,6 +198,7 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
             f"return_default_value={self.return_default_value!r},\n\t"
             f"delay={self.delay!r},\n\t"
             f"jitter={self.jitter!r},\n\t"
+            f"sleep_call={getattr(self, 'sleep_call', None)!r},\n\t"
             f"re_raise_exception={self._re_raise_exception!r},\n\t"
             f"disable_logging={self._disable_logging!r},\n\t"
             f"disable_warnings={self._disable_warnings!r},\n\t"
