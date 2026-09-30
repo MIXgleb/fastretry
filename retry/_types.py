@@ -1,10 +1,4 @@
-"""
-Shared type definitions for the retry package.
-
-This module contains type aliases, type variables, protocols, and the
-``UnsetType`` sentinel used across the package to distinguish
-"no value provided" from an explicit ``None``.
-"""
+"""Shared type definitions for the retry package."""
 
 from collections.abc import (
     Awaitable,
@@ -70,10 +64,10 @@ class GlobalKwargs(TypedDict, total=False):
     :func:`~._config.configure_retry`.
     """
 
-    jitter_for_exponential: JitterStrategy | UnsetType
-    jitter_for_fixed: JitterStrategy | UnsetType
-    sync_sleep_call: Callable[[float], None] | UnsetType
-    async_sleep_call: Callable[[float], Awaitable[None]] | UnsetType
+    jitter_for_exponential: JitterStrategy
+    jitter_for_fixed: JitterStrategy
+    sync_sleep_call: Callable[[float], None]
+    async_sleep_call: Callable[[float], Awaitable[None]]
 
 
 class LoggingKwargs(
@@ -86,8 +80,8 @@ class LoggingKwargs(
     logger_retry: LoggerType | None
     logger_failure: LoggerType | None
     logger_sleep: LoggerType | None
-    include_traceback_in_retry_log: bool | UnsetType
-    include_traceback_in_failure_log: bool | UnsetType
+    include_traceback_in_retry_log: bool
+    include_traceback_in_failure_log: bool
     logger_traceback_kwarg: str
 
 
