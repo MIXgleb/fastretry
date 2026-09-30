@@ -97,7 +97,7 @@ class GlobalOptions:
     logger_traceback_kwarg: str
 
 
-@dc.dataclass(frozen=True, slots=True)
+@dc.dataclass(frozen=True, slots=True, repr=False)
 class CallOptions:
     """
     Arguments of the wrapped call.
@@ -154,8 +154,8 @@ class AttemptState:
     elapsed: float = 0.0
     computed_delay: float | UnsetType = UNSET
     result: object | UnsetType = UNSET
-    last_exception: Exception | None = None
-    exceptions: list[Exception] = dc.field(default_factory=list[Exception])
+    last_exception: Exception | None = dc.field(default=None, repr=False)
+    exceptions: list[Exception] = dc.field(default_factory=list[Exception], repr=False)
 
     @property
     def exceptions_with_traceback(self) -> tuple[str, ...]:

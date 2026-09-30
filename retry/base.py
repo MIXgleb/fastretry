@@ -23,6 +23,7 @@ from typing import (
     Final,
     Self,
     final,
+    override,
 )
 
 from retry._defaults import (
@@ -178,6 +179,38 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
             ),
             call=CallOptions(),
             attempt=AttemptState(),
+        )
+
+    @override
+    def __repr__(self) -> str:
+        """
+        Return a concise representation of the retry decorator.
+
+        Returns
+        -------
+        str
+            Representation
+
+        """
+        return (
+            f"{type(self).__name__}(\n\t"
+            f"wrapper_kind={self.wrapper_kind!r},\n\t"
+            f"attempts={self.attempts!r},\n\t"
+            f"return_default_value={self.return_default_value!r},\n\t"
+            f"delay={self.delay!r},\n\t"
+            f"jitter={self.jitter!r},\n\t"
+            f"re_raise_exception={self._re_raise_exception!r},\n\t"
+            f"disable_logging={self._disable_logging!r},\n\t"
+            f"disable_warnings={self._disable_warnings!r},\n\t"
+            f"logger_success={self._logger_success!r},\n\t"
+            f"logger_retry={self._logger_retry!r},\n\t"
+            f"logger_failure={self._logger_failure!r},\n\t"
+            f"logger_sleep={self._logger_sleep!r},\n\t"
+            f"logger_traceback_kwarg={self._logger_traceback_kwarg!r},\n\t"
+            f"include_traceback_in_retry_log={self._include_traceback_in_retry_log!r},\n\t"
+            f"include_traceback_in_failure_log={self._include_traceback_in_failure_log!r},\n\t"
+            f"callbacks={self._callbacks!r},\n\t"
+            f")"
         )
 
     @final
