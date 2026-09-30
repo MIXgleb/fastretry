@@ -69,7 +69,7 @@ def _make_default_logger() -> logging.Logger:
     return logger
 
 
-_DEFAULT_LOGGER: Final[logging.Logger] = _make_default_logger()
+DEFAULT_LOGGER: Final[logging.Logger] = _make_default_logger()
 
 
 @dc.dataclass(slots=True)
@@ -93,8 +93,8 @@ class _Defaults:
     # --- logging ---
     logger_sleep: LoggerType | None = None
     logger_success: LoggerType | None = None
-    logger_retry: LoggerType | None = _DEFAULT_LOGGER.warning
-    logger_failure: LoggerType | None = _DEFAULT_LOGGER.error
+    logger_retry: LoggerType | None = DEFAULT_LOGGER.warning
+    logger_failure: LoggerType | None = DEFAULT_LOGGER.error
 
     include_traceback_in_retry_log: bool = False
     include_traceback_in_failure_log: bool = True

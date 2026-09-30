@@ -305,7 +305,7 @@ class Log:
                     f"{key!r} kwarg; logging without it.\n\t"
                     f"Set the correct keyword argument name via "
                     f"configure_logging(logger_traceback_kwarg=...).",
-                    stacklevel=6,
+                    stacklevel=8,
                 )
                 kwargs.pop(key)
             else:

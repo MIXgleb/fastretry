@@ -42,6 +42,8 @@ class SyncRetrying[**P, R](BaseRetrying[R, Callable[P, R | UnsetType]]):
 
     __slots__ = ("sleep_call",)
 
+    wrapper_kind = "sync"
+
     @override
     def __init__(self, **kwargs: Unpack[RetryKwargs[R]]) -> None:
         super().__init__(**kwargs)
@@ -81,15 +83,15 @@ class SyncRetrying[**P, R](BaseRetrying[R, Callable[P, R | UnsetType]]):
                         exc=exc,
                         delay_calculator=delay_calculator,
                     )
-                    self._call_callback(callback=on_retry, stats=stats)
+                    self._safe_call_callback(callback=on_retry, stats=stats)
                     self._sleep(stats_attempt=stats_attempt)
                 else:
                     self._prepare_success(stats_attempt=stats_attempt, result=result)
-                    self._call_callback(callback=on_success, stats=stats)
+                    self._safe_call_callback(callback=on_success, stats=stats)
                     return result
 
             self._prepare_failure(stats_attempt=stats_attempt)
-            self._call_callback(callback=on_failure, stats=stats)
+            self._safe_call_callback(callback=on_failure, stats=stats)
             self._raise_if_needed(stats_attempt=stats_attempt)
             return self.return_default_value
 
@@ -107,12 +109,19 @@ class SyncRetrying[**P, R](BaseRetrying[R, Callable[P, R | UnsetType]]):
         if isinstance(stats_attempt.computed_delay, UnsetType) or stats_attempt.computed_delay <= 0:
             return
 
-        self._log.record(
+        _ = self._log.record(
             log_kind="sleep",
             message="Wait %s seconds between attempts to execute the '%s' function",
             args=(stats_attempt.computed_delay, stats_attempt.fname),
         )
-        self.sleep_call(stats_attempt.computed_delay)
+
+        try:
+            self.sleep_call(stats_attempt.computed_delay)
+        except Exception as exc:  # ruff: ignore[blind-except]
+            self._log_swallowed(
+                operation=f"{self.wrapper_kind} sleep callable",
+                exc=exc,
+            )
 
     @override
     def _call_callback(
@@ -134,3 +143,19 @@ class SyncRetrying[**P, R](BaseRetrying[R, Callable[P, R | UnsetType]]):
             with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
                 future = pool.submit(asyncio.run, result)
                 future.result()
+
+    @override
+    def _safe_call_callback(
+        self,
+        *,
+        callback: Callable[[RetryStats], Awaitable[None] | None],
+        stats: RetryStats,
+    ) -> None:
+        try:
+            self._call_callback(callback=callback, stats=stats)
+        except Exception as exc:  # ruff: ignore[blind-except]
+            name = getattr(callback, "__name__", "<anonymous>")
+            self._log_swallowed(
+                operation=f"{name} callback in {self.wrapper_kind} wrapper",
+                exc=exc,
+            )

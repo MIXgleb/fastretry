@@ -19,12 +19,14 @@ from collections.abc import (
 )
 from typing import (
     Any,
+    ClassVar,
     Final,
     Self,
     final,
 )
 
 from retry._defaults import (
+    DEFAULT_LOGGER,
     defaults,
 )
 from retry._utils import (
@@ -54,24 +56,26 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
 
     __slots__ = (
         "_callbacks",
+        "_disable_logging",
+        "_disable_warnings",
+        "_include_traceback_in_failure_log",
+        "_include_traceback_in_retry_log",
         "_log",
+        "_logger_failure",
+        "_logger_retry",
+        "_logger_sleep",
+        "_logger_success",
+        "_logger_traceback_kwarg",
+        "_re_raise_exception",
         "_stats",
         "_warnings",
         "attempts",
         "delay",
-        "disable_logging",
-        "disable_warnings",
-        "include_traceback_in_failure_log",
-        "include_traceback_in_retry_log",
         "jitter",
-        "logger_failure",
-        "logger_retry",
-        "logger_sleep",
-        "logger_success",
-        "logger_traceback_kwarg",
-        "re_raise_exception",
         "return_default_value",
     )
+
+    wrapper_kind: ClassVar[str]
 
     def __init__(  # ruff: ignore[too-many-arguments]
         self,
@@ -124,11 +128,11 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
             passed=delay,
             default=defaults.delay,
         )
-        self.disable_logging: Final = self._resolve(
+        self._disable_logging: Final = self._resolve(
             passed=disable_logging,
             default=defaults.disable_logging,
         )
-        self.disable_warnings: Final = self._resolve(
+        self._disable_warnings: Final = self._resolve(
             passed=disable_warnings,
             default=defaults.disable_warnings,
         )
@@ -137,21 +141,21 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         )
 
         # --- logger configuration ---
-        self.logger_success: Final = defaults.logger_success
-        self.logger_retry: Final = defaults.logger_retry
-        self.logger_failure: Final = defaults.logger_failure
-        self.logger_sleep: Final = defaults.logger_sleep
-        self.logger_traceback_kwarg: Final = defaults.logger_traceback_kwarg
-        self.include_traceback_in_retry_log: Final = defaults.include_traceback_in_retry_log
-        self.include_traceback_in_failure_log: Final = defaults.include_traceback_in_failure_log
+        self._logger_success: Final = defaults.logger_success
+        self._logger_retry: Final = defaults.logger_retry
+        self._logger_failure: Final = defaults.logger_failure
+        self._logger_sleep: Final = defaults.logger_sleep
+        self._logger_traceback_kwarg: Final = defaults.logger_traceback_kwarg
+        self._include_traceback_in_retry_log: Final = defaults.include_traceback_in_retry_log
+        self._include_traceback_in_failure_log: Final = defaults.include_traceback_in_failure_log
 
         # --- internal helpers ---
-        self._log = Log(self.logger_config)
-        self._warnings = Warnings(disable_warnings=self.disable_warnings)
+        self._log: Final = Log(self.logger_config)
+        self._warnings: Final = Warnings(disable_warnings=self._disable_warnings)
 
         # --- derived options ---
         self.jitter: Final = self._derive_jitter(jitter=jitter)
-        self.re_raise_exception: Final = isinstance(self.return_default_value, UnsetType)
+        self._re_raise_exception: Final = isinstance(self.return_default_value, UnsetType)
         self._stats: Final = RetryStats(
             log=self._log,
             decorator=DecoratorOptions(
@@ -159,18 +163,18 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
                 return_default_value=self.return_default_value,
                 delay=self.delay,
                 jitter=self.jitter,
-                disable_logging=self.disable_logging,
-                disable_warnings=self.disable_warnings,
-                re_raise_exception=self.re_raise_exception,
+                disable_logging=self._disable_logging,
+                disable_warnings=self._disable_warnings,
+                re_raise_exception=self._re_raise_exception,
             ),
             global_options=GlobalOptions(
                 jitter_for_exponential=defaults.jitter_for_exponential,
                 jitter_for_fixed=defaults.jitter_for_fixed,
                 sync_sleep_call=defaults.sync_sleep_call,
                 async_sleep_call=defaults.async_sleep_call,
-                include_traceback_in_retry_log=self.include_traceback_in_retry_log,
-                include_traceback_in_failure_log=self.include_traceback_in_failure_log,
-                logger_traceback_kwarg=self.logger_traceback_kwarg,
+                include_traceback_in_retry_log=self._include_traceback_in_retry_log,
+                include_traceback_in_failure_log=self._include_traceback_in_failure_log,
+                logger_traceback_kwarg=self._logger_traceback_kwarg,
             ),
             call=CallOptions(),
             attempt=AttemptState(),
@@ -193,15 +197,15 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
 
         """
         return LoggerConfig(
-            logger_retry=self.logger_retry,
-            logger_failure=self.logger_failure,
-            logger_sleep=self.logger_sleep,
-            logger_success=self.logger_success,
-            logger_traceback_kwarg=self.logger_traceback_kwarg,
-            include_traceback_in_retry_log=self.include_traceback_in_retry_log,
-            include_traceback_in_failure_log=self.include_traceback_in_failure_log,
-            disable_logging=self.disable_logging,
-            disable_warnings=self.disable_warnings,
+            logger_retry=self._logger_retry,
+            logger_failure=self._logger_failure,
+            logger_sleep=self._logger_sleep,
+            logger_success=self._logger_success,
+            logger_traceback_kwarg=self._logger_traceback_kwarg,
+            include_traceback_in_retry_log=self._include_traceback_in_retry_log,
+            include_traceback_in_failure_log=self._include_traceback_in_failure_log,
+            disable_logging=self._disable_logging,
+            disable_warnings=self._disable_warnings,
         )
 
     @final
@@ -244,7 +248,7 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         if not isinstance(self.return_default_value, UnsetType):
             FunctionTypes(func).warn_on_return_default_mismatch(
                 return_default_value=self.return_default_value,
-                disable_warnings=self.disable_warnings,
+                disable_warnings=self._disable_warnings,
             )
 
         return self._wrap(func)
@@ -326,6 +330,83 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         """
         raise NotImplementedError
 
+    @abstractmethod
+    def _safe_call_callback(
+        self,
+        *,
+        callback: Callable[[RetryStats], Awaitable[None] | None],
+        stats: RetryStats,
+    ) -> Awaitable[None] | None:
+        """
+        Invoke a retry callback, swallowing and logging any exception.
+
+        Callback errors must not abort the retry cycle: if the callback
+        raises, the error is logged via :meth:`_log_swallowed` and the
+        retry proceeds normally.
+
+        Parameters
+        ----------
+        callback : Callable[[RetryStats], Awaitable[None] | None]
+            Callback to invoke.
+        stats : RetryStats
+            Current retry statistics.
+
+        """
+        raise NotImplementedError
+
+    def _log_swallowed(
+        self,
+        *,
+        operation: str,
+        exc: Exception,
+    ) -> None:
+        """
+        Log a swallowed exception, falling back to a default logger.
+
+        Prefers the failure logger, then the retry logger. If neither is
+        available (both disabled), the message is written to the package's
+        default logger so the error is not silently lost.
+
+        Parameters
+        ----------
+        operation : str
+            Human-readable name of the failed operation.
+        exc : Exception
+            The swallowed exception.
+
+        """
+        record = self._log.record
+
+        if record(
+            log_kind="failure",
+            message="Swallowed exception in %s.",
+            args=(operation,),
+            last_exception=exc,
+        ):
+            return
+
+        if record(
+            log_kind="retry",
+            message="Swallowed exception in %s.",
+            args=(operation,),
+            last_exception=exc,
+        ):
+            return
+
+        self._warnings.warn(
+            f"\n\tNo logger available for swallowed exception in {operation}: "
+            f"{exc!r}.\n\t"
+            f"Both logger_failure and logger_retry are disabled; "
+            f"falling back to the default logger.",
+            stacklevel=5,
+        )
+        DEFAULT_LOGGER.error(
+            "Swallowed exception in %s: %r",
+            operation,
+            exc,
+            exc_info=exc,
+        )
+
     @final
     def _prepare_success(  # ruff: ignore[no-self-use]
         self,
@@ -393,7 +474,7 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         """
         stats_attempt.elapsed = time.monotonic() - stats_attempt.started_at
 
-        if not self.re_raise_exception or stats_attempt.last_exception is None:
+        if not self._re_raise_exception or stats_attempt.last_exception is None:
             stats_attempt.result = self.return_default_value
 
     @final
@@ -420,7 +501,7 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
             Containing all exceptions from ``stats.attempt.exceptions``.
 
         """
-        if self.re_raise_exception and stats_attempt.exceptions:
+        if self._re_raise_exception and stats_attempt.exceptions:
             msg = f"All {stats_attempt.retry_index} attempts failed"
             raise ExceptionGroup(msg, stats_attempt.exceptions)
 

@@ -40,6 +40,8 @@ class AsyncRetrying[**P, R](BaseRetrying[R, Callable[P, Awaitable[R | UnsetType]
 
     __slots__ = ("sleep_call",)
 
+    wrapper_kind = "async"
+
     @override
     def __init__(self, **kwargs: Unpack[RetryKwargs[R]]) -> None:
         super().__init__(**kwargs)
@@ -79,15 +81,15 @@ class AsyncRetrying[**P, R](BaseRetrying[R, Callable[P, Awaitable[R | UnsetType]
                         exc=exc,
                         delay_calculator=delay_calculator,
                     )
-                    await self._call_callback(callback=on_retry, stats=stats)
+                    await self._safe_call_callback(callback=on_retry, stats=stats)
                     await self._sleep(stats_attempt=stats_attempt)
                 else:
                     self._prepare_success(stats_attempt=stats_attempt, result=result)
-                    await self._call_callback(callback=on_success, stats=stats)
+                    await self._safe_call_callback(callback=on_success, stats=stats)
                     return result
 
             self._prepare_failure(stats_attempt=stats_attempt)
-            await self._call_callback(callback=on_failure, stats=stats)
+            await self._safe_call_callback(callback=on_failure, stats=stats)
             self._raise_if_needed(stats_attempt=stats_attempt)
             return self.return_default_value
 
@@ -105,12 +107,19 @@ class AsyncRetrying[**P, R](BaseRetrying[R, Callable[P, Awaitable[R | UnsetType]
         if isinstance(stats_attempt.computed_delay, UnsetType) or stats_attempt.computed_delay <= 0:
             return
 
-        self._log.record(
+        _ = self._log.record(
             log_kind="sleep",
             message="Wait %s seconds between attempts to execute the '%s' function",
             args=(stats_attempt.computed_delay, stats_attempt.fname),
         )
-        await self.sleep_call(stats_attempt.computed_delay)
+
+        try:
+            await self.sleep_call(stats_attempt.computed_delay)
+        except Exception as exc:  # ruff: ignore[blind-except]
+            self._log_swallowed(
+                operation=f"{self.wrapper_kind} sleep callable",
+                exc=exc,
+            )
 
     @override
     async def _call_callback(
@@ -124,3 +133,19 @@ class AsyncRetrying[**P, R](BaseRetrying[R, Callable[P, Awaitable[R | UnsetType]
 
         if inspect.isawaitable(result):
             await result
+
+    @override
+    async def _safe_call_callback(
+        self,
+        *,
+        callback: Callable[[RetryStats], Awaitable[None] | None],
+        stats: RetryStats,
+    ) -> None:
+        try:
+            await self._call_callback(callback=callback, stats=stats)
+        except Exception as exc:  # ruff: ignore[blind-except]
+            name = getattr(callback, "__name__", "<anonymous>")
+            self._log_swallowed(
+                operation=f"{name} callback in {self.wrapper_kind} wrapper",
+                exc=exc,
+            )
