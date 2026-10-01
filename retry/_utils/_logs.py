@@ -9,6 +9,9 @@ handling for a single shared logger named ``"retry"``.
 import dataclasses as dc
 import logging
 import sys
+from collections.abc import (
+    Mapping,
+)
 from enum import (
     IntEnum,
 )
@@ -178,6 +181,7 @@ class Log:
         message: str,
         args: tuple[Any, ...],
         last_exception: Exception | None = None,
+        extra: Mapping[str, object] | None = None,
     ) -> bool:
         """
         Record a log message for ``log_kind`` and dispatch it.
@@ -205,6 +209,11 @@ class Log:
         last_exception : Exception | None, optional
             Exception to attach as ``exc_info`` when the message's level is
             at or above :attr:`LoggerConfig.traceback_min_level`.
+        extra : Mapping[str, object] | None, optional
+            Additional fields to attach to the log record via the ``logging``
+            ``extra`` argument. Useful for structured logging backends
+            (Sentry, Datadog). Ignored by custom loggers that do not accept
+            ``extra``.
 
         Returns
         -------
@@ -222,6 +231,9 @@ class Log:
 
         if log_level >= self._config.traceback_min_level and last_exception is not None:
             kwargs["exc_info"] = last_exception
+
+        if extra:
+            kwargs["extra"] = dict(extra)
 
         _RETRY_LOGGER.log(log_level, message, *args, **kwargs)
         return True
@@ -290,6 +302,7 @@ class _BoundLog[LK: _LogKind]:
         self: '_BoundLog[Literal["success", "sleep"]]',
         message: str,
         *args: object,
+        extra: Mapping[str, object] | None = None,
     ) -> bool: ...
 
     @overload
@@ -298,6 +311,7 @@ class _BoundLog[LK: _LogKind]:
         message: str,
         *args: object,
         last_exception: Exception | None,
+        extra: Mapping[str, object] | None = None,
     ) -> bool: ...
 
     def __call__(
@@ -305,6 +319,7 @@ class _BoundLog[LK: _LogKind]:
         message: str,
         *args: object,
         last_exception: Exception | None = None,
+        extra: Mapping[str, object] | None = None,
     ) -> bool:
         """
         Emit a log message using the bound logger kind.
@@ -318,6 +333,10 @@ class _BoundLog[LK: _LogKind]:
         last_exception : Exception | None, optional
             Exception to attach as ``exc_info`` when the message's level is
             at or above :attr:`LoggerConfig.traceback_min_level`.
+        extra : Mapping[str, object] | None, optional
+            Additional fields to attach to the log record via the
+            ``logging`` ``extra`` argument. Useful for structured logging
+            backends (Sentry, Datadog).
 
         Returns
         -------
@@ -331,4 +350,5 @@ class _BoundLog[LK: _LogKind]:
             message=message,
             args=args,
             last_exception=last_exception,
+            extra=extra,
         )

@@ -15,6 +15,7 @@ from abc import (
 from collections.abc import (
     Awaitable,
     Callable,
+    Mapping,
 )
 from typing import (
     Any,
@@ -302,7 +303,7 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
     def _sleep(
         self,
         *,
-        stats_attempt: AttemptState,
+        stats: RetryStats,
     ) -> Awaitable[None] | None:
         """
         Sleep between attempts.
@@ -312,8 +313,8 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
 
         Parameters
         ----------
-        stats_attempt : AttemptState
-            Per-attempt state.
+        stats : RetryStats
+            Current retry statistics.
 
         """
         raise NotImplementedError
@@ -381,6 +382,7 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         *,
         operation: str,
         exc: Exception,
+        extra: Mapping[str, object],
     ) -> None:
         """
         Log a swallowed exception through the failure logger.
@@ -399,6 +401,9 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
             ``"on_retry callback"`` or ``"sync sleep callable"``.
         exc : Exception
             The swallowed exception.
+        extra : Mapping[str, object]
+            Structured fields attached to the log record via the ``logging``
+            ``extra`` argument. Typically :attr:`RetryStats.log_extra`.
 
         """
         if not self._log.record(
@@ -406,6 +411,7 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
             message="Swallowed exception in %s.",
             args=(operation,),
             last_exception=exc,
+            extra=extra,
         ):
             self._warnings.warn(
                 f"\n\tNo logger available for swallowed exception in {operation}: "

@@ -70,8 +70,10 @@ def default_on_retry(stats: RetryStats) -> None:
     """
     Default ``on_retry`` callback: log the failed attempt.
 
-    Records a ``"retry"`` message via ``stats.log``. If the retry level
-    is :attr:`LogLevel.OFF` or logging is disabled, the call is a no-op.
+    Records a ``"retry"`` message via ``stats.log``, and, when a delay
+    is scheduled before the next attempt, also records a ``"sleep"``
+    message. Structured fields from :attr:`RetryStats.log_extra` are
+    attached to both records.
 
     Parameters
     ----------
@@ -90,6 +92,7 @@ def default_on_retry(stats: RetryStats) -> None:
             stats.decorator.attempts,
         ),
         last_exception=stats_attempt.last_exception,
+        extra=stats.log_extra,
     )
 
     if not isinstance(stats_attempt.computed_delay, UnsetType) and stats_attempt.computed_delay > 0:
@@ -97,6 +100,7 @@ def default_on_retry(stats: RetryStats) -> None:
             log_kind="sleep",
             message="Wait %s seconds between attempts to execute the '%s' function",
             args=(stats_attempt.computed_delay, stats_attempt.fname),
+            extra=stats.log_extra,
         )
 
 
@@ -104,9 +108,8 @@ def default_on_failure(stats: RetryStats) -> None:
     """
     Default ``on_failure`` callback: log the final failure.
 
-    Records a ``"failure"`` message via ``stats.log``. If the failure
-    level is :attr:`LogLevel.OFF` or logging is disabled, the call is a
-    no-op.
+    Records a ``"failure"`` message via ``stats.log``, attaching structured
+    fields from :attr:`RetryStats.log_extra` to the log record.
 
     Parameters
     ----------
@@ -121,6 +124,7 @@ def default_on_failure(stats: RetryStats) -> None:
         message="Failed the execution of the '%s' function.",
         args=(stats_attempt.fname,),
         last_exception=stats_attempt.last_exception,
+        extra=stats.log_extra,
     )
 
 

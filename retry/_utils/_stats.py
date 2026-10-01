@@ -236,6 +236,38 @@ class RetryStats:
     call: CallOptions
     attempt: AttemptState
 
+    @property
+    def log_extra(self) -> Mapping[str, object]:
+        """
+        Structured fields for the ``logging`` ``extra`` argument.
+
+        Suitable for passing to :meth:`Log.record` via ``extra``. Useful
+        for structured logging backends (Sentry, Datadog) that index
+        ``LogRecord`` attributes.
+
+        Returns
+        -------
+        Mapping[str, object]
+            Fields including function name, attempt index, total attempts,
+            monotonic start time, elapsed time, computed delay, and the type
+            of the last exception.
+
+        """
+        attempt = self.attempt
+        return {
+            "fname": attempt.fname,
+            "retry_index": attempt.retry_index,
+            "attempts": self.decorator.attempts,
+            "started_at": attempt.started_at,
+            "elapsed": attempt.elapsed,
+            "computed_delay": attempt.computed_delay,
+            "exception_type": (
+                type(attempt.last_exception).__name__
+                if attempt.last_exception is not None
+                else None
+            ),
+        }
+
     def for_call(
         self,
         *,

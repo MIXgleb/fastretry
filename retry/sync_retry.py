@@ -27,7 +27,6 @@ from retry._types import (
     RetryKwargs,
 )
 from retry._utils import (
-    AttemptState,
     DelayCalculator,
     RetryStats,
     UnsetType,
@@ -84,7 +83,7 @@ class SyncRetrying[**P, R](BaseRetrying[R, Callable[P, R | UnsetType]]):
                         delay_calculator=delay_calculator,
                     )
                     self._safe_call_callback(callback=on_retry, stats=stats)
-                    self._sleep(stats_attempt=stats_attempt)
+                    self._sleep(stats=stats)
                 else:
                     self._prepare_success(stats_attempt=stats_attempt, result=result)
                     self._safe_call_callback(callback=on_success, stats=stats)
@@ -101,8 +100,10 @@ class SyncRetrying[**P, R](BaseRetrying[R, Callable[P, R | UnsetType]]):
     def _sleep(
         self,
         *,
-        stats_attempt: AttemptState,
+        stats: RetryStats,
     ) -> None:
+        stats_attempt = stats.attempt
+
         if isinstance(stats_attempt.computed_delay, UnsetType) or stats_attempt.computed_delay <= 0:
             return
 
@@ -112,6 +113,7 @@ class SyncRetrying[**P, R](BaseRetrying[R, Callable[P, R | UnsetType]]):
             self._log_swallowed(
                 operation=f"{self.wrapper_kind} sleep callable",
                 exc=exc,
+                extra=stats.log_extra,
             )
 
     @override
@@ -149,4 +151,5 @@ class SyncRetrying[**P, R](BaseRetrying[R, Callable[P, R | UnsetType]]):
             self._log_swallowed(
                 operation=f"{name} callback in {self.wrapper_kind} wrapper",
                 exc=exc,
+                extra=stats.log_extra,
             )
