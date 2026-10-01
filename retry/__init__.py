@@ -9,6 +9,7 @@ __all__ = (
     "configure_retry",
     "default_on_failure",
     "default_on_retry",
+    "default_on_success",
     "reset_defaults",
     "retry",
     "set_retry_defaults",
@@ -32,6 +33,7 @@ from retry._utils import (
     RetryStats,
     default_on_failure,
     default_on_retry,
+    default_on_success,
 )
 from retry._utils._delay import (
     ExponentialDelay,

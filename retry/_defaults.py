@@ -45,6 +45,7 @@ from retry._utils import (
     UnsetType,
     default_on_failure,
     default_on_retry,
+    default_on_success,
 )
 
 
@@ -55,7 +56,7 @@ class _Defaults:
     delay: Delay = 0
     disable_logging: bool = False
     disable_warnings: bool = False
-    on_success: Callable[[RetryStats], None] | None = None
+    on_success: Callable[[RetryStats], None] | None = default_on_success
     on_retry: Callable[[RetryStats], None] | None = default_on_retry
     on_failure: Callable[[RetryStats], None] | None = default_on_failure
 

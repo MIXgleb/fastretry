@@ -66,6 +66,38 @@ class ResolvedRetryCallbacks:
     on_failure: Callable[[RetryStats], None]
 
 
+def default_on_success(stats: RetryStats) -> None:
+    """
+    Default ``on_success`` callback: log the successful attempt.
+
+    Records a ``"success"`` message via ``stats.log``, attaching
+    structured fields from :attr:`RetryStats.log_extra` to the log
+    record. The result value is included in the message when it is a
+    primitive type; for complex objects only the type name is logged.
+
+    Parameters
+    ----------
+    stats : RetryStats
+        Current retry statistics.
+
+    """
+    result = stats.attempt.result
+
+    if isinstance(result, (int, float, str, bool, bytes, type(None))):
+        message = "Function executed successfully. Result: %r."
+        args = (result,)
+    else:
+        message = "Function executed successfully. Result type: %s."
+        args = (type(result).__name__,)
+
+    _ = stats.log.record(
+        log_kind="success",
+        message=message,
+        args=args,
+        extra=stats.log_extra,
+    )
+
+
 def default_on_retry(stats: RetryStats) -> None:
     """
     Default ``on_retry`` callback: log the failed attempt.

@@ -21,6 +21,7 @@ __all__ = (
     "Warnings",
     "default_on_failure",
     "default_on_retry",
+    "default_on_success",
     "noop_callback",
 )
 
@@ -29,6 +30,7 @@ from retry._utils._callbacks import (
     RetryCallbacks,
     default_on_failure,
     default_on_retry,
+    default_on_success,
     noop_callback,
 )
 from retry._utils._delay import (
