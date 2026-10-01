@@ -408,8 +408,8 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         """
         if not self._log.record(
             log_kind="failure",
-            message="Swallowed exception in %s.",
-            args=(operation,),
+            message="Swallowed exception in %s in %s wrapper.",
+            args=(operation, self.wrapper_kind),
             last_exception=exc,
             extra=extra,
         ):

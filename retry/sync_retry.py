@@ -111,7 +111,7 @@ class SyncRetrying[**P, R](BaseRetrying[R, Callable[P, R | UnsetType]]):
             self.sleep_call(stats_attempt.computed_delay)
         except Exception as exc:  # ruff: ignore[blind-except]
             self._log_swallowed(
-                operation=f"{self.wrapper_kind} sleep callable",
+                operation="sleep callable",
                 exc=exc,
                 extra=stats.log_extra,
             )
@@ -149,7 +149,7 @@ class SyncRetrying[**P, R](BaseRetrying[R, Callable[P, R | UnsetType]]):
         except Exception as exc:  # ruff: ignore[blind-except]
             name = getattr(callback, "__name__", "<anonymous>")
             self._log_swallowed(
-                operation=f"{name} callback in {self.wrapper_kind} wrapper",
+                operation=f"{name} callback",
                 exc=exc,
                 extra=stats.log_extra,
             )
