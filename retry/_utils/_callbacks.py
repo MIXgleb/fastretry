@@ -9,6 +9,9 @@ from typing import (
 from retry._utils._stats import (
     RetryStats,
 )
+from retry._utils._unset import (
+    UnsetType,
+)
 
 
 class RetryCallbacks(TypedDict, total=False):
@@ -88,6 +91,13 @@ def default_on_retry(stats: RetryStats) -> None:
         ),
         last_exception=stats_attempt.last_exception,
     )
+
+    if not isinstance(stats_attempt.computed_delay, UnsetType) and stats_attempt.computed_delay > 0:
+        _ = stats.log.record(
+            log_kind="sleep",
+            message="Wait %s seconds between attempts to execute the '%s' function",
+            args=(stats_attempt.computed_delay, stats_attempt.fname),
+        )
 
 
 def default_on_failure(stats: RetryStats) -> None:

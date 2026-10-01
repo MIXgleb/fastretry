@@ -101,17 +101,8 @@ class AsyncRetrying[**P, R](BaseRetrying[R, Callable[P, Awaitable[R | UnsetType]
         *,
         stats_attempt: AttemptState,
     ) -> None:
-        if stats_attempt.retry_index == self.attempts:
-            return
-
         if isinstance(stats_attempt.computed_delay, UnsetType) or stats_attempt.computed_delay <= 0:
             return
-
-        _ = self._log.record(
-            log_kind="sleep",
-            message="Wait %s seconds between attempts to execute the '%s' function",
-            args=(stats_attempt.computed_delay, stats_attempt.fname),
-        )
 
         try:
             await self.sleep_call(stats_attempt.computed_delay)
