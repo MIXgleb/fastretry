@@ -11,7 +11,7 @@ from typing import (
 from retry._utils import (
     Delay,
     JitterStrategy,
-    LoggerType,
+    LogLevel,
     RetryCallbacks,
     RetryStats,
     UnsetType,
@@ -76,13 +76,11 @@ class LoggingKwargs(
 ):
     """Options related to logging, configured via :func:`~._defaults.configure_logging`."""
 
-    logger_success: LoggerType | None
-    logger_retry: LoggerType | None
-    logger_failure: LoggerType | None
-    logger_sleep: LoggerType | None
-    include_traceback_in_retry_log: bool
-    include_traceback_in_failure_log: bool
-    logger_traceback_kwarg: str
+    level_success: LogLevel
+    level_retry: LogLevel
+    level_failure: LogLevel
+    level_sleep: LogLevel
+    traceback_min_level: LogLevel
 
 
 class DefaultsKwargs(
@@ -91,4 +89,4 @@ class DefaultsKwargs(
     LoggingKwargs,
     total=False,
 ):
-    """All keyword arguments accepted by :meth:`_Defaults.set`."""
+    """All keyword arguments accepted by :meth:`~._defaults._Defaults.set`."""

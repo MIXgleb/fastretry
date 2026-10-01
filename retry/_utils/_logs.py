@@ -1,45 +1,68 @@
 """
 Logging utilities for retry decorators.
 
-Provides the :class:`Log` helper — a kind-aware wrapper around a logging
-configuration that centralizes logger selection, traceback handling, and
-keyword fallback.
+Provides the :class:`Log` helper — a kind-aware wrapper around a
+:class:`LoggerConfig` that centralizes level selection and traceback
+handling for a single shared logger named ``"retry"``.
 """
 
 import dataclasses as dc
-import re
-from collections.abc import (
-    Callable,
+import logging
+import sys
+from enum import (
+    IntEnum,
 )
 from typing import (
     Any,
+    Final,
     Literal,
-    Protocol,
     assert_never,
     overload,
 )
 
-from retry._utils._warnings import (
-    Warnings,
-)
-
 type _LogKind = Literal["success", "retry", "failure", "sleep"]
 
-_UNEXPECTED_KWARG_RE = re.compile(
-    r"got an unexpected keyword argument ['\"](?P<name>[^'\"]+)['\"]",
-)
 
-
-class LoggerType(Protocol):
+class LogLevel(IntEnum):
     """
-    Signature of a logger callable.
+    Log level for a retry log kind.
 
-    Accepts optional positional ``%``-style arguments,
-    and arbitrary keyword arguments (e.g. ``exc_info``).
+    Extends :class:`logging` levels with ``OFF`` to disable a kind
+    entirely. Values match :mod:`logging` constants so they can be
+    passed directly to :meth:`logging.Logger.log`.
     """
 
-    def __call__(self, *args: Any, **kwargs: Any) -> None:  # ruff: ignore[any-type]
-        """Call the logger with an optional %-style format."""
+    OFF = 0
+    DEBUG = logging.DEBUG
+    INFO = logging.INFO
+    WARNING = logging.WARNING
+    ERROR = logging.ERROR
+    CRITICAL = logging.CRITICAL
+
+
+def _make_retry_logger() -> logging.Logger:
+    """
+    Create the default logger writing to stdout.
+
+    Returns
+    -------
+    logging.Logger
+        default logger
+
+    """
+    logger = logging.getLogger("retry")
+
+    if not logger.handlers:
+        logger.setLevel(logging.DEBUG)
+        logger.propagate = False
+        handler = logging.StreamHandler(sys.stdout)
+        handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s"))
+        logger.addHandler(handler)
+
+    return logger
+
+
+_RETRY_LOGGER: Final[logging.Logger] = _make_retry_logger()
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -47,26 +70,22 @@ class LoggerConfig:
     """
     Immutable snapshot of logging configuration.
 
-    Passed to :class:`~._utils._logs.Log` so that the logger cannot
-    mutate the retry configuration. All fields are read-only after
-    construction.
+    Passed to :class:`Log` so that the logger cannot mutate the retry
+    configuration. All fields are read-only after construction.
 
     Attributes
     ----------
-    logger_retry : LoggerType | None
-        Callable for retry-kind messages.
-    logger_failure : LoggerType | None
-        Callable for failure-kind messages.
-    logger_sleep : LoggerType | None
-        Callable for sleep-kind messages.
-    logger_success : LoggerType | None
-        Callable for success-kind messages.
-    logger_traceback_kwarg : str
-        Name of the keyword argument used to pass an exception.
-    include_traceback_in_retry_log : bool
-        Whether to attach traceback to retry logs.
-    include_traceback_in_failure_log : bool
-        Whether to attach traceback to failure logs.
+    level_success : LogLevel
+        Level for success messages, or ``OFF`` to disable.
+    level_retry : LogLevel
+        Level for retry messages, or ``OFF`` to disable.
+    level_failure : LogLevel
+        Level for failure messages, or ``OFF`` to disable.
+    level_sleep : LogLevel
+        Level for sleep messages, or ``OFF`` to disable.
+    traceback_min_level : LogLevel
+        Minimum level at which a traceback is attached to the log
+        record. Messages below this level are logged without traceback.
     disable_logging : bool
         If ``True``, all logging is skipped.
     disable_warnings : bool
@@ -74,13 +93,11 @@ class LoggerConfig:
 
     """
 
-    logger_retry: LoggerType | None
-    logger_failure: LoggerType | None
-    logger_sleep: LoggerType | None
-    logger_success: LoggerType | None
-    logger_traceback_kwarg: str
-    include_traceback_in_retry_log: bool
-    include_traceback_in_failure_log: bool
+    level_success: LogLevel
+    level_retry: LogLevel
+    level_failure: LogLevel
+    level_sleep: LogLevel
+    traceback_min_level: LogLevel
     disable_logging: bool
     disable_warnings: bool
 
@@ -169,15 +186,13 @@ class Log:
         argument checks. Prefer :meth:`use` unless you have a specific
         reason to call this directly.
 
-        Skips emission when logging is disabled or the logger is ``None``.
-        When traceback logging is enabled for the kind and an exception is
-        provided, the exception is passed via ``logger_traceback_kwarg``.
+        The message is emitted through the shared ``"retry"`` logger at the
+        level configured for ``log_kind``. If logging is disabled or the
+        level is :attr:`LogLevel.OFF`, the call is a no-op.
 
-        ``last_exception`` is meaningful only for the ``"retry"`` and
-        ``"failure"`` kinds, where the logger may accept a traceback keyword
-        argument. Passing it for ``"sleep"`` or ``"success"`` is silently
-        ignored. Omitting it for ``"retry"`` or ``"failure"`` is allowed —
-        the log will be emitted without a traceback.
+        When ``last_exception`` is provided and the message's level is at
+        or above :attr:`LoggerConfig.traceback_min_level`, the exception is
+        attached as ``exc_info``. Otherwise it is ignored.
 
         Parameters
         ----------
@@ -188,43 +203,35 @@ class Log:
         args : tuple[Any, ...]
             Format arguments.
         last_exception : Exception | None, optional
-            Exception to pass via ``logger_traceback_kwarg`` if traceback
-            logging is enabled for the kind. Ignored for ``"sleep"`` and
-            ``"success"``. For ``"retry"`` and ``"failure"`` it is optional;
-            when omitted, no traceback is attached.
+            Exception to attach as ``exc_info`` when the message's level is
+            at or above :attr:`LoggerConfig.traceback_min_level`.
 
         Returns
         -------
         bool
-            ``True`` if the message was dispatched to a logger, ``False``
-            if logging is disabled or the logger for ``log_kind`` is ``None``.
+            ``True`` if the message was dispatched, ``False`` if logging is
+            disabled or the level for ``log_kind`` is ``OFF``.
 
         """
-        logger, include_traceback = self._resolve(log_kind)
+        log_level = self._resolve(log_kind)
 
-        if self._config.disable_logging or logger is None:
+        if self._config.disable_logging or log_level == LogLevel.OFF:
             return False
 
         kwargs: dict[str, Any] = {}
 
-        if include_traceback and last_exception is not None:
-            kwargs[self._config.logger_traceback_kwarg] = last_exception
+        if log_level >= self._config.traceback_min_level and last_exception is not None:
+            kwargs["exc_info"] = last_exception
 
-        self._safe_log_with_fallback(
-            logger=logger,
-            message=message,
-            args=args,
-            kwargs=kwargs,
-            log_kind=log_kind,
-        )
+        _RETRY_LOGGER.log(log_level, message, *args, **kwargs)
         return True
 
     def _resolve(
         self,
         log_kind: _LogKind,
-    ) -> tuple[LoggerType | None, bool]:
+    ) -> LogLevel:
         """
-        Return the logger and traceback flag for a log kind.
+        Return the level for a log kind.
 
         Parameters
         ----------
@@ -233,108 +240,23 @@ class Log:
 
         Returns
         -------
-        tuple[LoggerType | None, bool]
-            Logger and traceback flag.
+        LogLevel
+            Level for the given kind, or ``LogLevel.OFF`` if disabled.
 
         """
         config = self._config
 
         match log_kind:
             case "sleep":
-                return config.logger_sleep, False
+                return config.level_sleep
             case "success":
-                return config.logger_success, False
+                return config.level_success
             case "retry":
-                return config.logger_retry, config.include_traceback_in_retry_log
+                return config.level_retry
             case "failure":
-                return config.logger_failure, config.include_traceback_in_failure_log
+                return config.level_failure
             case _:
                 assert_never(log_kind)
-
-    def _safe_log_with_fallback(
-        self,
-        *,
-        logger: Callable[..., Any],
-        message: str,
-        args: tuple[Any, ...],
-        kwargs: dict[str, Any],
-        log_kind: _LogKind,
-    ) -> None:
-        """
-        Call ``logger``, dropping keyword arguments it does not accept.
-
-        If the logger raises ``TypeError`` because a keyword argument is not
-        accepted, that keyword is removed from ``kwargs``, a warning is
-        emitted, and the call is retried. Any other ``TypeError`` is
-        re-raised.
-
-        Parameters
-        ----------
-        logger : Callable
-            Logger callable to invoke.
-        message : str
-            ``%``-style format string.
-        args : tuple[Any, ...]
-            Format arguments.
-        kwargs : dict[str, Any]
-            Keyword arguments to pass. Modified in place as unsupported keys
-            are dropped.
-        log_kind : LogKind
-            Logger kind, used in warning messages.
-
-        Raises
-        ------
-        TypeError
-            Logger raised ``TypeError`` unrelated to keyword arguments.
-
-        """
-        while kwargs:
-            try:
-                logger(message, *args, **kwargs)
-            except TypeError as exc:
-                if "got an unexpected keyword argument" not in str(exc):
-                    raise
-
-                key = self._extract_unexpected_kwarg(exc)
-
-                if key is None or key not in kwargs:
-                    raise
-
-                Warnings(disable_warnings=self._config.disable_warnings).warn(
-                    f"\n\tLogger of kind {log_kind!r} does not accept "
-                    f"{key!r} kwarg; logging without it.\n\t"
-                    f"Set the correct keyword argument name via "
-                    f"configure_logging(logger_traceback_kwarg=...).",
-                    stacklevel=8,
-                )
-                kwargs.pop(key)
-            else:
-                return
-
-        logger(message, *args)
-
-    @staticmethod
-    def _extract_unexpected_kwarg(exc: TypeError) -> str | None:
-        """
-        Extract the offending keyword name from a ``TypeError`` message.
-
-        Expected format::
-
-            <callable>() got an unexpected keyword argument '<name>'
-
-        Parameters
-        ----------
-        exc : TypeError
-            Exception to parse.
-
-        Returns
-        -------
-        str | None
-            The keyword name, or ``None`` if the message doesn't match.
-
-        """
-        match = _UNEXPECTED_KWARG_RE.search(str(exc))
-        return match.group("name") if match else None
 
 
 class _BoundLog[LK: _LogKind]:
@@ -394,16 +316,14 @@ class _BoundLog[LK: _LogKind]:
         *args : object
             Format arguments.
         last_exception : Exception | None, optional
-            Exception to pass via ``logger_traceback_kwarg`` if traceback
-            logging is enabled for the bound kind. Only meaningful for
-            ``"retry"`` and ``"failure"``; ignored for ``"sleep"`` and
-            ``"success"``.
+            Exception to attach as ``exc_info`` when the message's level is
+            at or above :attr:`LoggerConfig.traceback_min_level`.
 
         Returns
         -------
         bool
-            ``True`` if the message was dispatched to a logger, ``False``
-            if logging is disabled or the logger for ``log_kind`` is ``None``.
+            ``True`` if the message was dispatched, ``False`` if logging is
+            disabled or the level for the bound kind is ``OFF``.
 
         """
         return self._log.record(

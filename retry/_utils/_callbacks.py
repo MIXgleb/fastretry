@@ -67,8 +67,8 @@ def default_on_retry(stats: RetryStats) -> None:
     """
     Default ``on_retry`` callback: log the failed attempt.
 
-    Records a ``"retry"`` message via ``stats.log``. If ``logger_retry``
-    is ``None`` or logging is disabled, the call is a no-op.
+    Records a ``"retry"`` message via ``stats.log``. If the retry level
+    is :attr:`LogLevel.OFF` or logging is disabled, the call is a no-op.
 
     Parameters
     ----------
@@ -94,8 +94,9 @@ def default_on_failure(stats: RetryStats) -> None:
     """
     Default ``on_failure`` callback: log the final failure.
 
-    Records a ``"failure"`` message via ``stats.log``. If ``logger_failure``
-    is ``None`` or logging is disabled, the call is a no-op.
+    Records a ``"failure"`` message via ``stats.log``. If the failure
+    level is :attr:`LogLevel.OFF` or logging is disabled, the call is a
+    no-op.
 
     Parameters
     ----------

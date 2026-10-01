@@ -2,6 +2,7 @@
 
 __all__ = (
     "ExponentialDelay",
+    "LogLevel",
     "RetryCallbacks",
     "RetryStats",
     "configure_logging",
@@ -26,6 +27,7 @@ from retry._retry import (
     retry,
 )
 from retry._utils import (
+    LogLevel,
     RetryCallbacks,
     RetryStats,
     default_on_failure,

@@ -19,8 +19,6 @@ Loggers are configured separately via :func:`configure_logging`.
 import asyncio
 import contextlib
 import dataclasses as dc
-import logging
-import sys
 import time
 from collections.abc import (
     Awaitable,
@@ -42,34 +40,12 @@ from retry._types import (
 from retry._utils import (
     Delay,
     JitterStrategy,
-    LoggerType,
+    LogLevel,
     RetryStats,
     UnsetType,
     default_on_failure,
     default_on_retry,
 )
-
-
-def _make_default_logger() -> logging.Logger:
-    """
-    Create the default logger writing to stdout.
-
-    Returns
-    -------
-    logging.Logger
-        default logger
-
-    """
-    logger = logging.getLogger("retry")
-    logger.setLevel(logging.DEBUG)
-    logger.propagate = False
-    handler = logging.StreamHandler(sys.stdout)
-    handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s"))
-    logger.addHandler(handler)
-    return logger
-
-
-DEFAULT_LOGGER: Final[logging.Logger] = _make_default_logger()
 
 
 @dc.dataclass(slots=True)
@@ -91,15 +67,12 @@ class _Defaults:
     async_sleep_call: Callable[[float], Awaitable[None]] = asyncio.sleep
 
     # --- logging ---
-    logger_sleep: LoggerType | None = None
-    logger_success: LoggerType | None = None
-    logger_retry: LoggerType | None = DEFAULT_LOGGER.warning
-    logger_failure: LoggerType | None = DEFAULT_LOGGER.error
+    level_success: LogLevel = LogLevel.OFF
+    level_retry: LogLevel = LogLevel.WARNING
+    level_failure: LogLevel = LogLevel.ERROR
+    level_sleep: LogLevel = LogLevel.OFF
 
-    include_traceback_in_retry_log: bool = False
-    include_traceback_in_failure_log: bool = True
-
-    logger_traceback_kwarg: str = "exc_info"
+    traceback_min_level: LogLevel = LogLevel.ERROR
 
     @final
     def set(self, **kwargs: Unpack[DefaultsKwargs]) -> None:
@@ -138,30 +111,32 @@ defaults: Final[_Defaults] = _Defaults()
 
 def configure_logging(**kwargs: Unpack[LoggingKwargs]) -> None:
     """
-    Configure loggers used by the retry decorators.
+    Configure logging for the retry decorators.
 
-    By default, all loggers are built-in ``logging.Logger`` methods
-    writing to stdout.
+    Logging is handled by the standard :mod:`logging` module through a
+    single logger named ``"retry"``, which writes to stdout by default.
 
-    Pass ``None`` to disable a specific logger.
+    Each log kind has its own level. Set a level to :attr:`LogLevel.OFF`
+    to disable that kind.
 
     Parameters
     ----------
-    logger_success : LoggerType | None, optional
-        Callable for messages emitted after a successful attempt.
-    logger_retry : LoggerType | None, optional
-        Callable for messages emitted after a failed attempt, before sleeping.
-    logger_failure : LoggerType | None, optional
-        Callable for messages emitted after all attempts have failed.
-    logger_sleep : LoggerType | None, optional
-        Callable for messages emitted before sleeping between attempts.
-    include_traceback_in_retry_log : bool, optional
-        Include traceback in retry logs, by default False.
-    include_traceback_in_failure_log : bool, optional
-        Include traceback in failure logs, by default True.
-    logger_traceback_kwarg : str, optional
-        Name of the keyword argument used to pass the exception to the
-        logger, by default "exc_info".
+    level_success : LogLevel, optional
+        Level for messages emitted after a successful attempt,
+        by default :attr:`LogLevel.OFF`.
+    level_retry : LogLevel, optional
+        Level for messages emitted after a failed attempt, before
+        sleeping, by default :attr:`LogLevel.WARNING`.
+    level_failure : LogLevel, optional
+        Level for messages emitted after all attempts have failed,
+        by default :attr:`LogLevel.ERROR`.
+    level_sleep : LogLevel, optional
+        Level for messages emitted before sleeping between attempts,
+        by default :attr:`LogLevel.OFF`.
+    traceback_min_level : LogLevel, optional
+        Minimum level at which a traceback is attached to the log record.
+        Messages below this level are logged without traceback,
+        by default :attr:`LogLevel.ERROR`.
 
     """
     defaults.set(**kwargs)

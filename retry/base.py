@@ -26,7 +26,6 @@ from typing import (
 )
 
 from retry._defaults import (
-    DEFAULT_LOGGER,
     defaults,
 )
 from retry._utils import (
@@ -58,16 +57,14 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         "_callbacks",
         "_disable_logging",
         "_disable_warnings",
-        "_include_traceback_in_failure_log",
-        "_include_traceback_in_retry_log",
+        "_level_failure",
+        "_level_retry",
+        "_level_sleep",
+        "_level_success",
         "_log",
-        "_logger_failure",
-        "_logger_retry",
-        "_logger_sleep",
-        "_logger_success",
-        "_logger_traceback_kwarg",
         "_re_raise_exception",
         "_stats",
+        "_traceback_min_level",
         "_warnings",
         "attempts",
         "delay",
@@ -141,13 +138,11 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         )
 
         # --- logger configuration ---
-        self._logger_success: Final = defaults.logger_success
-        self._logger_retry: Final = defaults.logger_retry
-        self._logger_failure: Final = defaults.logger_failure
-        self._logger_sleep: Final = defaults.logger_sleep
-        self._logger_traceback_kwarg: Final = defaults.logger_traceback_kwarg
-        self._include_traceback_in_retry_log: Final = defaults.include_traceback_in_retry_log
-        self._include_traceback_in_failure_log: Final = defaults.include_traceback_in_failure_log
+        self._level_success: Final = defaults.level_success
+        self._level_retry: Final = defaults.level_retry
+        self._level_failure: Final = defaults.level_failure
+        self._level_sleep: Final = defaults.level_sleep
+        self._traceback_min_level: Final = defaults.traceback_min_level
 
         # --- internal helpers ---
         self._log: Final = Log(self.logger_config)
@@ -172,9 +167,7 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
                 jitter_for_fixed=defaults.jitter_for_fixed,
                 sync_sleep_call=defaults.sync_sleep_call,
                 async_sleep_call=defaults.async_sleep_call,
-                include_traceback_in_retry_log=self._include_traceback_in_retry_log,
-                include_traceback_in_failure_log=self._include_traceback_in_failure_log,
-                logger_traceback_kwarg=self._logger_traceback_kwarg,
+                traceback_min_level=self._traceback_min_level,
             ),
             call=CallOptions(),
             attempt=AttemptState(),
@@ -202,13 +195,11 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
             f"re_raise_exception={self._re_raise_exception!r},\n\t"
             f"disable_logging={self._disable_logging!r},\n\t"
             f"disable_warnings={self._disable_warnings!r},\n\t"
-            f"logger_success={self._logger_success!r},\n\t"
-            f"logger_retry={self._logger_retry!r},\n\t"
-            f"logger_failure={self._logger_failure!r},\n\t"
-            f"logger_sleep={self._logger_sleep!r},\n\t"
-            f"logger_traceback_kwarg={self._logger_traceback_kwarg!r},\n\t"
-            f"include_traceback_in_retry_log={self._include_traceback_in_retry_log!r},\n\t"
-            f"include_traceback_in_failure_log={self._include_traceback_in_failure_log!r},\n\t"
+            f"level_success={self._level_success!r},\n\t"
+            f"level_retry={self._level_retry!r},\n\t"
+            f"level_failure={self._level_failure!r},\n\t"
+            f"level_sleep={self._level_sleep!r},\n\t"
+            f"traceback_min_level={self._traceback_min_level!r},\n\t"
             f"callbacks={self._callbacks!r},\n\t"
             f")"
         )
@@ -230,13 +221,11 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
 
         """
         return LoggerConfig(
-            logger_retry=self._logger_retry,
-            logger_failure=self._logger_failure,
-            logger_sleep=self._logger_sleep,
-            logger_success=self._logger_success,
-            logger_traceback_kwarg=self._logger_traceback_kwarg,
-            include_traceback_in_retry_log=self._include_traceback_in_retry_log,
-            include_traceback_in_failure_log=self._include_traceback_in_failure_log,
+            level_success=self._level_success,
+            level_retry=self._level_retry,
+            level_failure=self._level_failure,
+            level_sleep=self._level_sleep,
+            traceback_min_level=self._traceback_min_level,
             disable_logging=self._disable_logging,
             disable_warnings=self._disable_warnings,
         )
@@ -394,50 +383,36 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         exc: Exception,
     ) -> None:
         """
-        Log a swallowed exception, falling back to a default logger.
+        Log a swallowed exception through the failure logger.
 
-        Prefers the failure logger, then the retry logger. If neither is
-        available (both disabled), the message is written to the package's
-        default logger so the error is not silently lost.
+        Used when a user-provided callback or sleep callable raises: the
+        error must not abort the retry cycle, but should still be visible.
+
+        If the failure level is disabled (``LogLevel.OFF``) or logging is
+        globally disabled, a warning is emitted instead so the swallowed
+        exception is not lost silently.
 
         Parameters
         ----------
         operation : str
-            Human-readable name of the failed operation.
+            Human-readable name of the failed operation, e.g.
+            ``"on_retry callback"`` or ``"sync sleep callable"``.
         exc : Exception
             The swallowed exception.
 
         """
-        self._warnings.warn(
-            f"\n\tNo logger available for swallowed exception in {operation}: "
-            f"{exc!r}.\n\t"
-            f"Both logger_failure and logger_retry are disabled; "
-            f"falling back to the default logger.",
-            stacklevel=5,
-        )
-
-        if not self._disable_logging:
-            if self._log.record(
-                log_kind="failure",
-                message="Swallowed exception in %s.",
-                args=(operation,),
-                last_exception=exc,
-            ):
-                return
-
-            if self._log.record(
-                log_kind="retry",
-                message="Swallowed exception in %s.",
-                args=(operation,),
-                last_exception=exc,
-            ):
-                return
-
-            DEFAULT_LOGGER.error(
-                "Swallowed exception in %s: %r",
-                operation,
-                exc,
-                exc_info=exc,
+        if not self._log.record(
+            log_kind="failure",
+            message="Swallowed exception in %s.",
+            args=(operation,),
+            last_exception=exc,
+        ):
+            self._warnings.warn(
+                f"\n\tNo logger available for swallowed exception in {operation}: "
+                f"{exc!r}.\n\t"
+                f"The failure log level is disabled; "
+                f"falling back to a warning.",
+                stacklevel=5,
             )
 
     @final

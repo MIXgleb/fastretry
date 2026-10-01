@@ -15,6 +15,7 @@ from retry._utils._delay import (
 )
 from retry._utils._logs import (
     Log,
+    LogLevel,
 )
 from retry._utils._unset import (
     UNSET,
@@ -64,8 +65,8 @@ class GlobalOptions:
     """
     Application-wide options resolved from global defaults.
 
-    Configured via :func:`~._defaults.configure_retry` and
-    :func:`~._defaults.configure_logging`. Read-only per decorator.
+    Configured via :func:`~._defaults.configure_retry`. Read-only per
+    decorator.
 
     Attributes
     ----------
@@ -77,12 +78,9 @@ class GlobalOptions:
         Sync callable used to sleep between attempts.
     async_sleep_call : Callable[[float], Awaitable[None]]
         Async callable used to sleep between attempts.
-    include_traceback_in_retry_log : bool
-        Whether to attach traceback to retry logs.
-    include_traceback_in_failure_log : bool
-        Whether to attach traceback to failure logs.
-    logger_traceback_kwarg : str
-        Name of the keyword argument used to pass an exception.
+    traceback_min_level : LogLevel
+        Minimum level at which a traceback is attached to the log record.
+        Messages below this level are logged without traceback.
 
     """
 
@@ -92,9 +90,7 @@ class GlobalOptions:
     sync_sleep_call: Callable[[float], None]
     async_sleep_call: Callable[[float], Awaitable[None]]
 
-    include_traceback_in_retry_log: bool
-    include_traceback_in_failure_log: bool
-    logger_traceback_kwarg: str
+    traceback_min_level: LogLevel
 
 
 @dc.dataclass(frozen=True, slots=True, repr=False)

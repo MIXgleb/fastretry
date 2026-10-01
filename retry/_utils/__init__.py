@@ -12,8 +12,8 @@ __all__ = (
     "GlobalOptions",
     "JitterStrategy",
     "Log",
+    "LogLevel",
     "LoggerConfig",
-    "LoggerType",
     "ResolvedRetryCallbacks",
     "RetryCallbacks",
     "RetryStats",
@@ -43,7 +43,7 @@ from retry._utils._function_types import (
 from retry._utils._logs import (
     Log,
     LoggerConfig,
-    LoggerType,
+    LogLevel,
 )
 from retry._utils._stats import (
     AttemptState,
