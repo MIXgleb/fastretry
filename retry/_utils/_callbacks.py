@@ -85,12 +85,8 @@ def default_on_retry(stats: RetryStats) -> None:
 
     _ = stats.log.record(
         log_kind="retry",
-        message="Error executing the '%s' function. Try %d of %d.",
-        args=(
-            stats_attempt.fname,
-            stats_attempt.retry_index,
-            stats.decorator.attempts,
-        ),
+        message="Error executing the function. Try %d of %d.",
+        args=(stats_attempt.retry_index, stats.decorator.attempts),
         last_exception=stats_attempt.last_exception,
         extra=stats.log_extra,
     )
@@ -98,8 +94,8 @@ def default_on_retry(stats: RetryStats) -> None:
     if not isinstance(stats_attempt.computed_delay, UnsetType) and stats_attempt.computed_delay > 0:
         _ = stats.log.record(
             log_kind="sleep",
-            message="Wait %s seconds between attempts to execute the '%s' function",
-            args=(stats_attempt.computed_delay, stats_attempt.fname),
+            message="Wait %s seconds between attempts.",
+            args=(stats_attempt.computed_delay,),
             extra=stats.log_extra,
         )
 
@@ -117,13 +113,11 @@ def default_on_failure(stats: RetryStats) -> None:
         Current retry statistics.
 
     """
-    stats_attempt = stats.attempt
-
     _ = stats.log.record(
         log_kind="failure",
-        message="Failed the execution of the '%s' function.",
-        args=(stats_attempt.fname,),
-        last_exception=stats_attempt.last_exception,
+        message="Failed the execution of the function after %d attempts.",
+        args=(stats.decorator.attempts,),
+        last_exception=stats.attempt.last_exception,
         extra=stats.log_extra,
     )
 

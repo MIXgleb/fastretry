@@ -59,7 +59,21 @@ def _make_retry_logger() -> logging.Logger:
         logger.setLevel(logging.DEBUG)
         logger.propagate = False
         handler = logging.StreamHandler(sys.stdout)
-        handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s"))
+        handler.setFormatter(
+            logging.Formatter(
+                "{asctime} [{levelname:^9}] {fname} "
+                "[{retry_index}/{attempts}] "
+                "({elapsed:.2f}s) [{exception_type}]: {message}",
+                style="{",
+                defaults={
+                    "fname": "<unknown>",
+                    "retry_index": "?",
+                    "attempts": "?",
+                    "elapsed": 0.0,
+                    "exception_type": "-",
+                },
+            )
+        )
         logger.addHandler(handler)
 
     return logger
