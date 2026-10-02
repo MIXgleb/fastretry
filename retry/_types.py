@@ -43,27 +43,15 @@ class RetryKwargs[R](RetryOptions, total=False):
     callbacks: RetryCallbacks | UnsetType
 
 
-class LocalKwargs(RetryOptions, total=False):
-    """
-    Options accepted by ``@retry(...)``.
-
-    These options are also stored as global retry defaults via
-    :func:`~._defaults.set_retry_defaults`.
-    """
+class RetryDefaultsKwargs(
+    RetryOptions,
+    total=False,
+):
+    """Options accepted by :func:`configure`."""
 
     on_success: Callable[[RetryStats], None] | None
     on_retry: Callable[[RetryStats], None] | None
     on_failure: Callable[[RetryStats], None] | None
-
-
-class GlobalKwargs(TypedDict, total=False):
-    """
-    Options that exist only in :data:`~._defaults.defaults`, not in :class:`~.base.BaseRetrying`.
-
-    These are configured application-wide via
-    :func:`~._defaults.configure_retry`.
-    """
-
     jitter_for_exponential: JitterStrategy
     jitter_for_fixed: JitterStrategy
     sync_sleep_call: Callable[[float], None]
@@ -84,8 +72,7 @@ class LoggingKwargs(
 
 
 class DefaultsKwargs(
-    LocalKwargs,
-    GlobalKwargs,
+    RetryDefaultsKwargs,
     LoggingKwargs,
     total=False,
 ):

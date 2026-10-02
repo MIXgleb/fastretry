@@ -5,24 +5,16 @@ __all__ = (
     "LogLevel",
     "RetryCallbacks",
     "RetryStats",
-    "configure_logging",
-    "configure_retry",
+    "config",
     "default_on_failure",
     "default_on_retry",
     "default_on_success",
-    "reset_defaults",
     "retry",
-    "set_retry_defaults",
-    "temporary_defaults",
 )
 
 
-from retry._defaults import (
-    configure_logging,
-    configure_retry,
-    reset_defaults,
-    set_retry_defaults,
-    temporary_defaults,
+from retry._config import (
+    config,
 )
 from retry._retry import (
     retry,
