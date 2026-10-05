@@ -1,5 +1,19 @@
+# Sphinx
+docs/_build/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.venv*/
+env/
+
+# Type Checkers
 .mypy_cache
 .ruff_cache
-__pycache__
+
+# Dev
 test.py
 todo.txt
+docs/
