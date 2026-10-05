@@ -1,18 +1,19 @@
 """
 Global configuration for retry defaults and logging.
 
-All default values used by ``BaseRetrying`` live in a single
-:class:`_Defaults` instance. Public functions in the :mod:`retry.config`
-module mutate that instance, changing the behaviour of all subsequently
+All default values used by :class:`~retry.base.BaseRetrying`
+live in a single :class:`~retry._defaults._Defaults` instance.
+Public functions in the :mod:`~retry._config` module mutate
+that instance, changing the behaviour of all subsequently
 created retry decorators.
 
 Configuration is split into two groups:
 
 - **Retry defaults** — options that can also be passed per-decorator
-  via ``@retry(...)``.
+via ``@retry(...)``.
 - **Logging configuration** — log levels and traceback thresholds.
 
-Both are configured via :data:`retry.config.config`.
+Both are configured via :data:`~retry._config.config`.
 """
 
 import asyncio
@@ -74,7 +75,7 @@ class _Defaults:
         """
         Set one or more defaults by name.
 
-        Values equal to :data:`~._types.UNSET` are ignored.
+        Values equal to ``UNSET`` are ignored.
 
         Raises
         ------

@@ -1,9 +1,9 @@
 """
 Abstract base class for retry decorators.
 
-``BaseRetrying`` holds the shared state and the shared blocks.
+:class:`~retry.base.BaseRetrying` holds the shared state and the shared blocks.
 Concrete sync and async implementations live in
-:mod:`~.sync_retry` and :mod:`~.async_retry`.
+:mod:`~retry.sync_retry` and :mod:`~retry.async_retry`.
 """
 
 import copy
@@ -91,25 +91,25 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
 
         Parameters
         ----------
-        attempts : int, optional
+        attempts : int, ``optional``
             Number of attempts
-        return_default_value : Any, optional
+        return_default_value : Any, ``optional``
             Default value returned if the function fails after all attempts,
-        delay : Delay, optional
+        delay : Delay, ``optional``
             Delay between attempts in seconds. May be a plain ``float`` for a
-            fixed delay or an :class:`~._utils._delay.ExponentialDelay` for
+            fixed delay or an :class:`~retry._utils._delay.ExponentialDelay` for
             exponential backoff.
-        jitter : JitterStrategy, optional
+        jitter : JitterStrategy, ``optional``
             Jitter strategy overriding the default for the given delay type.
             When omitted, ``jitter_for_exponential`` or ``jitter_for_fixed``
             from the global defaults is used.
-        disable_logging : bool, optional
+        disable_logging : bool, ``optional``
             Disable all logging
-        disable_warnings : bool, optional
+        disable_warnings : bool, ``optional``
             Disable all warnings
-        callbacks : RetryCallbacks, optional
+        callbacks : RetryCallbacks, ``optional``
             Callbacks invoked during retry processing. When omitted, defaults
-            from :mod:`~._utils._callbacks` are used. Individual callbacks may
+            from :mod:`~retry._utils._callbacks` are used. Individual callbacks may
             be set to ``None`` to disable them.
 
         """
@@ -212,8 +212,8 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         Immutable snapshot of the logging configuration.
 
         Built on demand from the current logging-related attributes. Passed
-        to :class:`~._utils._logs.Log` so that the logger cannot mutate the
-        retry configuration.
+        to :class:`~retry._utils._logs.Log` so that the logger
+        cannot mutate the retry configuration.
 
         Returns
         -------
@@ -308,9 +308,6 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         """
         Sleep between attempts.
 
-        Does nothing on the last attempt. Computes the delay via
-        ``delay_calculator``.
-
         Parameters
         ----------
         stats : RetryStats
@@ -331,11 +328,12 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
 
         Subclasses decide how to handle an awaitable result:
 
-        - :class:`AsyncRetrying` always awaits it.
-        - :class:`SyncRetrying` runs it synchronously. When no event loop is
-        running, :func:`asyncio.run` is used; when a loop is already
-        running, the coroutine is executed in a separate thread with its
-        own loop. The latter is expensive and blocks the caller until the
+        - :class:`~retry.async_retry.AsyncRetrying` always awaits it.
+        - :class:`~retry.sync_retry.SyncRetrying` runs it synchronously.
+        When no event loop is running, :func:`asyncio.run` is used;
+        when a loop is already running, the coroutine is executed
+        in a separate thread with its own loop.
+        The latter is expensive and blocks the caller until the
         callback completes.
 
         Parameters
@@ -390,9 +388,9 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         Used when a user-provided callback or sleep callable raises: the
         error must not abort the retry cycle, but should still be visible.
 
-        If the failure level is disabled (``LogLevel.OFF``) or logging is
-        globally disabled, a warning is emitted instead so the swallowed
-        exception is not lost silently.
+        If the failure level is disabled (:attr:`~retry._utils._logs.LogLevel.OFF`)
+        or logging is globally disabled, a warning is emitted instead
+        so the swallowed exception is not lost silently.
 
         Parameters
         ----------
@@ -403,7 +401,8 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
             The swallowed exception.
         extra : Mapping[str, object]
             Structured fields attached to the log record via the ``logging``
-            ``extra`` argument. Typically :attr:`RetryStats.log_extra`.
+            ``extra`` argument. Typically
+            :attr:`~retry._utils._stats.RetryStats.log_extra`.
 
         """
         if not self._log.record(
@@ -498,10 +497,10 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         stats_attempt: AttemptState,
     ) -> None:
         """
-        Raise a single :exc:`ExceptionGroup` if re-raising is enabled.
+        Raise a single ``ExceptionGroup`` if re-raising is enabled.
 
         Does nothing when ``re_raise_exception`` is ``False`` or there are
-        no caught exceptions. Otherwise, raises an :exc:`ExceptionGroup`
+        no caught exceptions. Otherwise, raises an ``ExceptionGroup``
         containing every exception from the failed attempts, in order.
 
         Parameters
@@ -512,7 +511,7 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         Raises
         ------
         ExceptionGroup
-            Containing all exceptions from ``stats.attempt.exceptions``.
+            Containing all exceptions from :attr:`~retry._utils._stats.AttemptState.exceptions`.
 
         """
         if self._re_raise_exception and stats_attempt.exceptions:
@@ -530,7 +529,7 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
 
         If ``jitter`` is not provided, the strategy is chosen based on the
         delay type: ``defaults.jitter_for_exponential`` for
-        :class:`~._utils._delay.ExponentialDelay`, or
+        :class:`~retry._utils._delay.ExponentialDelay`, or
         ``defaults.jitter_for_fixed`` for a plain ``float`` delay.
 
         Parameters

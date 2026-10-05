@@ -28,8 +28,8 @@ class _ResetNamespace:
         """
         Reset all defaults to their factory values.
 
-        Restores every option configured via :attr:`config.retry` and
-        :attr:`config.logging` to the value it had at import time.
+        Restores every option configured via :attr:`~retry._config.config.retry` and
+        :attr:`~retry._config.config.logging` to the value it had at import time.
         Useful in tests to avoid leaking configuration between test
         cases.
         """
@@ -54,32 +54,32 @@ class _RetryNamespace:
 
         Parameters
         ----------
-        attempts : int, optional
+        attempts : int, ``optional``
             Default number of attempts, by default 1.
-        delay : Delay, optional
+        delay : Delay, ``optional``
             Default delay between attempts, in seconds, by default 0.
-        disable_logging : bool, optional
+        disable_logging : bool, ``optional``
             Disable all logging by default, by default False.
-        disable_warnings : bool, optional
+        disable_warnings : bool, ``optional``
             Disable all warnings by default, by default False.
-        on_success : Callable[[RetryStats], None] | None, optional
+        on_success : Callable[[RetryStats], None] | None, ``optional``
             Default callback invoked after a successful attempt,
-            by default :func:`default_on_success`.
-        on_retry : Callable[[RetryStats], None] | None, optional
+            by default :func:`~retry._utils._callbacks.default_on_success`.
+        on_retry : Callable[[RetryStats], None] | None, ``optional``
             Default callback invoked after a failed attempt,
-            by default :func:`default_on_retry`.
-        on_failure : Callable[[RetryStats], None] | None, optional
+            by default :func:`~retry._utils._callbacks.default_on_retry`.
+        on_failure : Callable[[RetryStats], None] | None, ``optional``
             Default callback invoked after all attempts have failed,
-            by default :func:`default_on_failure`.
-        jitter_for_exponential : JitterStrategy, optional
+            by default :func:`~retry._utils._callbacks.default_on_failure`.
+        jitter_for_exponential : JitterStrategy, ``optional``
             Default jitter strategy for exponential delay,
             by default ``"none"``.
-        jitter_for_fixed : JitterStrategy, optional
+        jitter_for_fixed : JitterStrategy, ``optional``
             Default jitter strategy for fixed delay,
             by default ``"none"``.
-        sync_sleep_call : Callable[[float], None], optional
+        sync_sleep_call : Callable[[float], None], ``optional``
             Default sync sleep callable, by default :func:`time.sleep`.
-        async_sleep_call : Callable[[float], Awaitable[None]], optional
+        async_sleep_call : Callable[[float], Awaitable[None]], ``optional``
             Default async sleep callable, by default :func:`asyncio.sleep`.
 
         """
@@ -103,25 +103,25 @@ class _LoggingNamespace:
         stdout by default.
 
         Each log kind has its own level. Set a level to
-        :attr:`LogLevel.OFF` to disable that kind.
+        :attr:`~retry._utils._logs.LogLevel.OFF` to disable that kind.
 
         Parameters
         ----------
-        level_success : LogLevel, optional
+        level_success : LogLevel, ``optional``
             Level for messages emitted after a successful attempt,
-            by default :attr:`LogLevel.OFF`.
-        level_retry : LogLevel, optional
+            by default :attr:`~retry._utils._logs.LogLevel.OFF`.
+        level_retry : LogLevel, ``optional``
             Level for messages emitted after a failed attempt,
-            by default :attr:`LogLevel.WARNING`.
-        level_failure : LogLevel, optional
+            by default :attr:`~retry._utils._logs.LogLevel.WARNING`.
+        level_failure : LogLevel, ``optional``
             Level for messages emitted after all attempts have failed,
-            by default :attr:`LogLevel.ERROR`.
-        level_sleep : LogLevel, optional
+            by default :attr:`~retry._utils._logs.LogLevel.ERROR`.
+        level_sleep : LogLevel, ``optional``
             Level for messages emitted before sleeping between attempts,
-            by default :attr:`LogLevel.OFF`.
-        traceback_min_level : LogLevel, optional
+            by default :attr:`~retry._utils._logs.LogLevel.OFF`.
+        traceback_min_level : LogLevel, ``optional``
             Minimum level at which a traceback is attached to the log
-            record, by default :attr:`LogLevel.ERROR`.
+            record, by default :attr:`~retry._utils._logs.LogLevel.ERROR`.
 
         """
         defaults.set(**kwargs)

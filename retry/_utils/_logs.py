@@ -1,8 +1,9 @@
 """
 Logging utilities for retry decorators.
 
-Provides the :class:`Log` helper — a kind-aware wrapper around a
-:class:`LoggerConfig` that centralizes level selection and traceback
+Provides the :class:`~retry._utils._logs.Log` helper —
+a kind-aware wrapper around a :class:`~retry._utils._logs.LoggerConfig`
+that centralizes level selection and traceback
 handling for a single shared logger named ``"retry"``.
 """
 
@@ -30,17 +31,23 @@ class LogLevel(IntEnum):
     """
     Log level for a retry log kind.
 
-    Extends :class:`logging` levels with ``OFF`` to disable a kind
+    Extends :mod:`logging` levels with ``OFF`` to disable a kind
     entirely. Values match :mod:`logging` constants so they can be
     passed directly to :meth:`logging.Logger.log`.
     """
 
     OFF = 0
+    """Disable logging for this kind."""
     DEBUG = logging.DEBUG
+    """Debug level."""
     INFO = logging.INFO
+    """Info level."""
     WARNING = logging.WARNING
+    """Warning level."""
     ERROR = logging.ERROR
+    """Error level."""
     CRITICAL = logging.CRITICAL
+    """Critical level."""
 
 
 def _make_retry_logger() -> logging.Logger:
@@ -87,8 +94,9 @@ class LoggerConfig:
     """
     Immutable snapshot of logging configuration.
 
-    Passed to :class:`Log` so that the logger cannot mutate the retry
-    configuration. All fields are read-only after construction.
+    Passed to :class:`~retry._utils._logs.Log` so that the
+    logger cannot mutate the retry configuration.
+    All fields are read-only after construction.
 
     Attributes
     ----------
@@ -121,10 +129,10 @@ class LoggerConfig:
 
 class Log:
     """
-    Kind-aware logging wrapper around a :class:`LoggerConfig`.
+    Kind-aware logging wrapper around a :class:`~retry._utils._logs.LoggerConfig`.
 
-    Use :meth:`use` to select a logger kind and then call the result to
-    emit a message::
+    Use :meth:`use` to select a logger kind
+    and then call the result to emit a message::
 
         log = Log(config)
         log.use("retry")("Error executing '%s'", fname)
@@ -176,7 +184,7 @@ class Log:
 
         Parameters
         ----------
-        log_kind : LogKind
+        log_kind : _LogKind
             Logger kind: ``"retry"``, ``"failure"``, ``"sleep"``, or
             ``"success"``.
 
@@ -206,24 +214,24 @@ class Log:
 
         The message is emitted through the shared ``"retry"`` logger at the
         level configured for ``log_kind``. If logging is disabled or the
-        level is :attr:`LogLevel.OFF`, the call is a no-op.
+        level is :attr:`~retry._utils._logs.LogLevel.OFF`, the call is a no-op.
 
         When ``last_exception`` is provided and the message's level is at
-        or above :attr:`LoggerConfig.traceback_min_level`, the exception is
-        attached as ``exc_info``. Otherwise it is ignored.
+        or above :attr:`~retry._utils._logs.LoggerConfig.traceback_min_level`,
+        the exception is attached as ``exc_info``. Otherwise it is ignored.
 
         Parameters
         ----------
-        log_kind : LogKind
+        log_kind : _LogKind
             Logger kind.
         message : str
             ``%``-style format string.
         args : tuple[Any, ...]
             Format arguments.
-        last_exception : Exception | None, optional
+        last_exception : Exception | None, ``optional``
             Exception to attach as ``exc_info`` when the message's level is
-            at or above :attr:`LoggerConfig.traceback_min_level`.
-        extra : Mapping[str, object] | None, optional
+            at or above :attr:`~retry._utils._logs.LoggerConfig.traceback_min_level`.
+        extra : Mapping[str, object] | None, ``optional``
             Additional fields to attach to the log record via the ``logging``
             ``extra`` argument. Useful for structured logging backends
             (Sentry, Datadog). Ignored by custom loggers that do not accept
@@ -261,13 +269,14 @@ class Log:
 
         Parameters
         ----------
-        log_kind : LogKind
+        log_kind : _LogKind
             Logger kind.
 
         Returns
         -------
         LogLevel
-            Level for the given kind, or ``LogLevel.OFF`` if disabled.
+            Level for the given kind, or
+            :attr:`~retry._utils._logs.LogLevel.OFF` if disabled.
 
         """
         config = self._config
@@ -289,14 +298,15 @@ class _BoundLog[LK: _LogKind]:
     """
     Callable bound to a specific logger kind.
 
-    Created by :meth:`Log.use` and cached in :class:`Log`. Not intended
-    to be instantiated directly.
+    Created by :meth:`~retry._utils._logs.Log.use`
+    and cached in :class:`~retry._utils._logs.Log`.
+    Not intended to be instantiated directly.
 
     Parameters
     ----------
     log : Log
         Parent logger.
-    log_kind : LogKind
+    log_kind : _LogKind
         Bound logger kind.
 
     """
@@ -344,10 +354,10 @@ class _BoundLog[LK: _LogKind]:
             ``%``-style format string.
         *args : object
             Format arguments.
-        last_exception : Exception | None, optional
+        last_exception : Exception | None, ``optional``
             Exception to attach as ``exc_info`` when the message's level is
-            at or above :attr:`LoggerConfig.traceback_min_level`.
-        extra : Mapping[str, object] | None, optional
+            at or above :attr:`~retry._utils._logs.LoggerConfig.traceback_min_level`.
+        extra : Mapping[str, object] | None, ``optional``
             Additional fields to attach to the log record via the
             ``logging`` ``extra`` argument. Useful for structured logging
             backends (Sentry, Datadog).

@@ -1,8 +1,9 @@
 """
 Synchronous retry decorator.
 
-``SyncRetrying`` wraps regular (non-coroutine) callables and uses
-``time.sleep`` (or a user-provided sync sleep callable) between attempts.
+:class:`~retry.sync_retry.SyncRetrying` wraps regular (non-coroutine)
+callables and uses :func:`time.sleep` (or a user-provided sync sleep callable)
+between attempts.
 """
 
 import asyncio

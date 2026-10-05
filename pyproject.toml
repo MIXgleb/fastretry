@@ -1,10 +1,15 @@
 [project]
 name = "retry"
-version = "0.1.0"
+version = "0.2.0"
 description = ""
 requires-python = ">=3.12"
 authors = [{ name = "Gleb Mikhalev", email = "gleb1@bk.ru" }]
-dependencies = []
+dependencies = ["Retry decorator for synchronous and asynchronous functions."]
+
+[dependency-groups]
+dev = ["sphinx>=7.2.6", "furo", "ruff", "mypy", "ty", "pyrefly"]
+
+docs = ["sphinx>=7.2.6", "furo"]
 
 
 # Ruff config: https://docs.astral.sh/ruff/settings

@@ -27,7 +27,7 @@ class FunctionTypes:
     """
     Best-effort runtime access to a function's declared type hints.
 
-    Wraps ``typing.get_type_hints`` and provides helpers for inspecting
+    Wraps :func:`typing.get_type_hints` and provides helpers for inspecting
     and validating types. Only simple types, unions, and ``None`` are
     checked; generics are matched by their base class, and ``Any`` /
     ``object`` / unresolvable annotations are treated as inconclusive.

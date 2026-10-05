@@ -1,3 +1,13 @@
+"""
+Retry lifecycle callbacks.
+
+Defines the :class:`~retry._utils._callbacks.RetryCallbacks`
+mapping accepted by the retry decorators, its fully
+resolved counterpart :class:`~retry._utils._callbacks.ResolvedRetryCallbacks`,
+and the built-in callback implementations used when the
+user does not provide their own.
+"""
+
 import dataclasses as dc
 from collections.abc import (
     Callable,
@@ -19,16 +29,16 @@ class RetryCallbacks(TypedDict, total=False):
     Callbacks invoked during retry processing.
 
     All callbacks are optional. When a callback is omitted, the
-    corresponding default from :mod:`~._utils._callbacks` is used.
-    Set a callback explicitly to ``None`` to disable it.
+    corresponding built-in default is used. Set a callback explicitly
+    to ``None`` to disable it.
 
     Attributes
     ----------
-    on_success : Callable[[RetryStats], None] | None, optional
+    on_success : Callable[[RetryStats], None] | None, ``optional``
         Called after a successful attempt. No default is provided.
-    on_retry : Callable[[RetryStats], None] | None, optional
+    on_retry : Callable[[RetryStats], None] | None, ``optional``
         Called after a failed attempt, before sleeping.
-    on_failure : Callable[[RetryStats], None] | None, optional
+    on_failure : Callable[[RetryStats], None] | None, ``optional``
         Called after all attempts have failed.
 
     """
@@ -43,11 +53,11 @@ class ResolvedRetryCallbacks:
     """
     Fully resolved retry callbacks.
 
-    Produced by ``BaseRetrying._resolve_callbacks`` from a user-provided
-    :class:`RetryCallbacks` mapping. All keys are present and every value
-    is a callable: omitted entries are filled with defaults from
-    :mod:`~._utils._callbacks`, and explicit ``None`` values are replaced
-    with a no-op callback.
+    Produced by :func:`~retry.base.BaseRetrying._resolve_callbacks`
+    from a user-provided :class:`~retry._utils._callbacks.RetryCallbacks` mapping.
+    All keys are present and every value is a callable:
+    omitted entries are filled with built-in defaults, and explicit
+    ``None`` values are replaced with a no-op callback.
 
     Attributes
     ----------
@@ -71,8 +81,8 @@ def default_on_success(stats: RetryStats) -> None:
     Default ``on_success`` callback: log the successful attempt.
 
     Records a ``"success"`` message via ``stats.log``, attaching
-    structured fields from :attr:`RetryStats.log_extra` to the log
-    record. The result value is included in the message when it is a
+    structured fields from :attr:`~retry._utils._stats.RetryStats.log_extra`
+    to the log record. The result value is included in the message when it is a
     primitive type; for complex objects only the type name is logged.
 
     Parameters
@@ -104,8 +114,9 @@ def default_on_retry(stats: RetryStats) -> None:
 
     Records a ``"retry"`` message via ``stats.log``, and, when a delay
     is scheduled before the next attempt, also records a ``"sleep"``
-    message. Structured fields from :attr:`RetryStats.log_extra` are
-    attached to both records.
+    message. Structured fields from
+    :attr:`~retry._utils._stats.RetryStats.log_extra`
+    are attached to both records.
 
     Parameters
     ----------
@@ -137,7 +148,8 @@ def default_on_failure(stats: RetryStats) -> None:
     Default ``on_failure`` callback: log the final failure.
 
     Records a ``"failure"`` message via ``stats.log``, attaching structured
-    fields from :attr:`RetryStats.log_extra` to the log record.
+    fields from :attr:`~retry._utils._stats.RetryStats.log_extra`
+    to the log record.
 
     Parameters
     ----------

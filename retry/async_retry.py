@@ -1,7 +1,8 @@
 """
 Asynchronous retry decorator.
 
-``AsyncRetrying`` wraps coroutine functions and uses ``asyncio.sleep``
+:class:`~retry.async_retry.AsyncRetrying` wraps coroutine
+functions and uses :func:`asyncio.sleep`
 (or a user-provided async sleep callable) between attempts.
 """
 

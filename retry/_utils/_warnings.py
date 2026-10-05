@@ -1,3 +1,11 @@
+"""
+Warning emission with a global toggle.
+
+Defines :class:`~retry._utils._warnings.Warnings`,
+a thin wrapper around :func:`warnings.warn`
+that respects a ``disable_warnings`` flag.
+"""
+
 import warnings as _warnings
 
 

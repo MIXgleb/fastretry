@@ -1,9 +1,9 @@
 """
 Delay computation for retry attempts.
 
-Provides :class:`ExponentialDelay` for configuring exponential backoff and
-:class:`DelayCalculator` for computing the effective delay of an attempt,
-including jitter.
+Provides :class:`~retry._utils._delay.ExponentialDelay` for configuring
+exponential backoff and :class:`~retry._utils._delay.DelayCalculator`
+for computing the effective delay of an attempt, including jitter.
 """
 
 import random
@@ -31,10 +31,10 @@ class ExponentialDelay(NamedTuple):
     ----------
     delay : float
         Base delay in seconds. Must be positive.
-    backoff_factor : float, optional
+    backoff_factor : float, ``optional``
         Multiplier applied on each subsequent attempt, by default 2.0.
         Values ``<= 1.0`` effectively disable exponential growth.
-    max_delay : float | None, optional
+    max_delay : float | None, ``optional``
         Upper bound for the computed delay, by default None (no cap).
         Must be positive when set.
 
@@ -86,8 +86,9 @@ class DelayCalculator:
         Compute the effective delay for a retry attempt.
 
         For a plain ``float`` delay, the base value is used as-is. For an
-        :class:`ExponentialDelay`, the base grows by ``backoff_factor``
-        on each subsequent attempt and is capped at ``max_delay``.
+        :class:`~retry._utils._delay.ExponentialDelay`, the base grows
+        by ``backoff_factor`` on each subsequent attempt and is capped
+        at ``max_delay``.
 
         Jitter is then applied according to the configured strategy:
 

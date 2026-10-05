@@ -1,10 +1,10 @@
 """
 Public retry decorator.
 
-This module exposes :func:`retry`, the main entry point of the package.
-It dispatches to either :class:`~.sync_retry.SyncRetrying` or
-:class:`~.async_retry.AsyncRetrying` depending on whether the decorated
-function is a coroutine function.
+This module exposes :func:`~retry._retry.retry`, the main entry point of the package.
+It dispatches to either :class:`~retry.sync_retry.SyncRetrying` or
+:class:`~retry.async_retry.AsyncRetrying` depending on whether
+the decorated function is a coroutine function.
 
 The decorator can be used in two forms::
 
@@ -82,38 +82,39 @@ def retry[**P, R](  # ruff: ignore[undocumented-param]
     selected automatically.
 
     Options not passed explicitly fall back to the global retry
-    defaults (see :func:`set_retry_defaults`). The factory
+    defaults (see :attr:`~retry._config.config.retry`). The factory
     values are listed below.
 
     Parameters
     ----------
-    attempts : int, optional
+    attempts : int, ``optional``
         Number of attempts (factory default: 1)
-    return_default_value : Any, optional
+    return_default_value : Any, ``optional``
         Default value returned if the function fails after all attempts.
         When provided, the wrapper returns it instead of re-raising the
         last exception.
-    delay : Delay, optional
+    delay : Delay, ``optional``
         Delay between attempts in seconds. A plain ``float`` gives a
-        fixed delay (factory default: 0); an ``ExponentialDelay``
-        enables exponential backoff with ``backoff_factor=2.0`` and
-        no upper bound.
-    jitter : JitterStrategy, optional
+        fixed delay (factory default: 0); an
+        :class:`~retry._utils._delay.ExponentialDelay` enables exponential
+        backoff with ``backoff_factor=2.0`` and no upper bound.
+    jitter : JitterStrategy, ``optional``
         Jitter strategy for the delay. When omitted, the default for
         the configured delay type is used (``"none"`` for exponential,
         ``"none"`` for fixed).
-    disable_logging : bool, optional
+    disable_logging : bool, ``optional``
         Disable all logging (factory default: False)
-    disable_warnings : bool, optional
+    disable_warnings : bool, ``optional``
         Disable all warnings (factory default: False)
-    callbacks : RetryCallbacks, optional
+    callbacks : RetryCallbacks, ``optional``
         Mapping of retry lifecycle callbacks. Keys are ``"on_retry"``,
         ``"on_success"``, and ``"on_failure"``; each value is a callable
         ``(stats: RetryStats) -> None`` or ``None`` to disable that event.
         Callbacks may be synchronous or asynchronous.
 
         You may pass a plain ``dict`` with any subset of these keys, or
-        build a :class:`RetryCallbacks` instance directly.
+        build a :class:`~retry._utils._callbacks.RetryCallbacks` instance
+        directly.
 
         Omitted keys fall back to the defaults. Passing ``None`` for
         a key disables the callback for that event.
@@ -146,7 +147,7 @@ def retry[**P, R](  # ruff: ignore[undocumented-param]
     When all attempts fail:
 
     - If ``return_default_value`` is provided, the wrapper returns it.
-    - Otherwise, the wrapper raises an :exc:`ExceptionGroup` containing
+    - Otherwise, the wrapper raises an ``ExceptionGroup`` containing
       every exception from every attempt, in the order they were raised.
       A single failed attempt still produces an ``ExceptionGroup`` with
       one member, so the failure type is always the same.

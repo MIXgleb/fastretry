@@ -1,3 +1,12 @@
+"""
+Sentinel type for "no value provided".
+
+Defines :class:`~retry._utils._unset.UnsetType` and the
+:data:`~retry._utils._unset.UNSET` singleton, used across
+the package to distinguish "user did not pass anything"
+from an explicit ``None``.
+"""
+
 from typing import (
     Final,
     final,
