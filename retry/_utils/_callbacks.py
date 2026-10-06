@@ -151,17 +151,30 @@ def default_on_failure(stats: RetryStats) -> None:
     fields from :attr:`~retry._utils._stats.RetryStats.log_extra`
     to the log record.
 
+    The message distinguishes two cases:
+
+    - all attempts were exhausted;
+    - the retry loop was aborted early because the caught exception did
+      not match ``retry_on`` or matched ``no_retry_on``.
+
     Parameters
     ----------
     stats : RetryStats
         Current retry statistics.
 
     """
+    stats_attempt = stats.attempt
+
+    if stats_attempt.retry_aborted:
+        message = "Retry aborted after %d attempt(s): exception is not retryable."
+    else:
+        message = "Failed the execution of the function after %d attempts."
+
     _ = stats.log.record(
         log_kind="failure",
-        message="Failed the execution of the function after %d attempts.",
-        args=(stats.decorator.attempts,),
-        last_exception=stats.attempt.last_exception,
+        message=message,
+        args=(stats_attempt.retry_index,),
+        last_exception=stats_attempt.last_exception,
         extra=stats.log_extra,
     )
 

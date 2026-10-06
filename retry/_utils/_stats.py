@@ -60,6 +60,11 @@ class DecoratorOptions:
         If ``True``, warnings are suppressed.
     re_raise_exception : bool
         If ``True``, the last exception is re-raised after all attempts.
+    retry_on : tuple[type[BaseException], ...]
+        Exception types that trigger a retry.
+    no_retry_on : tuple[type[BaseException], ...]
+        Exception types that are never retried, even if they match
+        ``retry_on``. Takes precedence.
 
     """
 
@@ -70,6 +75,8 @@ class DecoratorOptions:
     disable_logging: bool
     disable_warnings: bool
     re_raise_exception: bool
+    retry_on: tuple[type[BaseException], ...]
+    no_retry_on: tuple[type[BaseException], ...]
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -147,12 +154,16 @@ class AttemptState:
     result : object | UnsetType
         Result of the successful call, or ``UNSET`` if the call has not
         succeeded.
-    last_exception : Exception | None
+    last_exception : BaseException | None
         Exception from the most recent attempt, or ``None`` if no attempt
         has failed yet.
-    exceptions : list[Exception]
+    exceptions : list[BaseException]
         All exceptions raised across attempts, in order. Empty until the
         first failure.
+    retry_aborted : bool
+        ``True`` when the retry loop was aborted before exhausting all
+        attempts, because the caught exception did not match ``retry_on``
+        or matched ``no_retry_on``.
 
     """
 
@@ -162,8 +173,9 @@ class AttemptState:
     elapsed: float = 0.0
     computed_delay: float | UnsetType = UNSET
     result: object | UnsetType = UNSET
-    last_exception: Exception | None = dc.field(default=None, repr=False)
-    exceptions: list[Exception] = dc.field(default_factory=list[Exception], repr=False)
+    last_exception: BaseException | None = dc.field(default=None, repr=False)
+    exceptions: list[BaseException] = dc.field(default_factory=list[BaseException], repr=False)
+    retry_aborted: bool = False
 
     @property
     def exceptions_with_traceback(self) -> tuple[str, ...]:
@@ -171,8 +183,8 @@ class AttemptState:
         Formatted tracebacks of all caught exceptions.
 
         Each item is a string produced by :func:`traceback.format_exception`
-        for the corresponding exception in :attr:`~retry._utils._stats.AttemptState.exceptions`.
-        Useful for logging or displaying the full history of failures.
+        for the corresponding exception in :attr:`exceptions`. Useful for
+        logging or displaying the full history of failures.
 
         Returns
         -------
@@ -187,18 +199,18 @@ class AttemptState:
 
     def format_exception(
         self,
-        exc: Exception | UnsetType | None = UNSET,
+        exc: BaseException | UnsetType | None = UNSET,
     ) -> str:
         """
         Format a traceback for an exception.
 
         Parameters
         ----------
-        exc : Exception | None | UnsetType, ``optional``
+        exc : BaseException | UnsetType | None, ``optional``
             Exception to format. When omitted (``UNSET``), the value of
-            :attr:`~retry._utils._stats.AttemptState.last_exception` is used.
-            Pass ``None`` explicitly to get a human-readable message
-            indicating no exception was recorded.
+            :attr:`last_exception` is used. Pass ``None`` explicitly
+            to get a human-readable message indicating no exception
+            was recorded.
 
         Returns
         -------
@@ -262,8 +274,8 @@ class RetryStats:
         -------
         Mapping[str, object]
             Fields including function name, attempt index, total attempts,
-            monotonic start time, elapsed time, computed delay, and the type
-            of the last exception.
+            monotonic start time, elapsed time, computed delay, the type of
+            the last exception, and whether the retry loop was aborted early.
 
         """
         attempt = self.attempt
@@ -279,6 +291,7 @@ class RetryStats:
                 if attempt.last_exception is not None
                 else None
             ),
+            "retry_aborted": attempt.retry_aborted,
         }
 
     def for_call(

@@ -62,6 +62,11 @@ class _RetryNamespace:
             Disable all logging by default, by default False.
         disable_warnings : bool, ``optional``
             Disable all warnings by default, by default False.
+        retry_on : tuple[type[BaseException], ...], ``optional``
+            Exception types that trigger a retry. Defaults to ``(Exception,)``,
+        no_retry_on : tuple[type[BaseException], ...], ``optional``
+            Exception types that are never retried, even if they match
+            ``retry_on``. Takes precedence. Defaults to ``()``.
         on_success : Callable[[RetryStats], None] | None, ``optional``
             Default callback invoked after a successful attempt,
             by default :func:`~retry._utils._callbacks.default_on_success`.

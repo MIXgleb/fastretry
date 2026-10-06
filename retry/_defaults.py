@@ -54,6 +54,8 @@ class _Defaults:
     on_success: Callable[[RetryStats], None] | None = default_on_success
     on_retry: Callable[[RetryStats], None] | None = default_on_retry
     on_failure: Callable[[RetryStats], None] | None = default_on_failure
+    retry_on: tuple[type[BaseException], ...] = (Exception,)
+    no_retry_on: tuple[type[BaseException], ...] = ()
 
     # --- global options (application-wide) ---
     jitter_for_exponential: JitterStrategy = "none"

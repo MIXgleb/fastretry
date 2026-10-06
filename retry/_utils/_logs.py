@@ -202,7 +202,7 @@ class Log:
         log_kind: _LogKind,
         message: str,
         args: tuple[Any, ...],
-        last_exception: Exception | None = None,
+        last_exception: BaseException | None = None,
         extra: Mapping[str, object] | None = None,
     ) -> bool:
         """
@@ -228,7 +228,7 @@ class Log:
             ``%``-style format string.
         args : tuple[Any, ...]
             Format arguments.
-        last_exception : Exception | None, ``optional``
+        last_exception : BaseException | None, ``optional``
             Exception to attach as ``exc_info`` when the message's level is
             at or above :attr:`~retry._utils._logs.LoggerConfig.traceback_min_level`.
         extra : Mapping[str, object] | None, ``optional``
@@ -334,7 +334,7 @@ class _BoundLog[LK: _LogKind]:
         self: '_BoundLog[Literal["retry", "failure"]]',
         message: str,
         *args: object,
-        last_exception: Exception | None,
+        last_exception: BaseException | None,
         extra: Mapping[str, object] | None = None,
     ) -> bool: ...
 
@@ -342,7 +342,7 @@ class _BoundLog[LK: _LogKind]:
         self,
         message: str,
         *args: object,
-        last_exception: Exception | None = None,
+        last_exception: BaseException | None = None,
         extra: Mapping[str, object] | None = None,
     ) -> bool:
         """
@@ -354,7 +354,7 @@ class _BoundLog[LK: _LogKind]:
             ``%``-style format string.
         *args : object
             Format arguments.
-        last_exception : Exception | None, ``optional``
+        last_exception : BaseException | None, ``optional``
             Exception to attach as ``exc_info`` when the message's level is
             at or above :attr:`~retry._utils._logs.LoggerConfig.traceback_min_level`.
         extra : Mapping[str, object] | None, ``optional``

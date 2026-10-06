@@ -63,7 +63,9 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         "_level_sleep",
         "_level_success",
         "_log",
+        "_no_retry_on",
         "_re_raise_exception",
+        "_retry_on",
         "_stats",
         "_traceback_min_level",
         "_warnings",
@@ -85,6 +87,8 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         disable_logging: bool | UnsetType = UNSET,
         disable_warnings: bool | UnsetType = UNSET,
         callbacks: RetryCallbacks | UnsetType = UNSET,
+        retry_on: tuple[type[BaseException], ...] | UnsetType = UNSET,
+        no_retry_on: tuple[type[BaseException], ...] | UnsetType = UNSET,
     ) -> None:
         """
         Initialize the retry decorator.
@@ -111,6 +115,13 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
             Callbacks invoked during retry processing. When omitted, defaults
             from :mod:`~retry._utils._callbacks` are used. Individual callbacks may
             be set to ``None`` to disable them.
+        retry_on : tuple[type[BaseException], ...], ``optional``
+            Exception types that trigger a retry. When omitted, the global
+            default is used (``(Exception,)``).
+        no_retry_on : tuple[type[BaseException], ...], ``optional``
+            Exception types that are never retried, even if they match
+            ``retry_on``. Takes precedence. When omitted, the global default
+            is used (``()``).
 
         """
         # --- per-decorator options ---
@@ -137,6 +148,14 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         self._callbacks: Final = self._resolve_callbacks(
             callbacks=callbacks,
         )
+        self._retry_on: Final = self._resolve(
+            passed=retry_on,
+            default=defaults.retry_on,
+        )
+        self._no_retry_on: Final = self._resolve(
+            passed=no_retry_on,
+            default=defaults.no_retry_on,
+        )
 
         # --- logger configuration ---
         self._level_success: Final = defaults.level_success
@@ -162,6 +181,8 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
                 disable_logging=self._disable_logging,
                 disable_warnings=self._disable_warnings,
                 re_raise_exception=self._re_raise_exception,
+                retry_on=self._retry_on,
+                no_retry_on=self._no_retry_on,
             ),
             global_options=GlobalOptions(
                 jitter_for_exponential=defaults.jitter_for_exponential,
@@ -196,6 +217,8 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
             f"re_raise_exception={self._re_raise_exception!r},\n\t"
             f"disable_logging={self._disable_logging!r},\n\t"
             f"disable_warnings={self._disable_warnings!r},\n\t"
+            f"retry_on={self._retry_on!r},\n\t"
+            f"no_retry_on={self._no_retry_on!r},\n\t"
             f"level_success={self._level_success!r},\n\t"
             f"level_retry={self._level_retry!r},\n\t"
             f"level_failure={self._level_failure!r},\n\t"
@@ -253,9 +276,13 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         Wrap a function with retry logic.
 
         Performs shared pre-checks and delegates the actual wrapping to
-        :meth:`_wrap`. Only ``Exception`` subclasses are retried; all
-        ``BaseException`` subclasses (such as ``KeyboardInterrupt``,
-        ``SystemExit``, and ``asyncio.CancelledError``) propagate immediately.
+        :meth:`_wrap`. Which exceptions are retried is controlled by
+        ``_retry_on`` and ``_no_retry_on``:
+
+        - ``_no_retry_on`` takes precedence: a matching exception is
+        never retried.
+        - Otherwise, only exceptions matching ``_retry_on`` are retried.
+        - Non-matching exceptions propagate immediately.
 
         Parameters
         ----------
@@ -446,7 +473,7 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         self,
         *,
         stats_attempt: AttemptState,
-        exc: Exception,
+        exc: BaseException,
         delay_calculator: DelayCalculator,
     ) -> None:
         """
@@ -456,7 +483,7 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         ----------
         stats_attempt : AttemptState
             Per-attempt state.
-        exc : Exception
+        exc : BaseException
             Exception raised by the wrapped function.
         delay_calculator : DelayCalculator
             Calculator used to compute the delay before the next attempt.
@@ -466,6 +493,10 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         stats_attempt.exceptions.append(exc)
         stats_attempt.elapsed = time.monotonic() - stats_attempt.started_at
         stats_attempt.computed_delay = UNSET
+
+        if isinstance(exc, self._no_retry_on) or not isinstance(exc, self._retry_on):
+            stats_attempt.retry_aborted = True
+            return
 
         if stats_attempt.retry_index < self.attempts:
             stats_attempt.computed_delay = delay_calculator.compute(stats_attempt.retry_index)
@@ -497,11 +528,21 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         stats_attempt: AttemptState,
     ) -> None:
         """
-        Raise a single ``ExceptionGroup`` if re-raising is enabled.
+        Raise a single exception group if re-raising is enabled.
 
-        Does nothing when ``re_raise_exception`` is ``False`` or there are
-        no caught exceptions. Otherwise, raises an ``ExceptionGroup``
-        containing every exception from the failed attempts, in order.
+        Does nothing when ``re_raise_exception`` is ``False`` or no
+        exceptions were caught. Otherwise, raises
+        :exc:`BaseExceptionGroup` containing every exception from the
+        failed attempts, in order.
+
+        :exc:`BaseExceptionGroup` automatically resolves to
+        :exc:`ExceptionGroup` when every contained exception is a subclass
+        of :exc:`Exception`. So in the common case (``retry_on`` defaults to
+        ``(Exception,)``), callers can catch the result with
+        ``except* Exception``. Only when a :exc:`BaseException` subclass
+        (such as ``KeyboardInterrupt``) is actually caught does the result
+        become a :exc:`BaseExceptionGroup` that requires
+        ``except* BaseException``.
 
         Parameters
         ----------
@@ -510,13 +551,23 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
 
         Raises
         ------
-        ExceptionGroup
-            Containing all exceptions from :attr:`~retry._utils._stats.AttemptState.exceptions`.
+        BaseExceptionGroup
+            Containing all exceptions from
+            :attr:`~retry._utils._stats.AttemptState.exceptions`.
+            Resolves to :exc:`ExceptionGroup` when all contained
+            exceptions are subclasses of :exc:`Exception`.
 
         """
         if self._re_raise_exception and stats_attempt.exceptions:
-            msg = f"All {stats_attempt.retry_index} attempts failed"
-            raise ExceptionGroup(msg, stats_attempt.exceptions)
+            if stats_attempt.retry_aborted:
+                msg = (
+                    f"Retry aborted after {stats_attempt.retry_index} attempt(s): "
+                    f"exception is not retryable"
+                )
+            else:
+                msg = f"All {stats_attempt.retry_index} attempts failed"
+
+            raise BaseExceptionGroup(msg, stats_attempt.exceptions)
 
     @final
     def _derive_jitter(

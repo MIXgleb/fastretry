@@ -62,6 +62,8 @@ def retry(
     jitter: JitterStrategy | UnsetType = UNSET,
     disable_logging: bool | UnsetType = UNSET,
     disable_warnings: bool | UnsetType = UNSET,
+    retry_on: tuple[type[BaseException], ...] | UnsetType = UNSET,
+    no_retry_on: tuple[type[BaseException], ...] | UnsetType = UNSET,
     callbacks: RetryCallbacks | UnsetType = UNSET,
 ) -> Callable[[_WrappedFunc], _WrappedFunc]: ...
 
@@ -106,6 +108,11 @@ def retry[**P, R](  # ruff: ignore[undocumented-param]
         Disable all logging (factory default: False)
     disable_warnings : bool, ``optional``
         Disable all warnings (factory default: False)
+    retry_on : tuple[type[BaseException], ...], ``optional``
+        Exception types that trigger a retry. Defaults to ``(Exception,)``,
+    no_retry_on : tuple[type[BaseException], ...], ``optional``
+        Exception types that are never retried, even if they match
+        ``retry_on``. Takes precedence. Defaults to ``()``.
     callbacks : RetryCallbacks, ``optional``
         Mapping of retry lifecycle callbacks. Keys are ``"on_retry"``,
         ``"on_success"``, and ``"on_failure"``; each value is a callable
@@ -147,18 +154,51 @@ def retry[**P, R](  # ruff: ignore[undocumented-param]
     When all attempts fail:
 
     - If ``return_default_value`` is provided, the wrapper returns it.
-    - Otherwise, the wrapper raises an ``ExceptionGroup`` containing
-      every exception from every attempt, in the order they were raised.
-      A single failed attempt still produces an ``ExceptionGroup`` with
-      one member, so the failure type is always the same.
+    - Otherwise, the wrapper raises an exception group containing every
+      exception from every attempt, in the order they were raised. A
+      single failed attempt still produces a group with one member, so
+      the failure type is always the same.
 
-    Use ``except*`` to handle specific exception types::
+    By default, ``retry_on`` is ``(Exception,)`` and ``no_retry_on`` is
+    ``()``, so every caught exception is a subclass of :exc:`Exception`
+    and the wrapper raises a standard :exc:`ExceptionGroup`. Catch it
+    with ``except* Exception``::
 
         try:
             foo()
         except* ValueError as eg:
             for exc in eg.exceptions:
                 ...
+
+    Exceptions that are **not** matched by ``retry_on`` (or are matched
+    by ``no_retry_on``) are not retried. With the default configuration
+    this means all :exc:`BaseException` subclasses — such as
+    ``KeyboardInterrupt``, ``SystemExit``, and
+    ``asyncio.CancelledError`` — propagate immediately: the retry loop
+    stops, ``on_retry`` callback is not invoked, and the failure-handling
+    path runs (``on_failure`` callback, then re-raise or return
+    ``return_default_value``).
+
+    .. warning::
+
+        Passing a :exc:`BaseException` subclass (such as
+        ``KeyboardInterrupt`` or ``SystemExit``) in ``retry_on`` or
+        ``no_retry_on`` is **not recommended**. If such an exception is
+        actually caught, the wrapper raises a
+        :exc:`BaseExceptionGroup` instead of an
+        :exc:`ExceptionGroup`, and ``except* Exception`` will **not**
+        catch it. In that case use ``except* BaseException``::
+
+            try:
+                foo()
+            except* BaseException as eg:
+                for exc in eg.exceptions:
+                    ...
+
+        If you are unsure whether a ``BaseException`` subclass might
+        end up in the caught set, prefer ``except* BaseException`` — it
+        catches both :exc:`ExceptionGroup` and
+        :exc:`BaseExceptionGroup`.
 
     **Type checking of ``return_default_value``**
 

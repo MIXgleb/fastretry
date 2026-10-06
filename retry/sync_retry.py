@@ -77,12 +77,16 @@ class SyncRetrying[**P, R](BaseRetrying[R, Callable[P, R | UnsetType]]):
 
                 try:
                     result = func(*args, **kwargs)
-                except Exception as exc:  # ruff: ignore[blind-except]
+                except BaseException as exc:  # ruff: ignore[blind-except]
                     self._prepare_retry(
                         stats_attempt=stats_attempt,
                         exc=exc,
                         delay_calculator=delay_calculator,
                     )
+
+                    if stats_attempt.retry_aborted:
+                        break
+
                     self._safe_call_callback(callback=on_retry, stats=stats)
                     self._sleep(stats=stats)
                 else:
