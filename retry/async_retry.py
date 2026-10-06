@@ -126,7 +126,6 @@ class AsyncRetrying[**P, R](BaseRetrying[R, Callable[P, Awaitable[R | UnsetType]
         callback: Callable[[RetryStats], Awaitable[None] | None],
         stats: RetryStats,
     ) -> None:
-        """Invoke a callback, awaiting it if it returns an awaitable."""
         result = callback(stats)
 
         if inspect.isawaitable(result):
