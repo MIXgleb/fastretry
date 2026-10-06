@@ -13,6 +13,7 @@ from collections.abc import (
     Callable,
 )
 from typing import (
+    Final,
     TypedDict,
 )
 
@@ -21,6 +22,17 @@ from retry._utils._stats import (
 )
 from retry._utils._unset import (
     UnsetType,
+)
+
+_PRIMITIVE_TYPES: Final[tuple[type, ...]] = (
+    int,
+    float,
+    complex,
+    str,
+    bool,
+    bytes,
+    bytearray,
+    type(None),
 )
 
 
@@ -93,7 +105,7 @@ def default_on_success(stats: RetryStats) -> None:
     """
     result = stats.attempt.result
 
-    if isinstance(result, (int, float, str, bool, bytes, type(None))):
+    if isinstance(result, _PRIMITIVE_TYPES):
         message = "Function executed successfully. Result: %r."
         args = (result,)
     else:
