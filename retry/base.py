@@ -1,7 +1,7 @@
 """
 Abstract base class for retry decorators.
 
-:class:`~retry.base.BaseRetrying` holds the shared state and the shared blocks.
+:class:`~retry.base.BaseRetrying` holds the shared state and helpers.
 Concrete sync and async implementations live in
 :mod:`~retry.sync_retry` and :mod:`~retry.async_retry`.
 """
@@ -583,9 +583,9 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         Resolve the jitter strategy after initialization.
 
         If ``jitter`` is not provided, the strategy is chosen based on the
-        delay type: ``defaults.jitter_for_exponential`` for
+        delay type: ``jitter_for_exponential`` for
         :class:`~retry._utils._delay.ExponentialDelay`, or
-        ``defaults.jitter_for_fixed`` for a plain ``float`` delay.
+        ``jitter_for_fixed`` for a plain ``float`` delay.
 
         Parameters
         ----------
@@ -616,8 +616,9 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         Resolve the callbacks for a decorator.
 
         Resolution order for each callback: per-decorator value, then global
-        default (from ``defaults.on_retry`` / ``on_success`` / ``on_failure``).
-        ``None`` values disable the callback by substituting a no-op.
+        default (from the effective default ``on_retry`` / ``on_success`` /
+        ``on_failure``). ``None`` values disable the callback by
+        substituting a no-op.
 
         Parameters
         ----------

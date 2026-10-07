@@ -88,11 +88,13 @@ class _Defaults:
             Unknown default key
 
         """
+        all_keys = {f.name for f in dc.fields(self)}
+
         for key, value in kwargs.items():
             if isinstance(value, UnsetType):
                 continue
 
-            if not hasattr(self, key):
+            if key not in all_keys:
                 msg = f"Unknown default: {key!r}"
                 raise AttributeError(msg)
 

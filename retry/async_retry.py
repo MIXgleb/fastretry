@@ -49,6 +49,7 @@ class AsyncRetrying[**P, R](BaseRetrying[R, Callable[P, Awaitable[R | UnsetType]
         self,
         func: Callable[P, Awaitable[R | UnsetType]],
     ) -> Callable[P, Awaitable[R | UnsetType]]:
+        fname = getattr(func, "__qualname__", "<anonymous>")
         on_success = self._callbacks.on_success
         on_retry = self._callbacks.on_retry
         on_failure = self._callbacks.on_failure
@@ -62,7 +63,7 @@ class AsyncRetrying[**P, R](BaseRetrying[R, Callable[P, Awaitable[R | UnsetType]
             stats = self._stats.for_call(
                 args=args,
                 kwargs=kwargs,
-                fname=getattr(func, "__qualname__", "<anonymous>"),
+                fname=fname,
                 started_at=time.monotonic(),
             )
             stats_attempt = stats.attempt
