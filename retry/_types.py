@@ -26,7 +26,7 @@ class RetryOptions(TypedDict, total=False):
     :attr:`~retry._config.config.retry`.
 
     All keys are optional. Missing keys fall back to the values in
-    :data:`~retry._defaults.defaults`.
+    :data:`~retry._defaults.global_defaults`.
     """
 
     attempts: int | UnsetType

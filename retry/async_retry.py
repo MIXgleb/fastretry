@@ -19,9 +19,6 @@ from typing import (
     override,
 )
 
-from retry._defaults import (
-    defaults,
-)
 from retry._types import (
     RetryKwargs,
 )
@@ -45,7 +42,7 @@ class AsyncRetrying[**P, R](BaseRetrying[R, Callable[P, Awaitable[R | UnsetType]
     @override
     def __init__(self, **kwargs: Unpack[RetryKwargs[R]]) -> None:
         super().__init__(**kwargs)
-        self.sleep_call: Final = defaults.async_sleep_call
+        self.sleep_call: Final = self._effective_defaults.async_sleep_call
 
     @override
     def _wrap(

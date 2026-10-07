@@ -10,7 +10,9 @@ from typing import (
 )
 
 from retry._defaults import (
-    defaults,
+    context_defaults,
+    get_defaults,
+    global_defaults,
 )
 from retry._types import (
     DefaultsKwargs,
@@ -33,7 +35,7 @@ class _ResetNamespace:
         Useful in tests to avoid leaking configuration between test
         cases.
         """
-        defaults.reset()
+        get_defaults().reset()
 
 
 class _RetryNamespace:
@@ -88,7 +90,7 @@ class _RetryNamespace:
             Default async sleep callable, by default :func:`asyncio.sleep`.
 
         """
-        defaults.set(**kwargs)
+        get_defaults().set(**kwargs)
 
 
 class _LoggingNamespace:
@@ -129,11 +131,11 @@ class _LoggingNamespace:
             record, by default :attr:`~retry._utils._logs.LogLevel.ERROR`.
 
         """
-        defaults.set(**kwargs)
+        get_defaults().set(**kwargs)
 
 
-class _TemporaryNamespace:
-    """Namespace for temporary default overrides."""
+class _ContextNamespace:
+    """Namespace for per-context retry defaults."""
 
     __slots__ = ()
 
@@ -143,25 +145,42 @@ class _TemporaryNamespace:
         **kwargs: Unpack[DefaultsKwargs],
     ) -> Generator[None]:
         """
-        Temporarily override defaults, restoring them on exit.
+        Use a per-context defaults instance within the block.
 
-        Useful in tests: the previous values are restored even if the
-        body raises.
+        Creates a fresh copy of the global defaults, applies ``kwargs``
+        on top, and installs it for the duration of the block. Inside
+        the block:
+
+        - :attr:`~config.retry` and :attr:`~config.logging` mutate the
+          per-context instance instead of the global one;
+        - decorators created inside the block read defaults from the
+          per-context instance.
+
+        Changes are isolated to the current :class:`contextvars.Context`:
+        in asyncio, each task sees its own instance; in threaded code,
+        each thread sees its own. Outside the block, the global defaults
+        are used again.
 
         Parameters
         ----------
         **kwargs : Unpack[DefaultsKwargs]
-            Defaults to override for the duration of the block.
+            Initial overrides applied on top of the copied defaults.
+
+        Yields
+        ------
+        None
+            Control to the caller.
 
         """
-        snapshot = {f.name: getattr(defaults, f.name) for f in dc.fields(defaults)}
-        defaults.set(**kwargs)
+        fresh = dc.replace(global_defaults)
+        fresh.set(**kwargs)
+
+        token = context_defaults.set(fresh)
 
         try:
             yield
         finally:
-            for name, value in snapshot.items():
-                setattr(defaults, name, value)
+            context_defaults.reset(token)
 
 
 class _ConfigNamespace:
@@ -176,8 +195,8 @@ class _ConfigNamespace:
         Callable namespace for logging configuration.
     reset : _ResetNamespace
         Callable namespace for resetting all defaults.
-    temporary : _TemporaryNamespace
-        Callable namespace for temporary default overrides.
+    context : _ContextNamespace
+        Callable namespace for per-context default overrides.
 
     """
 
@@ -186,7 +205,7 @@ class _ConfigNamespace:
     retry = _RetryNamespace()
     logging = _LoggingNamespace()
     reset = _ResetNamespace()
-    temporary = _TemporaryNamespace()
+    context = _ContextNamespace()
 
 
 config = _ConfigNamespace()

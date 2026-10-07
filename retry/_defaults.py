@@ -13,10 +13,13 @@ Configuration is split into two groups:
 via ``@retry(...)``.
 - **Logging configuration** — log levels and traceback thresholds.
 
-Both are configured via :data:`~retry._config.config`.
+Both are configured via :data:`~retry._config.config`. For per-task or
+per-thread overrides, use the :attr:`~retry._config.config.context`
+context manager.
 """
 
 import asyncio
+import contextvars
 import dataclasses as dc
 import time
 from collections.abc import (
@@ -104,4 +107,26 @@ class _Defaults:
             setattr(self, f.name, getattr(fresh, f.name))
 
 
-defaults: Final[_Defaults] = _Defaults()
+global_defaults: Final[_Defaults] = _Defaults()
+context_defaults: contextvars.ContextVar[_Defaults | None] = contextvars.ContextVar(
+    "retry_defaults",
+    default=None,
+)
+
+
+def get_defaults() -> _Defaults:
+    """
+    Return the effective defaults for the current context.
+
+    If a per-context :class:`~retry._defaults._Defaults` instance was installed via
+    :attr:`~retry._config.config.context`, it is returned. Otherwise, the global
+    :data:`~retry._defaults.global_defaults` singleton is used.
+
+    Returns
+    -------
+    _Defaults
+        Effective defaults for the current context.
+
+    """
+    current_defaults = context_defaults.get()
+    return current_defaults if current_defaults is not None else global_defaults

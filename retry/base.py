@@ -27,7 +27,7 @@ from typing import (
 )
 
 from retry._defaults import (
-    defaults,
+    get_defaults,
 )
 from retry._utils import (
     UNSET,
@@ -58,6 +58,7 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         "_callbacks",
         "_disable_logging",
         "_disable_warnings",
+        "_effective_defaults",
         "_level_failure",
         "_level_retry",
         "_level_sleep",
@@ -124,10 +125,12 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
             is used (``()``).
 
         """
+        self._effective_defaults = get_defaults()
+
         # --- per-decorator options ---
         self.attempts: Final = self._resolve(
             passed=attempts,
-            default=defaults.attempts,
+            default=self._effective_defaults.attempts,
         )
         self.return_default_value: Final = self._resolve(
             passed=return_default_value,
@@ -135,34 +138,34 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         )
         self.delay: Final = self._resolve(
             passed=delay,
-            default=defaults.delay,
+            default=self._effective_defaults.delay,
         )
         self._disable_logging: Final = self._resolve(
             passed=disable_logging,
-            default=defaults.disable_logging,
+            default=self._effective_defaults.disable_logging,
         )
         self._disable_warnings: Final = self._resolve(
             passed=disable_warnings,
-            default=defaults.disable_warnings,
+            default=self._effective_defaults.disable_warnings,
         )
         self._callbacks: Final = self._resolve_callbacks(
             callbacks=callbacks,
         )
         self._retry_on: Final = self._resolve(
             passed=retry_on,
-            default=defaults.retry_on,
+            default=self._effective_defaults.retry_on,
         )
         self._no_retry_on: Final = self._resolve(
             passed=no_retry_on,
-            default=defaults.no_retry_on,
+            default=self._effective_defaults.no_retry_on,
         )
 
         # --- logger configuration ---
-        self._level_success: Final = defaults.level_success
-        self._level_retry: Final = defaults.level_retry
-        self._level_failure: Final = defaults.level_failure
-        self._level_sleep: Final = defaults.level_sleep
-        self._traceback_min_level: Final = defaults.traceback_min_level
+        self._level_success: Final = self._effective_defaults.level_success
+        self._level_retry: Final = self._effective_defaults.level_retry
+        self._level_failure: Final = self._effective_defaults.level_failure
+        self._level_sleep: Final = self._effective_defaults.level_sleep
+        self._traceback_min_level: Final = self._effective_defaults.traceback_min_level
 
         # --- internal helpers ---
         self._log: Final = Log(self.logger_config)
@@ -185,10 +188,10 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
                 no_retry_on=self._no_retry_on,
             ),
             global_options=GlobalOptions(
-                jitter_for_exponential=defaults.jitter_for_exponential,
-                jitter_for_fixed=defaults.jitter_for_fixed,
-                sync_sleep_call=defaults.sync_sleep_call,
-                async_sleep_call=defaults.async_sleep_call,
+                jitter_for_exponential=self._effective_defaults.jitter_for_exponential,
+                jitter_for_fixed=self._effective_defaults.jitter_for_fixed,
+                sync_sleep_call=self._effective_defaults.sync_sleep_call,
+                async_sleep_call=self._effective_defaults.async_sleep_call,
                 traceback_min_level=self._traceback_min_level,
             ),
             call=CallOptions(),
@@ -402,6 +405,7 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         """
         raise NotImplementedError
 
+    @final
     def _log_swallowed(
         self,
         *,
@@ -599,12 +603,12 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
             return jitter
 
         if isinstance(self.delay, ExponentialDelay):
-            return defaults.jitter_for_exponential
-        return defaults.jitter_for_fixed
+            return self._effective_defaults.jitter_for_exponential
+        return self._effective_defaults.jitter_for_fixed
 
     @final
-    @staticmethod
     def _resolve_callbacks(
+        self,
         *,
         callbacks: RetryCallbacks | UnsetType,
     ) -> ResolvedRetryCallbacks:
@@ -629,14 +633,26 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         """
         if isinstance(callbacks, UnsetType):
             return ResolvedRetryCallbacks(
-                on_success=defaults.on_success or noop_callback,
-                on_retry=defaults.on_retry or noop_callback,
-                on_failure=defaults.on_failure or noop_callback,
+                on_success=self._effective_defaults.on_success or noop_callback,
+                on_retry=self._effective_defaults.on_retry or noop_callback,
+                on_failure=self._effective_defaults.on_failure or noop_callback,
             )
         return ResolvedRetryCallbacks(
-            on_success=callbacks.get("on_success", defaults.on_success) or noop_callback,
-            on_retry=callbacks.get("on_retry", defaults.on_retry) or noop_callback,
-            on_failure=callbacks.get("on_failure", defaults.on_failure) or noop_callback,
+            on_success=callbacks.get(
+                "on_success",
+                self._effective_defaults.on_success,
+            )
+            or noop_callback,
+            on_retry=callbacks.get(
+                "on_retry",
+                self._effective_defaults.on_retry,
+            )
+            or noop_callback,
+            on_failure=callbacks.get(
+                "on_failure",
+                self._effective_defaults.on_failure,
+            )
+            or noop_callback,
         )
 
     @final
