@@ -60,9 +60,9 @@ class DecoratorOptions:
         If ``True``, warnings are suppressed.
     re_raise_exception : bool
         If ``True``, the last exception is re-raised after all attempts.
-    retry_on : tuple[type[BaseException], ...]
+    retry_on : type[BaseException] | tuple[type[BaseException], ...]
         Exception types that trigger a retry.
-    no_retry_on : tuple[type[BaseException], ...]
+    no_retry_on : type[BaseException] | tuple[type[BaseException], ...]
         Exception types that are never retried, even if they match
         ``retry_on``. Takes precedence.
 
@@ -75,8 +75,8 @@ class DecoratorOptions:
     disable_logging: bool
     disable_warnings: bool
     re_raise_exception: bool
-    retry_on: tuple[type[BaseException], ...]
-    no_retry_on: tuple[type[BaseException], ...]
+    retry_on: type[BaseException] | tuple[type[BaseException], ...]
+    no_retry_on: type[BaseException] | tuple[type[BaseException], ...]
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -148,6 +148,9 @@ class AttemptState:
         Monotonic timestamp captured at the start of the call.
     elapsed : float
         Seconds elapsed since ``started_at``.
+    previous_delay : float | None
+        Delay used on the previous attempt, or ``None`` on the first retry.
+        Used by the ``"decorrelated"`` jitter strategy.
     computed_delay : float | UnsetType
         Delay computed for the upcoming attempt, or ``UNSET`` if not yet
         computed.
@@ -171,6 +174,7 @@ class AttemptState:
     retry_index: int = 0
     started_at: float = 0.0
     elapsed: float = 0.0
+    previous_delay: float | None = None
     computed_delay: float | UnsetType = UNSET
     result: object | UnsetType = UNSET
     last_exception: BaseException | None = dc.field(default=None, repr=False)
