@@ -25,7 +25,6 @@ from retry._types import (
     RetryKwargs,
 )
 from retry._utils import (
-    DelayCalculator,
     RetryStats,
     UnsetType,
 )
@@ -52,13 +51,9 @@ class SyncRetrying[**P, R](BaseRetrying[R, Callable[P, R | UnsetType]]):
         func: Callable[P, R | UnsetType],
     ) -> Callable[P, R | UnsetType]:
         fname = getattr(func, "__qualname__", "<anonymous>")
-        on_success = self._callbacks.on_success
-        on_retry = self._callbacks.on_retry
-        on_failure = self._callbacks.on_failure
-        delay_calculator = DelayCalculator(
-            delay=self.delay,
-            jitter=self.jitter,
-        )
+        on_success = self.callbacks.on_success
+        on_retry = self.callbacks.on_retry
+        on_failure = self.callbacks.on_failure
 
         @functools.wraps(func)
         def wrapper(*args: P.args, **kwargs: P.kwargs) -> R | UnsetType:
@@ -79,7 +74,6 @@ class SyncRetrying[**P, R](BaseRetrying[R, Callable[P, R | UnsetType]]):
                     self._prepare_retry(
                         stats_attempt=stats_attempt,
                         exc=exc,
-                        delay_calculator=delay_calculator,
                     )
 
                     if stats_attempt.retry_aborted:
