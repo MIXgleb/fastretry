@@ -289,6 +289,7 @@ class RetryStats:
             "attempts": self.decorator.attempts,
             "started_at": attempt.started_at,
             "elapsed": attempt.elapsed,
+            "previous_delay": attempt.previous_delay,
             "computed_delay": attempt.computed_delay,
             "exception_type": (
                 type(attempt.last_exception).__name__
