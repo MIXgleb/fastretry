@@ -441,7 +441,7 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         ValueError
             If ``delay`` is an :class:`~retry._utils._delay.ExponentialDelay`
             with a non-positive ``delay``, ``backoff_factor``, or
-            ``max_delay``.
+            ``max_delay``, or with ``max_delay`` less than ``delay``.
 
         """
         if self.attempts < 1:
@@ -458,12 +458,19 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
             if self.delay.backoff_factor <= 0:
                 msg = f"backoff factor must be > 0, got {self.delay.backoff_factor!r}"
                 raise ValueError(msg)
-            if self.delay.max_delay is not None and self.delay.max_delay <= 0:
-                msg = f"maximum delay must be > 0, got {self.delay.max_delay!r}"
-                raise ValueError(msg)
-        elif self.delay <= 0:
+            if self.delay.max_delay is not None:
+                if self.delay.max_delay <= 0:
+                    msg = f"maximum delay must be > 0, got {self.delay.max_delay!r}"
+                    raise ValueError(msg)
+                if self.delay.max_delay < self.delay.delay:
+                    msg = (
+                        f"maximum delay ({self.delay.max_delay!r}) must be >= "
+                        f"base delay ({self.delay.delay!r})"
+                    )
+                    raise ValueError(msg)
+        elif self.delay < 0:
             self._warnings.warn(
-                f"\n\tDelay must be > 0, got {self.delay!r}. Falling back to 0.",
+                f"\n\tDelay must be >= 0, got {self.delay!r}. Falling back to 0.",
                 stacklevel=5,
             )
             self.delay = 0
