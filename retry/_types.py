@@ -42,7 +42,7 @@ class RetryKwargs[R](RetryOptions, total=False):
 
     return_default_value: R | UnsetType
     jitter: JitterStrategy | UnsetType
-    callbacks: RetryCallbacks | UnsetType
+    callbacks: RetryCallbacks | UnsetType | None
 
 
 class RetryDefaultsKwargs(

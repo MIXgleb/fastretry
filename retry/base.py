@@ -104,7 +104,7 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         jitter: JitterStrategy | UnsetType = UNSET,
         disable_logging: bool | UnsetType = UNSET,
         disable_warnings: bool | UnsetType = UNSET,
-        callbacks: RetryCallbacks | UnsetType = UNSET,
+        callbacks: RetryCallbacks | UnsetType | None = UNSET,
         retry_on: type[BaseException] | tuple[type[BaseException], ...] | UnsetType = UNSET,
         no_retry_on: type[BaseException] | tuple[type[BaseException], ...] | UnsetType = UNSET,
     ) -> None:
@@ -129,10 +129,11 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
             Disable all logging
         disable_warnings : bool, ``optional``
             Disable all warnings
-        callbacks : RetryCallbacks, ``optional``
+        callbacks : RetryCallbacks | None, ``optional``
             Callbacks invoked during retry processing. When omitted, defaults
-            from :mod:`~retry._utils._callbacks` are used. Individual callbacks may
-            be set to ``None`` to disable them.
+            from :mod:`~retry._utils._callbacks` are used. Pass ``None`` to
+            disable every callback at once. Individual callbacks may also be
+            set to ``None`` to disable them.
         retry_on : type[BaseException] | tuple[type[BaseException], ...], ``optional``
             Exception types that trigger a retry. When omitted, the global
             default is used (``Exception``).
@@ -677,7 +678,7 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
     def _resolve_callbacks(
         self,
         *,
-        callbacks: RetryCallbacks | UnsetType,
+        callbacks: RetryCallbacks | UnsetType | None,
     ) -> ResolvedRetryCallbacks:
         """
         Resolve the callbacks for a decorator.
@@ -687,11 +688,17 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         ``on_failure``). ``None`` values disable the callback by
         substituting a no-op.
 
+        Three top-level cases are handled:
+
+        - ``UNSET``: use the global defaults only.
+        - ``None``: disable every callback (all resolved to no-op).
+        - a mapping: per-key overrides on top of the global defaults.
+
         Parameters
         ----------
-        callbacks : RetryCallbacks | UnsetType
+        callbacks : RetryCallbacks | UnsetType | None
             Per-decorator callback overrides, or ``UNSET`` to use only the
-            global defaults.
+            global defaults, or ``None`` to disable all callbacks.
 
         Returns
         -------
@@ -699,6 +706,12 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
             Fully resolved callbacks with all three fields populated.
 
         """
+        if callbacks is None:
+            return ResolvedRetryCallbacks(
+                on_success=noop_callback,
+                on_retry=noop_callback,
+                on_failure=noop_callback,
+            )
         if isinstance(callbacks, UnsetType):
             return ResolvedRetryCallbacks(
                 on_success=self._effective_defaults.on_success or noop_callback,

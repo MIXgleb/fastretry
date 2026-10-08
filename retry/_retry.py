@@ -64,7 +64,7 @@ def retry(
     disable_warnings: bool | UnsetType = UNSET,
     retry_on: type[BaseException] | tuple[type[BaseException], ...] | UnsetType = UNSET,
     no_retry_on: type[BaseException] | tuple[type[BaseException], ...] | UnsetType = UNSET,
-    callbacks: RetryCallbacks | UnsetType = UNSET,
+    callbacks: RetryCallbacks | UnsetType | None = UNSET,
 ) -> Callable[[_WrappedFunc], _WrappedFunc]: ...
 
 
@@ -113,7 +113,7 @@ def retry[**P, R](  # ruff: ignore[undocumented-param]
     no_retry_on : type[BaseException] | tuple[type[BaseException], ...], ``optional``
         Exception types that are never retried, even if they match
         ``retry_on``. Takes precedence. Defaults to ``()``.
-    callbacks : RetryCallbacks, ``optional``
+    callbacks : RetryCallbacks | None, ``optional``
         Mapping of retry lifecycle callbacks. Keys are ``"on_retry"``,
         ``"on_success"``, and ``"on_failure"``; each value is a callable
         ``(stats: RetryStats) -> None`` or ``None`` to disable that event.
@@ -121,7 +121,8 @@ def retry[**P, R](  # ruff: ignore[undocumented-param]
 
         You may pass a plain ``dict`` with any subset of these keys, or
         build a :class:`~retry._utils._callbacks.RetryCallbacks` instance
-        directly.
+        directly. Pass ``None`` for the whole mapping to disable every
+        callback.
 
         Omitted keys fall back to the defaults. Passing ``None`` for
         a key disables the callback for that event.
