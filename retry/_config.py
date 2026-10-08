@@ -64,9 +64,9 @@ class _RetryNamespace:
             Disable all logging by default, by default False.
         disable_warnings : bool, ``optional``
             Disable all warnings by default, by default False.
-        retry_on : tuple[type[BaseException], ...], ``optional``
-            Exception types that trigger a retry. Defaults to ``(Exception,)``,
-        no_retry_on : tuple[type[BaseException], ...], ``optional``
+        retry_on : type[BaseException] | tuple[type[BaseException], ...], ``optional``
+            Exception types that trigger a retry. Defaults to ``Exception``.
+        no_retry_on : type[BaseException] | tuple[type[BaseException], ...], ``optional``
             Exception types that are never retried, even if they match
             ``retry_on``. Takes precedence. Defaults to ``()``.
         on_success : Callable[[RetryStats], None] | None, ``optional``
@@ -107,7 +107,7 @@ class _LoggingNamespace:
 
         Logging is handled by the standard :mod:`logging` module
         through a single logger named ``"retry"``, which writes to
-        stdout by default.
+        stdout (falling back to stderr) by default.
 
         Each log kind has its own level. Set a level to
         :attr:`~retry._utils._logs.LogLevel.OFF` to disable that kind.
