@@ -79,6 +79,22 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
 
     wrapper_kind: ClassVar[str | UnsetType] = UNSET
 
+    def __init_subclass__(cls) -> None:
+        """
+        Ensure every concrete retry strategy defines :attr:`wrapper_kind`.
+
+        Raises
+        ------
+        TypeError
+            If the subclass does not override :attr:`wrapper_kind`.
+
+        """
+        super().__init_subclass__()
+
+        if cls.wrapper_kind is UNSET:
+            msg = f"{cls.__name__} must define wrapper_kind"
+            raise TypeError(msg)
+
     def __init__(  # ruff: ignore[too-many-arguments]
         self,
         *,
