@@ -62,8 +62,8 @@ def retry(
     jitter: JitterStrategy | UnsetType = UNSET,
     disable_logging: bool | UnsetType = UNSET,
     disable_warnings: bool | UnsetType = UNSET,
-    retry_on: tuple[type[BaseException], ...] | UnsetType = UNSET,
-    no_retry_on: tuple[type[BaseException], ...] | UnsetType = UNSET,
+    retry_on: type[BaseException] | tuple[type[BaseException], ...] | UnsetType = UNSET,
+    no_retry_on: type[BaseException] | tuple[type[BaseException], ...] | UnsetType = UNSET,
     callbacks: RetryCallbacks | UnsetType = UNSET,
 ) -> Callable[[_WrappedFunc], _WrappedFunc]: ...
 
@@ -108,9 +108,9 @@ def retry[**P, R](  # ruff: ignore[undocumented-param]
         Disable all logging (factory default: False)
     disable_warnings : bool, ``optional``
         Disable all warnings (factory default: False)
-    retry_on : tuple[type[BaseException], ...], ``optional``
-        Exception types that trigger a retry. Defaults to ``(Exception,)``,
-    no_retry_on : tuple[type[BaseException], ...], ``optional``
+    retry_on : type[BaseException] | tuple[type[BaseException], ...], ``optional``
+        Exception types that trigger a retry. Defaults to ``Exception``.
+    no_retry_on : type[BaseException] | tuple[type[BaseException], ...], ``optional``
         Exception types that are never retried, even if they match
         ``retry_on``. Takes precedence. Defaults to ``()``.
     callbacks : RetryCallbacks, ``optional``
@@ -159,7 +159,7 @@ def retry[**P, R](  # ruff: ignore[undocumented-param]
       single failed attempt still produces a group with one member, so
       the failure type is always the same.
 
-    By default, ``retry_on`` is ``(Exception,)`` and ``no_retry_on`` is
+    By default, ``retry_on`` is ``Exception`` and ``no_retry_on`` is
     ``()``, so every caught exception is a subclass of :exc:`Exception`
     and the wrapper raises a standard :exc:`ExceptionGroup`. Catch it
     with ``except* Exception``::

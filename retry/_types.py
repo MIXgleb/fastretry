@@ -33,8 +33,8 @@ class RetryOptions(TypedDict, total=False):
     delay: Delay | UnsetType
     disable_logging: bool | UnsetType
     disable_warnings: bool | UnsetType
-    retry_on: tuple[type[BaseException], ...] | UnsetType
-    no_retry_on: tuple[type[BaseException], ...] | UnsetType
+    retry_on: type[BaseException] | tuple[type[BaseException], ...] | UnsetType
+    no_retry_on: type[BaseException] | tuple[type[BaseException], ...] | UnsetType
 
 
 class RetryKwargs[R](RetryOptions, total=False):
