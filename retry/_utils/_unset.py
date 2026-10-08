@@ -9,6 +9,7 @@ from an explicit ``None``.
 
 from typing import (
     Final,
+    Literal,
     final,
     override,
 )
@@ -27,7 +28,7 @@ class UnsetType:
     __slots__ = ()
 
     @override
-    def __repr__(self) -> str:
+    def __repr__(self) -> Literal["<unset>"]:
         return "<unset>"
 
 
