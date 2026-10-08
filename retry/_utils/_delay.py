@@ -49,10 +49,6 @@ class DelayCalculator:
     """
     Compute effective delays for retry attempts, with jitter.
 
-    Stateful: tracks the delay used on the previous attempt, which is
-    required by the ``"decorrelated"`` jitter strategy. Each retry loop
-    should use its own instance.
-
     Parameters
     ----------
     delay : Delay
@@ -65,7 +61,6 @@ class DelayCalculator:
     __slots__ = (
         "_delay",
         "_jitter",
-        "_previous_delay",
     )
 
     def __init__(
@@ -76,11 +71,12 @@ class DelayCalculator:
     ) -> None:
         self._delay = delay
         self._jitter: JitterStrategy = jitter
-        self._previous_delay: float | None = None
 
     def compute(
         self,
+        *,
         retry_index: int,
+        previous_delay: float | None = None,
     ) -> float:
         """
         Compute the effective delay for a retry attempt.
@@ -104,6 +100,9 @@ class DelayCalculator:
         ----------
         retry_index : int
             1-based attempt index.
+        previous_delay : float | None, ``optional``
+            Delay used on the previous attempt, by default None. Used by
+            the ``"decorrelated"`` jitter strategy; ignored by the others.
 
         Returns
         -------
@@ -111,10 +110,13 @@ class DelayCalculator:
             Effective delay in seconds.
 
         """
+        if (
+            isinstance(self._delay, ExponentialDelay) and self._delay.delay == 0
+        ) or self._delay == 0:
+            return 0
+
         computed = self._apply_backoff(retry_index)
-        result = self._apply_jitter(computed)
-        self._previous_delay = result
-        return result
+        return self._apply_jitter(computed, previous_delay)
 
     def _apply_backoff(
         self,
@@ -146,9 +148,71 @@ class DelayCalculator:
     def _apply_jitter(
         self,
         computed: float,
+        previous_delay: float | None,
     ) -> float:
         """
         Apply the jitter strategy to the computed delay.
+
+        Parameters
+        ----------
+        computed : float
+            Delay before jitter.
+        previous_delay : float | None
+            Delay used on the previous attempt, or ``None`` on the first retry.
+
+        Returns
+        -------
+        float
+            Delay after jitter.
+
+        """
+        match self._jitter:
+            case "none":
+                return computed
+            case "full":
+                return self.__calculate_full_jitter(computed)
+            case "equal":
+                return self.__calculate_equal_jitter(computed)
+            case "decorrelated":
+                return self.__calculate_decorrelated_jitter(computed, previous_delay)
+            case _:
+                assert_never(self._jitter)
+
+    def __calculate_decorrelated_jitter(
+        self,
+        computed: float,
+        previous_delay: float | None,
+    ) -> float:
+        """
+        Apply the decorrelated jitter strategy to the computed delay.
+
+        Parameters
+        ----------
+        computed : float
+            Delay before jitter.
+        previous_delay : float | None
+            Delay used on the previous attempt, or ``None`` on the first retry.
+
+        Returns
+        -------
+        float
+            Delay after jitter.
+
+        """
+        base = self._delay.delay if isinstance(self._delay, ExponentialDelay) else self._delay
+        previous = previous_delay if previous_delay is not None else computed
+        upper = max(base, previous * 3)
+
+        if isinstance(self._delay, ExponentialDelay) and self._delay.max_delay is not None:
+            upper = min(upper, self._delay.max_delay)
+            base = min(base, self._delay.max_delay)
+
+        return random.uniform(base, upper)  # ruff: ignore[suspicious-non-cryptographic-random-usage]
+
+    @staticmethod
+    def __calculate_full_jitter(computed: float) -> float:
+        """
+        Apply the full jitter strategy to the computed delay.
 
         Parameters
         ----------
@@ -161,26 +225,23 @@ class DelayCalculator:
             Delay after jitter.
 
         """
-        match self._jitter:
-            case "none":
-                return computed
-            case "full":
-                return random.uniform(0, computed)  # ruff: ignore[suspicious-non-cryptographic-random-usage]
-            case "equal":
-                half = computed / 2
-                return half + random.uniform(0, half)  # ruff: ignore[suspicious-non-cryptographic-random-usage]
-            case "decorrelated":
-                base = (
-                    self._delay.delay if isinstance(self._delay, ExponentialDelay) else self._delay
-                )
+        return random.uniform(0, computed)  # ruff: ignore[suspicious-non-cryptographic-random-usage]
 
-                if self._previous_delay is None:
-                    return random.uniform(0, computed)  # ruff: ignore[suspicious-non-cryptographic-random-usage]
+    @staticmethod
+    def __calculate_equal_jitter(computed: float) -> float:
+        """
+        Apply the equal jitter strategy to the computed delay.
 
-                upper = self._previous_delay * 3
+        Parameters
+        ----------
+        computed : float
+            Delay before jitter.
 
-                if upper <= base:
-                    return base
-                return random.uniform(base, upper)  # ruff: ignore[suspicious-non-cryptographic-random-usage]
-            case _:
-                assert_never(self._jitter)
+        Returns
+        -------
+        float
+            Delay after jitter.
+
+        """
+        half = computed / 2
+        return half + random.uniform(0, half)  # ruff: ignore[suspicious-non-cryptographic-random-usage]
