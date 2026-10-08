@@ -401,6 +401,9 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         raises, the error is logged via :meth:`_log_swallowed` and the
         retry proceeds normally.
 
+        Only :exc:`Exception` subclasses are swallowed. :exc:`BaseException`
+        subclasses (such as ``KeyboardInterrupt`` and ``SystemExit``) propagate.
+
         Parameters
         ----------
         callback : Callable[[RetryStats], Awaitable[None] | None]
