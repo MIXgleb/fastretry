@@ -52,7 +52,11 @@ class LogLevel(IntEnum):
 
 def _make_retry_logger() -> logging.Logger:
     """
-    Create the default logger writing to stdout.
+    Create the default logger writing to stdout or stderr.
+
+    Uses :data:`sys.stdout` when available, otherwise falls back to
+    :data:`sys.stderr`. If neither stream is available, no handler is
+    attached.
 
     Returns
     -------
@@ -61,11 +65,12 @@ def _make_retry_logger() -> logging.Logger:
 
     """
     logger = logging.getLogger("retry")
+    stream = sys.stdout or sys.stderr
 
-    if not logger.handlers:
+    if not logger.handlers and stream is not None:
         logger.setLevel(logging.DEBUG)
         logger.propagate = False
-        handler = logging.StreamHandler(sys.stdout)
+        handler = logging.StreamHandler(stream)
         handler.setFormatter(
             logging.Formatter(
                 "{asctime} [{levelname:^9}] {fname} "
