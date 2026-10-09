@@ -13,6 +13,15 @@ env/
 .mypy_cache
 .ruff_cache
 
+# Coverage
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+
+# Pytest
+.pytest_cache/
+
 # Dev
 test.py
 todo.txt

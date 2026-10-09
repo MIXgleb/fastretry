@@ -7,8 +7,17 @@ authors = [{ name = "Gleb Mikhalev", email = "gleb1@bk.ru" }]
 dependencies = ["Retry decorator for synchronous and asynchronous functions."]
 
 [dependency-groups]
-dev = ["sphinx>=7.2.6", "furo", "ruff", "mypy", "ty", "pyrefly"]
-
+dev = [
+    "ruff",
+    "mypy",
+    "ty",
+    "pyrefly",
+    "pytest",
+    "pytest-cov",
+    "pytest-mock",
+    "pytest-asyncio",
+    "pytest-randomly",
+]
 docs = ["sphinx>=7.2.6", "furo"]
 
 
@@ -16,7 +25,6 @@ docs = ["sphinx>=7.2.6", "furo"]
 [tool.ruff]
 line-length = 100
 target-version = "py312"
-include = ["retry/**/*.py"]
 
 
 [tool.ruff.format]
@@ -33,6 +41,23 @@ ignore = [
     "multi-line-summary-first-line",
     "missing-trailing-comma",
     "missing-copyright-notice",
+]
+
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**.py" = [
+    "import-private-name",
+    "undocumented-public-function",
+    "undocumented-public-method",
+    "undocumented-public-class",
+    "too-many-arguments",
+    "too-many-positional-arguments",
+    "boolean-type-hint-positional-argument",
+    "boolean-default-value-positional-argument",
+    "assert",
+    "magic-value-comparison",
+    "unused-async",
+    "private-member-access",
 ]
 
 
@@ -82,3 +107,18 @@ all = "error"
 python-version = "3.12"
 preset = "strict"
 project-includes = ["retry"]
+
+
+# Pytest
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = [
+    "--cov=retry",
+    "--cov-branch",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--cov-fail-under=100",
+    "--strict-markers",
+    "--strict-config",
+]
