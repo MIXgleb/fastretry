@@ -12,7 +12,6 @@ import functools
 import inspect
 import time
 from collections.abc import (
-    Awaitable,
     Callable,
 )
 from typing import (
@@ -25,6 +24,7 @@ from retry._types import (
     RetryKwargs,
 )
 from retry._utils import (
+    CallbackType,
     RetryStats,
     UnsetType,
 )
@@ -117,7 +117,7 @@ class SyncRetrying[**P, R](BaseRetrying[R, Callable[P, R | UnsetType]]):
     def _call_callback(
         self,
         *,
-        callback: Callable[[RetryStats], Awaitable[None] | None],
+        callback: CallbackType,
         stats: RetryStats,
     ) -> None:
         result = callback(stats)
@@ -138,7 +138,7 @@ class SyncRetrying[**P, R](BaseRetrying[R, Callable[P, R | UnsetType]]):
     def _safe_call_callback(
         self,
         *,
-        callback: Callable[[RetryStats], Awaitable[None] | None],
+        callback: CallbackType,
         stats: RetryStats,
     ) -> None:
         try:

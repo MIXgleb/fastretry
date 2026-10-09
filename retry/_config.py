@@ -69,13 +69,13 @@ class _RetryNamespace:
         no_retry_on : type[BaseException] | tuple[type[BaseException], ...], ``optional``
             Exception types that are never retried, even if they match
             ``retry_on``. Takes precedence. Defaults to ``()``.
-        on_success : Callable[[RetryStats], None] | None, ``optional``
+        on_success : CallbackType | None, ``optional``
             Default callback invoked after a successful attempt,
             by default :func:`~retry._utils._callbacks.default_on_success`.
-        on_retry : Callable[[RetryStats], None] | None, ``optional``
+        on_retry : CallbackType | None, ``optional``
             Default callback invoked after a failed attempt,
             by default :func:`~retry._utils._callbacks.default_on_retry`.
-        on_failure : Callable[[RetryStats], None] | None, ``optional``
+        on_failure : CallbackType | None, ``optional``
             Default callback invoked after all attempts have failed,
             by default :func:`~retry._utils._callbacks.default_on_failure`.
         jitter_for_exponential : JitterStrategy, ``optional``

@@ -32,6 +32,7 @@ from retry._defaults import (
 from retry._utils import (
     UNSET,
     AttemptState,
+    CallbackType,
     CallOptions,
     DecoratorOptions,
     Delay,
@@ -373,7 +374,7 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
     def _call_callback(
         self,
         *,
-        callback: Callable[[RetryStats], Awaitable[None] | None],
+        callback: CallbackType,
         stats: RetryStats,
     ) -> Awaitable[None] | None:
         """
@@ -391,7 +392,7 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
 
         Parameters
         ----------
-        callback : Callable[[RetryStats], Awaitable[None] | None]
+        callback : CallbackType
             Callback to invoke.
         stats : RetryStats
             Current retry statistics.
@@ -408,7 +409,7 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
     def _safe_call_callback(
         self,
         *,
-        callback: Callable[[RetryStats], Awaitable[None] | None],
+        callback: CallbackType,
         stats: RetryStats,
     ) -> Awaitable[None] | None:
         """
@@ -423,7 +424,7 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
 
         Parameters
         ----------
-        callback : Callable[[RetryStats], Awaitable[None] | None]
+        callback : CallbackType
             Callback to invoke.
         stats : RetryStats
             Current retry statistics.

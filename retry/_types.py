@@ -9,11 +9,11 @@ from typing import (
 )
 
 from retry._utils import (
+    CallbackType,
     Delay,
     JitterStrategy,
     LogLevel,
     RetryCallbacks,
-    RetryStats,
     UnsetType,
 )
 
@@ -51,9 +51,9 @@ class RetryDefaultsKwargs(
 ):
     """Options accepted by :attr:`~retry._config.config.retry`."""
 
-    on_success: Callable[[RetryStats], None] | None
-    on_retry: Callable[[RetryStats], None] | None
-    on_failure: Callable[[RetryStats], None] | None
+    on_success: CallbackType | None
+    on_retry: CallbackType | None
+    on_failure: CallbackType | None
     jitter_for_exponential: JitterStrategy
     jitter_for_fixed: JitterStrategy
     sync_sleep_call: Callable[[float], None]

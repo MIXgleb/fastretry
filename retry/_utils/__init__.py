@@ -4,6 +4,7 @@ __all__ = (
     "UNSET",
     "AttemptState",
     "CallOptions",
+    "CallbackType",
     "DecoratorOptions",
     "Delay",
     "DelayCalculator",
@@ -26,6 +27,7 @@ __all__ = (
 )
 
 from retry._utils._callbacks import (
+    CallbackType,
     ResolvedRetryCallbacks,
     RetryCallbacks,
     default_on_failure,

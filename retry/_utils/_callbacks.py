@@ -10,6 +10,7 @@ user does not provide their own.
 
 import dataclasses as dc
 from collections.abc import (
+    Awaitable,
     Callable,
 )
 from typing import (
@@ -35,6 +36,8 @@ _PRIMITIVE_TYPES: Final[tuple[type, ...]] = (
     type(None),
 )
 
+type CallbackType = Callable[[RetryStats], Awaitable[None] | None]
+
 
 class RetryCallbacks(TypedDict, total=False):
     """
@@ -46,18 +49,18 @@ class RetryCallbacks(TypedDict, total=False):
 
     Attributes
     ----------
-    on_success : Callable[[RetryStats], None] | None, ``optional``
+    on_success : CallbackType, ``optional``
         Called after a successful attempt. No default is provided.
-    on_retry : Callable[[RetryStats], None] | None, ``optional``
+    on_retry : CallbackType, ``optional``
         Called after a failed attempt, before sleeping.
-    on_failure : Callable[[RetryStats], None] | None, ``optional``
+    on_failure : CallbackType, ``optional``
         Called after all attempts have failed.
 
     """
 
-    on_success: Callable[[RetryStats], None] | None
-    on_retry: Callable[[RetryStats], None] | None
-    on_failure: Callable[[RetryStats], None] | None
+    on_success: CallbackType | None
+    on_retry: CallbackType | None
+    on_failure: CallbackType | None
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -73,19 +76,19 @@ class ResolvedRetryCallbacks:
 
     Attributes
     ----------
-    on_success : Callable[[RetryStats], None]
+    on_success : CallbackType
         Called after a successful attempt. Falls back to a no-op when not
         provided.
-    on_retry : Callable[[RetryStats], None]
+    on_retry : CallbackType
         Called after a failed attempt, before sleeping.
-    on_failure : Callable[[RetryStats], None]
+    on_failure : CallbackType
         Called after all attempts have failed.
 
     """
 
-    on_success: Callable[[RetryStats], None]
-    on_retry: Callable[[RetryStats], None]
-    on_failure: Callable[[RetryStats], None]
+    on_success: CallbackType
+    on_retry: CallbackType
+    on_failure: CallbackType
 
 
 def default_on_success(stats: RetryStats) -> None:

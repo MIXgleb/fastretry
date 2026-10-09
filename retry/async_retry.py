@@ -23,6 +23,7 @@ from retry._types import (
     RetryKwargs,
 )
 from retry._utils import (
+    CallbackType,
     RetryStats,
     UnsetType,
 )
@@ -115,7 +116,7 @@ class AsyncRetrying[**P, R](BaseRetrying[R, Callable[P, Awaitable[R | UnsetType]
     async def _call_callback(
         self,
         *,
-        callback: Callable[[RetryStats], Awaitable[None] | None],
+        callback: CallbackType,
         stats: RetryStats,
     ) -> None:
         result = callback(stats)
@@ -127,7 +128,7 @@ class AsyncRetrying[**P, R](BaseRetrying[R, Callable[P, Awaitable[R | UnsetType]
     async def _safe_call_callback(
         self,
         *,
-        callback: Callable[[RetryStats], Awaitable[None] | None],
+        callback: CallbackType,
         stats: RetryStats,
     ) -> None:
         try:
