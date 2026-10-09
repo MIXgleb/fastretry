@@ -180,9 +180,6 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
             default=self._effective_defaults.no_retry_on,
         )
 
-        # --- validate before deriving ---
-        self._validate_options()
-
         # --- logger configuration ---
         self._level_success: Final = self._effective_defaults.level_success
         self._level_retry: Final = self._effective_defaults.level_retry
@@ -193,6 +190,9 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         # --- internal helpers ---
         self._log: Final = Log(self.logger_config)
         self._warnings: Final = Warnings(disable_warnings=self.disable_warnings)
+
+        # --- validate before deriving ---
+        self._validate_options()
 
         # --- derived options ---
         self.jitter: Final = self._derive_jitter(jitter=jitter)
