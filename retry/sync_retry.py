@@ -65,7 +65,7 @@ class SyncRetrying[**P, R](
         **kwargs: Unpack[RetryKwargs[R]],
     ) -> None:
         super().__init__(**kwargs)
-        self.sleep_call: Final = self._effective_defaults.sync_sleep_call
+        self.sleep_call: Final[Callable[[float], None]] = self._effective_defaults.sync_sleep_call
 
     @override
     def _wrap(

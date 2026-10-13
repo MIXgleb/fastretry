@@ -69,7 +69,9 @@ class AsyncRetrying[**P, R](
         **kwargs: Unpack[RetryWithExecutorKwargs[R]],
     ) -> None:
         super().__init__(**kwargs)
-        self.sleep_call: Final = self._effective_defaults.async_sleep_call
+        self.sleep_call: Final[Callable[[float], Awaitable[None]]] = (
+            self._effective_defaults.async_sleep_call
+        )
 
     @override
     def _wrap(

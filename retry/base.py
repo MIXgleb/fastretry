@@ -21,6 +21,7 @@ from concurrent.futures import (
     Executor,
 )
 from typing import (
+    TYPE_CHECKING,
     Any,
     ClassVar,
     Final,
@@ -53,6 +54,13 @@ from retry._utils import (
     Warnings,
     noop_callback,
 )
+
+if TYPE_CHECKING:
+    from retry._utils._logs import (
+        LogLevel,
+    )
+
+type _RetryOnType = type[BaseException] | tuple[type[BaseException], ...]
 
 
 class BaseRetrying[
@@ -114,8 +122,8 @@ class BaseRetrying[
         disable_logging: bool | UnsetType = UNSET,
         disable_warnings: bool | UnsetType = UNSET,
         callbacks: RetryCallbacks | UnsetType | None = UNSET,
-        retry_on: type[BaseException] | tuple[type[BaseException], ...] | UnsetType = UNSET,
-        no_retry_on: type[BaseException] | tuple[type[BaseException], ...] | UnsetType = UNSET,
+        retry_on: _RetryOnType | UnsetType = UNSET,
+        no_retry_on: _RetryOnType | UnsetType = UNSET,
         executor: Executor | UnsetType = UNSET,
     ) -> None:
         """
@@ -168,7 +176,7 @@ class BaseRetrying[
             passed=attempts,
             default=self._effective_defaults.attempts,
         )
-        self.return_default_value: Final = self._resolve(
+        self.return_default_value: Final[R | UnsetType] = self._resolve(
             passed=return_default_value,
             default=UNSET,
         )
@@ -176,49 +184,52 @@ class BaseRetrying[
             passed=delay,
             default=self._effective_defaults.delay,
         )
-        self.disable_logging: Final = self._resolve(
+        self.disable_logging: Final[bool] = self._resolve(
             passed=disable_logging,
             default=self._effective_defaults.disable_logging,
         )
-        self.disable_warnings: Final = self._resolve(
+        self.disable_warnings: Final[bool] = self._resolve(
             passed=disable_warnings,
             default=self._effective_defaults.disable_warnings,
         )
-        self.callbacks: Final = self._resolve_callbacks(
+        self.callbacks: Final[ResolvedRetryCallbacks] = self._resolve_callbacks(
             callbacks=callbacks,
         )
-        self.retry_on: Final = self._resolve(
+        self.retry_on: Final[_RetryOnType] = self._resolve(
             passed=retry_on,
             default=self._effective_defaults.retry_on,
         )
-        self.no_retry_on: Final = self._resolve(
+        self.no_retry_on: Final[_RetryOnType] = self._resolve(
             passed=no_retry_on,
             default=self._effective_defaults.no_retry_on,
         )
-        self.executor: Final = self._resolve(
+        self.executor: Final[Executor | None] = self._resolve(
             passed=executor,
             default=None,
         )
 
         # --- logger configuration ---
-        self._level_success: Final = self._effective_defaults.level_success
-        self._level_retry: Final = self._effective_defaults.level_retry
-        self._level_failure: Final = self._effective_defaults.level_failure
-        self._level_sleep: Final = self._effective_defaults.level_sleep
-        self._traceback_min_level: Final = self._effective_defaults.traceback_min_level
+        self._level_success: Final[LogLevel] = self._effective_defaults.level_success
+        self._level_retry: Final[LogLevel] = self._effective_defaults.level_retry
+        self._level_failure: Final[LogLevel] = self._effective_defaults.level_failure
+        self._level_sleep: Final[LogLevel] = self._effective_defaults.level_sleep
+        self._traceback_min_level: Final[LogLevel] = self._effective_defaults.traceback_min_level
 
         # --- internal helpers ---
-        self._log: Final = Log(self.logger_config)
-        self._warnings: Final = Warnings(disable_warnings=self.disable_warnings)
+        self._log: Final[Log] = Log(self.logger_config)
+        self._warnings: Final[Warnings] = Warnings(disable_warnings=self.disable_warnings)
 
         # --- validate before deriving ---
         self._validate_options()
 
         # --- derived options ---
-        self.jitter: Final = self._derive_jitter(jitter=jitter)
-        self._delay_calculator: Final = DelayCalculator(delay=self.delay, jitter=self.jitter)
-        self._re_raise_exception: Final = isinstance(self.return_default_value, UnsetType)
-        self._stats: Final = RetryStats(
+        self.jitter: Final[JitterStrategy] = self._derive_jitter(jitter=jitter)
+        self._delay_calculator: Final[DelayCalculator] = DelayCalculator(
+            delay=self.delay,
+            jitter=self.jitter,
+        )
+        self._re_raise_exception: Final[bool] = isinstance(self.return_default_value, UnsetType)
+        self._stats: Final[RetryStats] = RetryStats(
             log=self._log,
             decorator=DecoratorOptions(
                 attempts=self.attempts,
