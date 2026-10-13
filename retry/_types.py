@@ -7,7 +7,8 @@ from collections.abc import (
 from concurrent.futures import (
     Executor,
 )
-from typing import (
+
+from typing_extensions import (
     TypedDict,
 )
 
@@ -21,45 +22,25 @@ from retry._utils import (
 )
 
 
-class RetryOptions(TypedDict, total=False):
-    """
-    Options accepted by ``@retry(...)``.
-
-    These options are also stored as global retry defaults via
-    :attr:`~retry._config.config.retry`.
-
-    All keys are optional. Missing keys fall back to the values in
-    :data:`~retry._defaults.global_defaults`.
-    """
-
+class _RetryOptions[R](TypedDict, total=False):
     attempts: int | UnsetType
+    return_default_value: R | UnsetType
     delay: Delay | UnsetType
+    jitter: JitterStrategy | UnsetType
     disable_logging: bool | UnsetType
     disable_warnings: bool | UnsetType
     retry_on: type[BaseException] | tuple[type[BaseException], ...] | UnsetType
     no_retry_on: type[BaseException] | tuple[type[BaseException], ...] | UnsetType
-
-
-class RetryKwargs[R](RetryOptions, total=False):
-    """Keyword arguments accepted by :func:`~retry._retry.retry`."""
-
-    return_default_value: R | UnsetType
-    jitter: JitterStrategy | UnsetType
     callbacks: RetryCallbacks | UnsetType | None
 
 
-class RetryWithExecutorKwargs[R](RetryKwargs[R], total=False):
-    """Keyword arguments accepted by :func:`~retry._retry.retry_async`."""
-
-    executor: Executor | UnsetType
-
-
-class RetryDefaultsKwargs(
-    RetryOptions,
-    total=False,
-):
-    """Options accepted by :attr:`~retry._config.config.retry`."""
-
+class _RetryDefaultOptions(TypedDict, total=False):
+    attempts: int
+    delay: Delay
+    disable_logging: bool
+    disable_warnings: bool
+    retry_on: type[BaseException] | tuple[type[BaseException], ...]
+    no_retry_on: type[BaseException] | tuple[type[BaseException], ...]
     on_success: CallbackType | None
     on_retry: CallbackType | None
     on_failure: CallbackType | None
@@ -69,12 +50,7 @@ class RetryDefaultsKwargs(
     async_sleep_call: Callable[[float], Awaitable[None]]
 
 
-class LoggingKwargs(
-    TypedDict,
-    total=False,
-):
-    """Options related to logging, configured via :attr:`~retry._config.config.logging`."""
-
+class _LoggingDefaultOptions(TypedDict, total=False):
     level_success: LogLevel
     level_retry: LogLevel
     level_failure: LogLevel
@@ -82,9 +58,44 @@ class LoggingKwargs(
     traceback_min_level: LogLevel
 
 
-class DefaultsKwargs(
-    RetryDefaultsKwargs,
-    LoggingKwargs,
+class RetryKwargs[R](
+    _RetryOptions[R],
     total=False,
+    closed=True,
+):
+    """Keyword arguments accepted by :func:`~retry._retry.retry`."""
+
+
+class RetryWithExecutorKwargs[R](
+    _RetryOptions[R],
+    total=False,
+    closed=True,
+):
+    """Keyword arguments accepted by :func:`~retry._retry.retry_async`."""
+
+    executor: Executor | UnsetType
+
+
+class RetryDefaultsKwargs(
+    _RetryDefaultOptions,
+    total=False,
+    closed=True,
+):
+    """Options accepted by :attr:`~retry._config.config.retry`."""
+
+
+class LoggingDefaultsKwargs(
+    _LoggingDefaultOptions,
+    total=False,
+    closed=True,
+):
+    """Options related to logging, configured via :attr:`~retry._config.config.logging`."""
+
+
+class DefaultsKwargs(
+    _RetryDefaultOptions,
+    _LoggingDefaultOptions,
+    total=False,
+    closed=True,
 ):
     """All keyword arguments accepted by :data:`~retry._config.config`."""

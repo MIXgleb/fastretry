@@ -16,7 +16,7 @@ from retry._defaults import (
 )
 from retry._types import (
     DefaultsKwargs,
-    LoggingKwargs,
+    LoggingDefaultsKwargs,
     RetryDefaultsKwargs,
 )
 
@@ -100,7 +100,7 @@ class _LoggingNamespace:
 
     def __call__(
         self,
-        **kwargs: Unpack[LoggingKwargs],
+        **kwargs: Unpack[LoggingDefaultsKwargs],
     ) -> None:
         """
         Configure logging for the retry decorators.
