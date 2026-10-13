@@ -60,7 +60,10 @@ class SyncRetrying[**P, R](
     wrapper_kind = "sync"
 
     @override
-    def __init__(self, **kwargs: Unpack[RetryKwargs[R]]) -> None:
+    def __init__(
+        self,
+        **kwargs: Unpack[RetryKwargs[R]],
+    ) -> None:
         super().__init__(**kwargs)
         self.sleep_call: Final = self._effective_defaults.sync_sleep_call
 

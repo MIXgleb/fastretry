@@ -64,7 +64,10 @@ class AsyncRetrying[**P, R](
     wrapper_kind = "async"
 
     @override
-    def __init__(self, **kwargs: Unpack[RetryWithExecutorKwargs[R]]) -> None:
+    def __init__(
+        self,
+        **kwargs: Unpack[RetryWithExecutorKwargs[R]],
+    ) -> None:
         super().__init__(**kwargs)
         self.sleep_call: Final = self._effective_defaults.async_sleep_call
 
@@ -174,6 +177,7 @@ class AsyncRetrying[**P, R](
     async def _run_in_executor(
         self,
         func: Callable[P, R],
+        /,
         *args: P.args,
         **kwargs: P.kwargs,
     ) -> R:

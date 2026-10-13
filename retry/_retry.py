@@ -59,7 +59,7 @@ _WrappedFunc = TypeVar("_WrappedFunc", bound=Callable[..., _ReturnType])
 
 
 @overload
-def retry(func: _WrappedFunc) -> _WrappedFunc: ...  # ruff: ignore[non-pep695-generic-function]
+def retry(func: _WrappedFunc, /) -> _WrappedFunc: ...  # ruff: ignore[non-pep695-generic-function]
 
 
 @overload
@@ -79,6 +79,7 @@ def retry(
 
 def retry[**P, R](  # ruff: ignore[undocumented-param]
     func: Callable[P, R] | None = None,
+    /,
     **kwargs: Unpack[RetryKwargs[R]],
 ) -> (
     Callable[P, R]
@@ -251,6 +252,7 @@ def retry[**P, R](  # ruff: ignore[undocumented-param]
 @overload
 def retry_async[**P, R](
     func: Callable[P, R] | Callable[P, Awaitable[R]],
+    /,
 ) -> Callable[P, Awaitable[R]]: ...
 
 
@@ -275,6 +277,7 @@ def retry_async[**P, R](
 
 def retry_async[**P, R](  # ruff: ignore[undocumented-param]
     func: Callable[P, R] | Callable[P, Awaitable[R]] | None = None,
+    /,
     **kwargs: Unpack[RetryWithExecutorKwargs[R]],
 ) -> (
     Callable[P, Awaitable[R]]

@@ -330,6 +330,7 @@ class _BoundLog[LK: _LogKind]:
     def __call__(
         self: '_BoundLog[Literal["success", "sleep"]]',
         message: str,
+        /,
         *args: object,
         extra: Mapping[str, object] | None = None,
     ) -> bool: ...
@@ -338,6 +339,7 @@ class _BoundLog[LK: _LogKind]:
     def __call__(
         self: '_BoundLog[Literal["retry", "failure"]]',
         message: str,
+        /,
         *args: object,
         last_exception: BaseException | None,
         extra: Mapping[str, object] | None = None,
@@ -346,6 +348,7 @@ class _BoundLog[LK: _LogKind]:
     def __call__(
         self,
         message: str,
+        /,
         *args: object,
         last_exception: BaseException | None = None,
         extra: Mapping[str, object] | None = None,

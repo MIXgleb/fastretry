@@ -76,7 +76,10 @@ class _Defaults:
     traceback_min_level: LogLevel = LogLevel.ERROR
 
     @final
-    def set(self, **kwargs: Unpack[DefaultsKwargs]) -> None:
+    def set(
+        self,
+        **kwargs: Unpack[DefaultsKwargs],
+    ) -> None:
         """
         Set one or more defaults by name.
 
