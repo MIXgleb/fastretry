@@ -86,7 +86,7 @@ class BaseRetrying[
         "return_default_value",
     )
 
-    wrapper_kind: ClassVar[str | UnsetType] = UNSET
+    wrapper_kind: ClassVar[str] = "base"
 
     def __init_subclass__(cls) -> None:
         """
@@ -100,7 +100,7 @@ class BaseRetrying[
         """
         super().__init_subclass__()
 
-        if cls.wrapper_kind is UNSET:
+        if cls.wrapper_kind == "base":
             msg = f"{cls.__name__} must define wrapper_kind"
             raise TypeError(msg)
 
