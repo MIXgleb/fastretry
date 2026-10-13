@@ -32,6 +32,7 @@ def _make_stats(attempt: AttemptState, attempts: int = 3) -> RetryStats:
             re_raise_exception=True,
             retry_on=(Exception,),
             no_retry_on=(),
+            executor=None,
         ),
         global_options=GlobalOptions(
             jitter_for_exponential="none",
@@ -56,6 +57,7 @@ def test_decorator_fields() -> None:
         re_raise_exception=True,
         retry_on=(Exception,),
         no_retry_on=(),
+        executor=None,
     )
     assert opts.attempts == 3
     assert opts.retry_on == (Exception,)
@@ -73,6 +75,7 @@ def test_decorator_frozen() -> None:
         re_raise_exception=True,
         retry_on=(Exception,),
         no_retry_on=(),
+        executor=None,
     )
 
     with pytest.raises(dc.FrozenInstanceError):

@@ -69,6 +69,7 @@ def stats_factory() -> _STATS_FACTORY_TYPE:
                 re_raise_exception=True,
                 retry_on=(Exception,),
                 no_retry_on=(),
+                executor=None,
             ),
             global_options=GlobalOptions(
                 jitter_for_exponential="none",

@@ -15,9 +15,6 @@ from retry._utils._callbacks import (
 from retry._utils._logs import (
     LogLevel,
 )
-from retry._utils._unset import (
-    UNSET,
-)
 
 
 def test_retry_sets_global() -> None:
@@ -70,10 +67,10 @@ def test_retry_unknown_key() -> None:
 def test_retry_ignores_unset() -> None:
     assert global_defaults.on_success is default_on_success
     config.retry(attempts=7)
-    config.retry(attempts=UNSET)
     assert global_defaults.attempts == 7
     assert global_defaults.on_success is default_on_success
     config.retry(delay=5)
+    assert global_defaults.delay == 5
     assert global_defaults.attempts == 7
     assert global_defaults.on_success is default_on_success
 

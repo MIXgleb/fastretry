@@ -2,20 +2,23 @@
 
 from typing import (
     get_type_hints,
+)
+
+from typing_extensions import (
     is_typeddict,
 )
 
 from retry._types import (
     DefaultsKwargs,
-    LoggingKwargs,
+    LoggingDefaultsKwargs,
     RetryDefaultsKwargs,
     RetryKwargs,
-    RetryOptions,
+    _RetryOptions,
 )
 
 
 def test_retry_options_is_typeddict() -> None:
-    assert is_typeddict(RetryOptions)
+    assert is_typeddict(_RetryOptions)
 
 
 def test_retry_kwargs_is_typeddict() -> None:
@@ -27,7 +30,7 @@ def test_retry_defaults_kwargs_is_typeddict() -> None:
 
 
 def test_logging_kwargs_is_typeddict() -> None:
-    assert is_typeddict(LoggingKwargs)
+    assert is_typeddict(LoggingDefaultsKwargs)
 
 
 def test_defaults_kwargs_is_typeddict() -> None:
@@ -36,14 +39,17 @@ def test_defaults_kwargs_is_typeddict() -> None:
 
 def test_retry_options_all_optional() -> None:
     """All keys in RetryOptions are optional (total=False)."""
-    assert RetryOptions.__required_keys__ == frozenset()
-    assert RetryOptions.__optional_keys__ == frozenset({
+    assert _RetryOptions.__required_keys__ == frozenset()
+    assert _RetryOptions.__optional_keys__ == frozenset({
         "attempts",
+        "return_default_value",
         "delay",
+        "jitter",
         "disable_logging",
         "disable_warnings",
         "retry_on",
         "no_retry_on",
+        "callbacks",
     })
 
 
@@ -57,7 +63,7 @@ def test_retry_kwargs_inherits_options() -> None:
 
 
 def test_logging_kwargs_keys() -> None:
-    hints = get_type_hints(LoggingKwargs)
+    hints = get_type_hints(LoggingDefaultsKwargs)
     assert "level_retry" in hints
     assert "level_failure" in hints
     assert "traceback_min_level" in hints
