@@ -1,7 +1,11 @@
 """Tests for AsyncRetrying decorator."""
 
 import asyncio
+import contextvars
 import time
+from concurrent.futures import (
+    ThreadPoolExecutor,
+)
 from typing import (
     Literal,
     NoReturn,
@@ -21,6 +25,7 @@ from retry._config import (
 )
 from retry._retry import (
     retry,
+    retry_async,
 )
 from retry._utils._stats import (
     RetryStats,
@@ -187,3 +192,107 @@ async def test_sleep_callable_raises(mocker: MockerFixture) -> None:
 
     mock_log_swallowed.assert_called_once()
     assert mock_log_swallowed.call_args.kwargs["operation"] == "sleep callable"
+
+
+async def test_retry_async_sync_function() -> None:
+    calls: list[int] = []
+
+    @retry_async(attempts=3, delay=0)
+    def fn() -> Literal["ok"]:
+        calls.append(1)
+        if len(calls) < 2:
+            msg = "fail"
+            raise ValueError(msg)
+        return "ok"
+
+    assert await fn() == "ok"
+    assert len(calls) == 2
+
+
+async def test_retry_async_sync_bare_decorator() -> None:
+    @retry_async
+    def fn() -> Literal[1]:
+        return 1
+
+    assert await fn() == 1
+
+
+async def test_retry_async_sync_callable_explicit() -> None:
+    def fn() -> Literal[1]:
+        return 1
+
+    wrapped = retry_async(fn)
+    assert await wrapped() == 1
+
+
+async def test_retry_async_async_function() -> None:
+    calls: list[int] = []
+
+    @retry_async(attempts=3, delay=0)
+    async def fn() -> Literal["ok"]:
+        calls.append(1)
+        if len(calls) < 2:
+            raise ValueError
+        return "ok"
+
+    assert await fn() == "ok"
+    assert len(calls) == 2
+
+
+async def test_retry_async_async_bare_decorator() -> None:
+    @retry_async
+    async def fn() -> Literal[1]:
+        return 1
+
+    assert await fn() == 1
+
+
+async def test_retry_async_all_fail() -> None:
+    @retry_async(attempts=2, delay=0)
+    def fn() -> NoReturn:
+        raise ValueError
+
+    with pytest.raises(ExceptionGroup) as eg:
+        await fn()
+
+    assert len(eg.value.exceptions) == 2
+
+
+async def test_retry_async_with_custom_executor() -> None:
+    with ThreadPoolExecutor(max_workers=1) as pool:
+
+        @retry_async(attempts=1, delay=0, executor=pool)
+        def fn() -> Literal[1]:
+            return 1
+
+        assert await fn() == 1
+
+
+async def test_retry_async_contextvars_propagated() -> None:
+    var: contextvars.ContextVar[str] = contextvars.ContextVar("var")
+
+    @retry_async(attempts=1, delay=0)
+    def fn() -> str:
+        return var.get()
+
+    token = var.set("hello")
+    try:
+        assert await fn() == "hello"
+    finally:
+        var.reset(token)
+
+
+async def test_retry_async_contextvars_propagated_custom_executor() -> None:
+    var: contextvars.ContextVar[str] = contextvars.ContextVar("var")
+
+    with ThreadPoolExecutor(max_workers=1) as pool:
+
+        @retry_async(attempts=1, delay=0, executor=pool)
+        def fn() -> str:
+            return var.get()
+
+        token = var.set("hello")
+        try:
+            assert await fn() == "hello"
+        finally:
+            var.reset(token)
