@@ -1,11 +1,12 @@
 """
 Asynchronous retry decorator.
 
-:class:`~retry.async_retry.AsyncRetrying` wraps coroutine
-functions and uses :func:`asyncio.sleep`
-(or a user-provided async sleep callable) between attempts.
+:class:`~retry.async_retry.AsyncRetrying` wraps coroutine functions
+(awaited directly) and sync functions (run in an executor).
 """
 
+import asyncio
+import contextvars
 import functools
 import inspect
 import time
@@ -16,11 +17,12 @@ from collections.abc import (
 from typing import (
     Final,
     Unpack,
+    cast,
     override,
 )
 
 from retry._types import (
-    RetryKwargs,
+    RetryWithExecutorKwargs,
 )
 from retry._utils import (
     CallbackType,
@@ -32,22 +34,44 @@ from retry.base import (
 )
 
 
-class AsyncRetrying[**P, R](BaseRetrying[R, Callable[P, Awaitable[R | UnsetType]]]):
-    """Async retrying decorator for multiple attempts to execute a function in case of an error."""
+class AsyncRetrying[**P, R](
+    BaseRetrying[
+        R,
+        Callable[P, R] | Callable[P, Awaitable[R]],
+        Callable[P, Awaitable[R | UnsetType]],
+    ],
+):
+    """
+    Async retrying decorator for multiple attempts to execute a function in case of an error.
+
+    Supports two kinds of wrapped callables:
+
+    - coroutine functions, which are awaited directly;
+    - plain sync functions, which are run in an executor so the event
+      loop is not blocked. The executor is chosen by the ``executor``
+      option: ``None`` (default) uses the running loop's thread pool;
+      an :class:`~concurrent.futures.Executor` instance is passed to
+      :meth:`asyncio.AbstractEventLoop.run_in_executor`.
+
+    Sleep and callbacks are always asynchronous: sleeps use the async
+    sleep callable configured via
+    :attr:`~retry._config.config.retry`, and callbacks returning
+    awaitables are awaited in the same event loop.
+    """
 
     __slots__ = ("sleep_call",)
 
     wrapper_kind = "async"
 
     @override
-    def __init__(self, **kwargs: Unpack[RetryKwargs[R]]) -> None:
+    def __init__(self, **kwargs: Unpack[RetryWithExecutorKwargs[R]]) -> None:
         super().__init__(**kwargs)
         self.sleep_call: Final = self._effective_defaults.async_sleep_call
 
     @override
     def _wrap(
         self,
-        func: Callable[P, Awaitable[R | UnsetType]],
+        func: Callable[P, R] | Callable[P, Awaitable[R]],
     ) -> Callable[P, Awaitable[R | UnsetType]]:
         fname = getattr(func, "__qualname__", "<anonymous>")
         on_success = self.callbacks.on_success
@@ -63,12 +87,18 @@ class AsyncRetrying[**P, R](BaseRetrying[R, Callable[P, Awaitable[R | UnsetType]
                 started_at=time.monotonic(),
             )
             stats_attempt = stats.attempt
+            result: R
 
             for retry_index in range(1, self.attempts + 1):
                 stats_attempt.retry_index = retry_index
 
                 try:
-                    result = await func(*args, **kwargs)
+                    if inspect.iscoroutinefunction(func):
+                        result = await func(*args, **kwargs)
+                    else:
+                        result = await self._run_in_executor(
+                            cast("Callable[P, R]", func), *args, **kwargs
+                        )
                 except BaseException as exc:  # ruff: ignore[blind-except]
                     self._prepare_retry(
                         stats_attempt=stats_attempt,
@@ -140,3 +170,35 @@ class AsyncRetrying[**P, R](BaseRetrying[R, Callable[P, Awaitable[R | UnsetType]
                 exc=exc,
                 extra=stats.log_extra,
             )
+
+    async def _run_in_executor(
+        self,
+        func: Callable[P, R],
+        *args: P.args,
+        **kwargs: P.kwargs,
+    ) -> R:
+        """
+        Invoke a sync callable in an executor.
+
+        Dispatched to an executor so the event loop is not blocked.
+
+        Parameters
+        ----------
+        func : Callable[P, R]
+            Sync callable.
+        *args : P.args
+            Positional arguments.
+        **kwargs : P.kwargs
+            Keyword arguments.
+
+        Returns
+        -------
+        R
+            Result of the call.
+
+        """
+        executor = self.executor
+        loop = asyncio.get_running_loop()
+        context = contextvars.copy_context()
+        partial = functools.partial(context.run, func, *args, **kwargs)
+        return await loop.run_in_executor(executor, partial)

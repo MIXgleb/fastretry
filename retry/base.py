@@ -17,6 +17,9 @@ from collections.abc import (
     Callable,
     Mapping,
 )
+from concurrent.futures import (
+    Executor,
+)
 from typing import (
     Any,
     ClassVar,
@@ -52,7 +55,11 @@ from retry._utils import (
 )
 
 
-class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
+class BaseRetrying[
+    R,
+    Wrapped: Callable[..., Any],
+    Wrapper: Callable[..., Any | UnsetType],
+](ABC):
     """Retrying decorator for multiple attempts to execute a function in case of an error."""
 
     __slots__ = (
@@ -72,6 +79,7 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         "delay",
         "disable_logging",
         "disable_warnings",
+        "executor",
         "jitter",
         "no_retry_on",
         "retry_on",
@@ -108,6 +116,7 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
         callbacks: RetryCallbacks | UnsetType | None = UNSET,
         retry_on: type[BaseException] | tuple[type[BaseException], ...] | UnsetType = UNSET,
         no_retry_on: type[BaseException] | tuple[type[BaseException], ...] | UnsetType = UNSET,
+        executor: Executor | UnsetType = UNSET,
     ) -> None:
         """
         Initialize the retry decorator.
@@ -142,6 +151,13 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
             Exception types that are never retried, even if they match
             ``retry_on``. Takes precedence. When omitted, the global default
             is used (``()``).
+        executor : Executor | UnsetType, ``optional``
+            Executor used to run sync functions in an async context.
+            When omitted (``UNSET``), the running loop's default thread
+            pool is used. Pass an :class:`~concurrent.futures.Executor`
+            instance to run sync functions via
+            :meth:`asyncio.AbstractEventLoop.run_in_executor`. Only
+            relevant for :class:`~retry.async_retry.AsyncRetrying`.
 
         """
         # --- effective defaults ---
@@ -179,6 +195,10 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
             passed=no_retry_on,
             default=self._effective_defaults.no_retry_on,
         )
+        self.executor: Final = self._resolve(
+            passed=executor,
+            default=None,
+        )
 
         # --- logger configuration ---
         self._level_success: Final = self._effective_defaults.level_success
@@ -208,6 +228,7 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
                 disable_logging=self.disable_logging,
                 disable_warnings=self.disable_warnings,
                 re_raise_exception=self._re_raise_exception,
+                executor=self.executor,
                 retry_on=self.retry_on,
                 no_retry_on=self.no_retry_on,
             ),
@@ -252,6 +273,7 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
             f"level_sleep={self._level_sleep!r},\n\t"
             f"traceback_min_level={self._traceback_min_level!r},\n\t"
             f"callbacks={self.callbacks!r},\n\t"
+            f"executor={self.executor!r},\n\t"
             f")"
         )
 
@@ -297,8 +319,8 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
     @final
     def wraps(
         self,
-        func: WrappedFunc,
-    ) -> WrappedFunc:
+        func: Wrapped,
+    ) -> Wrapper:
         """
         Wrap a function with retry logic.
 
@@ -318,7 +340,7 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
 
         Returns
         -------
-        Callable[..., Any]
+        Callable[..., Any | UnsetType]
             Wrapped function with the same signature
 
         """
@@ -333,8 +355,8 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
     @abstractmethod
     def _wrap(
         self,
-        func: WrappedFunc,
-    ) -> WrappedFunc:
+        func: Wrapped,
+    ) -> Wrapper:
         """
         Implement the wrapping logic for a concrete retry strategy.
 
@@ -347,7 +369,7 @@ class BaseRetrying[R, WrappedFunc: Callable[..., Any]](ABC):
 
         Returns
         -------
-        Callable[..., Any]
+        Callable[..., Any | UnsetType]
             Wrapped function with the same signature
 
         """

@@ -1,12 +1,17 @@
 """
-Public retry decorator.
+Public retry decorators.
 
-This module exposes :func:`~retry._retry.retry`, the main entry point of the package.
-It dispatches to either :class:`~retry.sync_retry.SyncRetrying` or
-:class:`~retry.async_retry.AsyncRetrying` depending on whether
-the decorated function is a coroutine function.
+This module exposes two entry points:
 
-The decorator can be used in two forms::
+- :func:`~retry._retry.retry` — the main decorator, dispatches to
+  :class:`~retry.sync_retry.SyncRetrying` or
+  :class:`~retry.async_retry.AsyncRetrying` depending on whether the
+  decorated function is a coroutine function.
+- :func:`~retry._retry.retry_async` — always returns a coroutine
+  function; sync callables are run in an executor, coroutine functions
+  are awaited directly.
+
+``retry`` can be used in two forms::
 
     @retry
     def foo() -> int: ...
@@ -22,6 +27,9 @@ from collections.abc import (
     Awaitable,
     Callable,
 )
+from concurrent.futures import (
+    Executor,
+)
 from typing import (
     TypeVar,
     Unpack,
@@ -30,6 +38,7 @@ from typing import (
 
 from retry._types import (
     RetryKwargs,
+    RetryWithExecutorKwargs,
 )
 from retry._utils import (
     UNSET,
@@ -73,7 +82,10 @@ def retry[**P, R](  # ruff: ignore[undocumented-param]
     **kwargs: Unpack[RetryKwargs[R]],
 ) -> (
     Callable[P, R]
-    | Callable[[Callable[P, R]], Callable[P, R | UnsetType] | Callable[P, Awaitable[R | UnsetType]]]
+    | Callable[
+        [Callable[P, R]],
+        Callable[P, R | UnsetType] | Callable[P, Awaitable[R | UnsetType]],
+    ]
 ):
     """
     Decorate a function to retry it on failure.
@@ -83,6 +95,9 @@ def retry[**P, R](  # ruff: ignore[undocumented-param]
     synchronous or asynchronous; the appropriate retrying strategy is
     selected automatically.
 
+    To run a sync function in an executor from async code, use
+    :func:`~retry._retry.retry_async` instead.
+
     Options not passed explicitly fall back to the global retry
     defaults (see :attr:`~retry._config.config.retry`). The factory
     values are listed below.
@@ -90,7 +105,7 @@ def retry[**P, R](  # ruff: ignore[undocumented-param]
     Parameters
     ----------
     attempts : int, ``optional``
-        Number of attempts (factory default: 1)
+        Number of attempts (factory default: 1).
     return_default_value : Any, ``optional``
         Default value returned if the function fails after all attempts.
         When provided, the wrapper returns it instead of re-raising the
@@ -105,9 +120,9 @@ def retry[**P, R](  # ruff: ignore[undocumented-param]
         the configured delay type is used (``"none"`` for exponential,
         ``"none"`` for fixed).
     disable_logging : bool, ``optional``
-        Disable all logging (factory default: False)
+        Disable all logging (factory default: False).
     disable_warnings : bool, ``optional``
-        Disable all warnings (factory default: False)
+        Disable all warnings (factory default: False).
     retry_on : type[BaseException] | tuple[type[BaseException], ...], ``optional``
         Exception types that trigger a retry. Defaults to ``Exception``.
     no_retry_on : type[BaseException] | tuple[type[BaseException], ...], ``optional``
@@ -229,5 +244,126 @@ def retry[**P, R](  # ruff: ignore[undocumented-param]
         if inspect.iscoroutinefunction(func):
             return wrap_async(func)
         return wrap_sync(func)
+
+    return wrap
+
+
+@overload
+def retry_async[**P, R](
+    func: Callable[P, R] | Callable[P, Awaitable[R]],
+) -> Callable[P, Awaitable[R]]: ...
+
+
+@overload
+def retry_async[**P, R](
+    *,
+    attempts: int | UnsetType = UNSET,
+    return_default_value: R | UnsetType = UNSET,
+    delay: Delay | UnsetType = UNSET,
+    jitter: JitterStrategy | UnsetType = UNSET,
+    disable_logging: bool | UnsetType = UNSET,
+    disable_warnings: bool | UnsetType = UNSET,
+    retry_on: type[BaseException] | tuple[type[BaseException], ...] | UnsetType = UNSET,
+    no_retry_on: type[BaseException] | tuple[type[BaseException], ...] | UnsetType = UNSET,
+    callbacks: RetryCallbacks | UnsetType | None = UNSET,
+    executor: Executor | UnsetType = UNSET,
+) -> Callable[
+    [Callable[P, R] | Callable[P, Awaitable[R]]],
+    Callable[P, Awaitable[R]],
+]: ...
+
+
+def retry_async[**P, R](  # ruff: ignore[undocumented-param]
+    func: Callable[P, R] | Callable[P, Awaitable[R]] | None = None,
+    **kwargs: Unpack[RetryWithExecutorKwargs[R]],
+) -> (
+    Callable[P, Awaitable[R]]
+    | Callable[
+        [Callable[P, R] | Callable[P, Awaitable[R]]],
+        Callable[P, Awaitable[R | UnsetType]],
+    ]
+):
+    """
+    Decorate a function to run it asynchronously with retries.
+
+    The decorator always returns a coroutine function: callers must
+    ``await`` the result. The wrapped callable may be:
+
+    - a coroutine function, which is awaited directly;
+    - a sync function, which is run in an executor so the event loop is
+      not blocked.
+
+    For sync functions, this is equivalent to writing::
+
+        @retry(attempts=3)
+        async def fn(*args, **kwargs):
+            executor: Executor = ...
+            loop = asyncio.get_running_loop()
+            partial = functools.partial(blocking_io, *args, **kwargs)
+            return await loop.run_in_executor(executor, partial)
+
+    but without the boilerplate and with copied context.
+
+    Options not passed explicitly fall back to the global retry
+    defaults (see :attr:`~retry._config.config.retry`). The factory
+    values are listed below.
+
+    Parameters
+    ----------
+    attempts : int, ``optional``
+        Number of attempts (factory default: 1).
+    return_default_value : Any, ``optional``
+        Default value returned if the function fails after all attempts.
+        When provided, the wrapper returns it instead of re-raising the
+        last exception.
+    delay : Delay, ``optional``
+        Delay between attempts in seconds. A plain ``float`` gives a
+        fixed delay (factory default: 0); an
+        :class:`~retry._utils._delay.ExponentialDelay` enables exponential
+        backoff with ``backoff_factor=2.0`` and no upper bound.
+    jitter : JitterStrategy, ``optional``
+        Jitter strategy for the delay. When omitted, the default for
+        the configured delay type is used (``"none"`` for exponential,
+        ``"none"`` for fixed).
+    disable_logging : bool, ``optional``
+        Disable all logging (factory default: False).
+    disable_warnings : bool, ``optional``
+        Disable all warnings (factory default: False).
+    retry_on : type[BaseException] | tuple[type[BaseException], ...], ``optional``
+        Exception types that trigger a retry. Defaults to ``Exception``.
+    no_retry_on : type[BaseException] | tuple[type[BaseException], ...], ``optional``
+        Exception types that are never retried, even if they match
+        ``retry_on``. Takes precedence. Defaults to ``()``.
+    callbacks : RetryCallbacks | None, ``optional``
+        Mapping of retry lifecycle callbacks, same as in
+        :func:`~retry._retry.retry`.
+    executor : Executor | None, ``optional``
+        Executor used to run sync functions in an async context.
+        When omitted (``UNSET``), the running loop's default thread
+        pool is used. Pass an :class:`~concurrent.futures.Executor`
+        instance to run sync functions via
+        :meth:`asyncio.AbstractEventLoop.run_in_executor`. Ignored for
+        coroutine functions.
+
+    Returns
+    -------
+    Callable
+        A decorator that wraps a callable into a coroutine function with
+        retries.
+
+    Notes
+    -----
+    See :func:`~retry._retry.retry` for failure handling and exception
+    group semantics. This decorator only changes how the wrapped
+    callable is invoked, not how retries are handled.
+
+    """
+    if func is not None:
+        return retry_async()(func)
+
+    def wrap(
+        func: Callable[P, R] | Callable[P, Awaitable[R]],
+    ) -> Callable[P, Awaitable[R | UnsetType]]:
+        return AsyncRetrying[P, R](**kwargs).wraps(func)
 
     return wrap

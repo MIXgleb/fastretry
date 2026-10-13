@@ -4,6 +4,9 @@ from collections.abc import (
     Awaitable,
     Callable,
 )
+from concurrent.futures import (
+    Executor,
+)
 from typing import (
     TypedDict,
 )
@@ -43,6 +46,12 @@ class RetryKwargs[R](RetryOptions, total=False):
     return_default_value: R | UnsetType
     jitter: JitterStrategy | UnsetType
     callbacks: RetryCallbacks | UnsetType | None
+
+
+class RetryWithExecutorKwargs[R](RetryKwargs[R], total=False):
+    """Keyword arguments accepted by :func:`~retry._retry.retry_async`."""
+
+    executor: Executor | UnsetType
 
 
 class RetryDefaultsKwargs(

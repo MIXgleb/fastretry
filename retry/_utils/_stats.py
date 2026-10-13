@@ -17,6 +17,9 @@ from collections.abc import (
     Callable,
     Mapping,
 )
+from concurrent.futures import (
+    Executor,
+)
 from typing import (
     Any,
 )
@@ -65,6 +68,9 @@ class DecoratorOptions:
     no_retry_on : type[BaseException] | tuple[type[BaseException], ...]
         Exception types that are never retried, even if they match
         ``retry_on``. Takes precedence.
+    executor : Executor | None
+        Executor used to run sync functions in an async context.
+        Only relevant for :class:`~retry.async_retry.AsyncRetrying`.
 
     """
 
@@ -77,6 +83,7 @@ class DecoratorOptions:
     re_raise_exception: bool
     retry_on: type[BaseException] | tuple[type[BaseException], ...]
     no_retry_on: type[BaseException] | tuple[type[BaseException], ...]
+    executor: Executor | None
 
 
 @dc.dataclass(frozen=True, slots=True)

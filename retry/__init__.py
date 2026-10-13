@@ -6,6 +6,9 @@ from retry._config import (
 from retry._retry import (
     retry as retry,
 )
+from retry._retry import (
+    retry_async as retry_async,
+)
 from retry._utils import (
     LogLevel as LogLevel,
 )

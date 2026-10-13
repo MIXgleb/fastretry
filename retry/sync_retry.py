@@ -33,8 +33,27 @@ from retry.base import (
 )
 
 
-class SyncRetrying[**P, R](BaseRetrying[R, Callable[P, R | UnsetType]]):
-    """Sync retrying decorator for multiple attempts to execute a function in case of an error."""
+class SyncRetrying[**P, R](
+    BaseRetrying[
+        R,
+        Callable[P, R],
+        Callable[P, R | UnsetType],
+    ],
+):
+    """
+    Sync retrying decorator for multiple attempts to execute a function in case of an error.
+
+    Wraps plain sync callables and runs them directly in the calling
+    thread. Coroutine functions are not supported: use
+    :class:`~retry.async_retry.AsyncRetrying` (or
+    :func:`~retry._retry.retry_async`) for coroutine functions.
+
+    Sleep and callbacks are synchronous: sleeps use the sync sleep
+    callable configured via :attr:`~retry._config.config.retry`, and
+    callbacks returning awaitables are run to completion by the
+    wrapper (via :func:`asyncio.run` when no event loop is running, or
+    in a separate thread with its own loop otherwise).
+    """
 
     __slots__ = ("sleep_call",)
 
@@ -48,7 +67,7 @@ class SyncRetrying[**P, R](BaseRetrying[R, Callable[P, R | UnsetType]]):
     @override
     def _wrap(
         self,
-        func: Callable[P, R | UnsetType],
+        func: Callable[P, R],
     ) -> Callable[P, R | UnsetType]:
         fname = getattr(func, "__qualname__", "<anonymous>")
         on_success = self.callbacks.on_success
