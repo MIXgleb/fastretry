@@ -40,7 +40,6 @@ from retry._utils import (
     Delay,
     JitterStrategy,
     LogLevel,
-    UnsetType,
     default_on_failure,
     default_on_retry,
     default_on_success,
@@ -94,9 +93,6 @@ class _Defaults:
         all_keys = {f.name for f in dc.fields(self)}
 
         for key, value in kwargs.items():
-            if isinstance(value, UnsetType):
-                continue
-
             if key not in all_keys:
                 msg = f"Unknown default: {key!r}"
                 raise AttributeError(msg)
