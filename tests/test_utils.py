@@ -13,7 +13,7 @@ from pytest_mock import (
 )
 
 from retry._utils._function_types import (
-    FunctionTypes,
+    TypeChecker,
 )
 from retry._utils._unset import (
     UNSET,
@@ -50,7 +50,7 @@ def test_simple_return() -> None:
     def fn() -> int:
         return 1
 
-    ft = FunctionTypes(fn)
+    ft = TypeChecker(fn)
     assert ft._return_hint is int
 
 
@@ -58,7 +58,7 @@ def test_no_annotation() -> None:
     def fn():  # ruff: ignore[missing-return-type-private-function]
         return 1
 
-    ft = FunctionTypes(fn)
+    ft = TypeChecker(fn)
     assert ft._return_hint is UNSET
 
 
@@ -66,7 +66,7 @@ def test_unresolvable() -> None:
     def fn() -> "NonExistent":  # ruff: ignore[undefined-name]
         return 1
 
-    ft = FunctionTypes(fn)
+    ft = TypeChecker(fn)
     assert ft._return_hint is UNSET
 
 
@@ -75,7 +75,7 @@ def test_warn_mismatch(mocker: MockerFixture) -> None:
         return 1
 
     mock_warn = mocker.patch("retry._utils._warnings._warnings.warn")
-    ft = FunctionTypes(fn)
+    ft = TypeChecker(fn)
     ft.warn_on_return_default_mismatch(
         return_default_value="str",
         disable_warnings=False,
@@ -88,7 +88,7 @@ def test_no_warn_match(mocker: MockerFixture) -> None:
         return 1
 
     mock_warn = mocker.patch("retry._utils._warnings._warnings.warn")
-    ft = FunctionTypes(fn)
+    ft = TypeChecker(fn)
     ft.warn_on_return_default_mismatch(
         return_default_value=5,
         disable_warnings=False,
@@ -101,7 +101,7 @@ def test_no_warn_when_disabled(mocker: MockerFixture) -> None:
         return 1
 
     mock_warn = mocker.patch("retry._utils._warnings._warnings.warn")
-    ft = FunctionTypes(fn)
+    ft = TypeChecker(fn)
     ft.warn_on_return_default_mismatch(
         return_default_value="str",
         disable_warnings=True,
@@ -132,7 +132,7 @@ def _make_fn(return_hint: object) -> Callable[..., object]:
     ],
 )
 def test_matches_return_hint(hint: object, value: object, expected: bool | None) -> None:
-    ft = FunctionTypes(_make_fn(hint))
+    ft = TypeChecker(_make_fn(hint))
     assert ft._matches_return_hint(value) is expected
 
 
@@ -140,5 +140,5 @@ def test_matches_return_hint_unset() -> None:
     def fn():  # ruff: ignore[missing-return-type-private-function]
         return 1
 
-    ft = FunctionTypes(fn)
+    ft = TypeChecker(fn)
     assert ft._matches_return_hint(5) is None
