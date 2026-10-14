@@ -9,7 +9,6 @@ __all__ = (
     "Delay",
     "DelayCalculator",
     "ExponentialDelay",
-    "FunctionTypes",
     "GlobalOptions",
     "JitterStrategy",
     "Log",
@@ -18,11 +17,13 @@ __all__ = (
     "ResolvedRetryCallbacks",
     "RetryCallbacks",
     "RetryStats",
+    "TypeChecker",
     "UnsetType",
     "Warnings",
     "default_on_failure",
     "default_on_retry",
     "default_on_success",
+    "is_coroutine_function",
     "noop_callback",
 )
 
@@ -42,7 +43,8 @@ from retry._utils._delay import (
     JitterStrategy,
 )
 from retry._utils._function_types import (
-    FunctionTypes,
+    TypeChecker,
+    is_coroutine_function,
 )
 from retry._utils._logs import (
     Log,

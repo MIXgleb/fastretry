@@ -17,7 +17,6 @@ from collections.abc import (
 from typing import (
     Final,
     Unpack,
-    cast,
     override,
 )
 
@@ -28,6 +27,7 @@ from retry._utils import (
     CallbackType,
     RetryStats,
     UnsetType,
+    is_coroutine_function,
 )
 from retry.base import (
     BaseRetrying,
@@ -92,18 +92,15 @@ class AsyncRetrying[**P, R](
                 started_at=time.monotonic(),
             )
             stats_attempt = stats.attempt
-            result: R
 
             for retry_index in range(1, self.attempts + 1):
                 stats_attempt.retry_index = retry_index
 
                 try:
-                    if inspect.iscoroutinefunction(func):
+                    if is_coroutine_function(func):
                         result = await func(*args, **kwargs)
                     else:
-                        result = await self._run_in_executor(
-                            cast("Callable[P, R]", func), *args, **kwargs
-                        )
+                        result = await self._run_in_executor(func, *args, **kwargs)  # pyright: ignore[reportArgumentType]
                 except BaseException as exc:  # ruff: ignore[blind-except]
                     self._prepare_retry(
                         stats_attempt=stats_attempt,

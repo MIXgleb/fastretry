@@ -22,7 +22,6 @@ This module exposes two entry points:
 
 """
 
-import inspect
 from collections.abc import (
     Awaitable,
     Callable,
@@ -46,6 +45,7 @@ from retry._utils import (
     JitterStrategy,
     RetryCallbacks,
     UnsetType,
+    is_coroutine_function,
 )
 from retry.async_retry import (
     AsyncRetrying,
@@ -79,13 +79,14 @@ def retry(
 
 
 def retry[**P, R](  # ruff: ignore[undocumented-param]
-    func: Callable[P, R] | None = None,
+    func: Callable[P, R] | Callable[P, Awaitable[R]] | None = None,
     /,
     **kwargs: Unpack[RetryKwargs[R]],
 ) -> (
     Callable[P, R]
+    | Callable[P, Awaitable[R]]
     | Callable[
-        [Callable[P, R]],
+        [Callable[P, R] | Callable[P, Awaitable[R]]],
         Callable[P, R | UnsetType] | Callable[P, Awaitable[R | UnsetType]],
     ]
 ):
@@ -234,18 +235,12 @@ def retry[**P, R](  # ruff: ignore[undocumented-param]
     if func is not None:
         return retry()(func)
 
-    def wrap_async(func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R | UnsetType]]:
-        return AsyncRetrying[P, R](**kwargs).wraps(func)
-
-    def wrap_sync(func: Callable[P, R]) -> Callable[P, R | UnsetType]:
-        return SyncRetrying[P, R](**kwargs).wraps(func)
-
     def wrap(
-        func: Callable[P, R],
+        func: Callable[P, R] | Callable[P, Awaitable[R]],
     ) -> Callable[P, R | UnsetType] | Callable[P, Awaitable[R | UnsetType]]:
-        if inspect.iscoroutinefunction(func):
-            return wrap_async(func)
-        return wrap_sync(func)
+        if is_coroutine_function(func):
+            return AsyncRetrying[P, R](**kwargs).wraps(func)
+        return SyncRetrying[P, R](**kwargs).wraps(func)  # pyright: ignore[reportArgumentType]
 
     return wrap
 

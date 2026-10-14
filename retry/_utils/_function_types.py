@@ -1,14 +1,27 @@
-"""Runtime access to a function's declared type hints."""
+"""
+Runtime access to a function's declared return type.
+
+Provides :func:`is_coroutine_function` for narrowing callables to
+coroutine functions, and :class:`TypeChecker` — a small container
+that holds the resolved return hint of a callable and validates values
+against it.
+"""
 
 import contextlib
+import inspect
 import types
 import typing
 from collections.abc import (
+    Awaitable,
     Callable,
 )
 from typing import (
     Any,
     Union,  # pyright: ignore[reportDeprecated]
+)
+
+from typing_extensions import (
+    TypeIs,
 )
 
 from retry._utils._unset import (
@@ -23,7 +36,27 @@ _UNION: tuple[object, ...] = (Union, types.UnionType)  # pyright: ignore[reportD
 _UNCHECKABLE: tuple[object, ...] = (Any, object)
 
 
-class FunctionTypes:
+def is_coroutine_function[**P, R](
+    func: Callable[P, R] | Callable[P, Awaitable[R]],
+) -> TypeIs[Callable[P, Awaitable[R]]]:
+    """
+    Check whether ``func`` is a coroutine function.
+
+    Parameters
+    ----------
+    func : Callable[P, R] | Callable[P, Awaitable[R]]
+        Callable to check.
+
+    Returns
+    -------
+    TypeIs[Callable[P, Awaitable[R]]]
+        ``True`` if ``func`` is a coroutine function.
+
+    """
+    return inspect.iscoroutinefunction(func)
+
+
+class TypeChecker:
     """
     Best-effort runtime access to a function's declared type hints.
 
@@ -41,7 +74,10 @@ class FunctionTypes:
 
     __slots__ = ("_func", "_return_hint")
 
-    def __init__(self, func: Callable[..., Any]) -> None:
+    def __init__(
+        self,
+        func: Callable[..., Any],
+    ) -> None:
         self._func = func
         self._return_hint = self._extract_return_hint()
 
@@ -62,7 +98,8 @@ class FunctionTypes:
         Parameters
         ----------
         return_default_value : object
-            Value that will be returned on failure.
+            Value to check against the declared return type. Typically
+            the ``return_default_value`` passed to the retry decorator.
         disable_warnings : bool
             If ``True``, warnings are suppressed.
 

@@ -42,7 +42,6 @@ from retry._utils import (
     Delay,
     DelayCalculator,
     ExponentialDelay,
-    FunctionTypes,
     GlobalOptions,
     JitterStrategy,
     Log,
@@ -50,6 +49,7 @@ from retry._utils import (
     ResolvedRetryCallbacks,
     RetryCallbacks,
     RetryStats,
+    TypeChecker,
     UnsetType,
     Warnings,
     noop_callback,
@@ -356,7 +356,7 @@ class BaseRetrying[
 
         """
         if not isinstance(self.return_default_value, UnsetType):
-            FunctionTypes(func).warn_on_return_default_mismatch(
+            TypeChecker(func).warn_on_return_default_mismatch(
                 return_default_value=self.return_default_value,
                 disable_warnings=self.disable_warnings,
             )
