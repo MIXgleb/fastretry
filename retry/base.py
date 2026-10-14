@@ -33,6 +33,9 @@ from typing import (
 from retry._defaults import (
     get_defaults,
 )
+from retry._types import (
+    RetryOnExceptionType,
+)
 from retry._utils import (
     UNSET,
     AttemptState,
@@ -59,8 +62,6 @@ if TYPE_CHECKING:
     from retry._utils._logs import (
         LogLevel,
     )
-
-type _RetryOnType = type[BaseException] | tuple[type[BaseException], ...]
 
 
 class BaseRetrying[
@@ -122,8 +123,8 @@ class BaseRetrying[
         disable_logging: bool | UnsetType = UNSET,
         disable_warnings: bool | UnsetType = UNSET,
         callbacks: RetryCallbacks | UnsetType | None = UNSET,
-        retry_on: _RetryOnType | UnsetType = UNSET,
-        no_retry_on: _RetryOnType | UnsetType = UNSET,
+        retry_on: RetryOnExceptionType | UnsetType = UNSET,
+        no_retry_on: RetryOnExceptionType | UnsetType = UNSET,
         executor: Executor | UnsetType = UNSET,
     ) -> None:
         """
@@ -195,11 +196,11 @@ class BaseRetrying[
         self.callbacks: Final[ResolvedRetryCallbacks] = self._resolve_callbacks(
             callbacks=callbacks,
         )
-        self.retry_on: Final[_RetryOnType] = self._resolve(
+        self.retry_on: Final[RetryOnExceptionType] = self._resolve(
             passed=retry_on,
             default=self._effective_defaults.retry_on,
         )
-        self.no_retry_on: Final[_RetryOnType] = self._resolve(
+        self.no_retry_on: Final[RetryOnExceptionType] = self._resolve(
             passed=no_retry_on,
             default=self._effective_defaults.no_retry_on,
         )

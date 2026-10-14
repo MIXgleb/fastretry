@@ -21,6 +21,8 @@ from retry._utils import (
     UnsetType,
 )
 
+type RetryOnExceptionType = type[BaseException] | tuple[type[BaseException], ...]
+
 
 class _RetryOptions[R](TypedDict, total=False):
     attempts: int | UnsetType
@@ -29,8 +31,8 @@ class _RetryOptions[R](TypedDict, total=False):
     jitter: JitterStrategy | UnsetType
     disable_logging: bool | UnsetType
     disable_warnings: bool | UnsetType
-    retry_on: type[BaseException] | tuple[type[BaseException], ...] | UnsetType
-    no_retry_on: type[BaseException] | tuple[type[BaseException], ...] | UnsetType
+    retry_on: RetryOnExceptionType | UnsetType
+    no_retry_on: RetryOnExceptionType | UnsetType
     callbacks: RetryCallbacks | UnsetType | None
 
 
@@ -39,8 +41,8 @@ class _RetryDefaultOptions(TypedDict, total=False):
     delay: Delay
     disable_logging: bool
     disable_warnings: bool
-    retry_on: type[BaseException] | tuple[type[BaseException], ...]
-    no_retry_on: type[BaseException] | tuple[type[BaseException], ...]
+    retry_on: RetryOnExceptionType
+    no_retry_on: RetryOnExceptionType
     on_success: CallbackType | None
     on_retry: CallbackType | None
     on_failure: CallbackType | None

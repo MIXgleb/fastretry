@@ -34,6 +34,7 @@ from typing import (
 
 from retry._types import (
     DefaultsKwargs,
+    RetryOnExceptionType,
 )
 from retry._utils import (
     CallbackType,
@@ -56,8 +57,8 @@ class _Defaults:
     on_success: CallbackType | None = default_on_success
     on_retry: CallbackType | None = default_on_retry
     on_failure: CallbackType | None = default_on_failure
-    retry_on: type[BaseException] | tuple[type[BaseException], ...] = Exception
-    no_retry_on: type[BaseException] | tuple[type[BaseException], ...] = ()
+    retry_on: RetryOnExceptionType = Exception
+    no_retry_on: RetryOnExceptionType = ()
 
     # --- global options (application-wide) ---
     jitter_for_exponential: JitterStrategy = "none"

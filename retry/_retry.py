@@ -40,6 +40,7 @@ from typing import (
 
 from retry._types import (
     RetryKwargs,
+    RetryOnExceptionType,
     RetryWithExecutorKwargs,
 )
 from retry._utils import (
@@ -59,7 +60,6 @@ from retry.sync_retry import (
     SyncRetrying,
 )
 
-type _RetryOnType = type[BaseException] | tuple[type[BaseException], ...]
 type _ReturnType = object
 _WrappedFunc = TypeVar("_WrappedFunc", bound=Callable[..., _ReturnType])
 
@@ -77,8 +77,8 @@ def retry(
     jitter: JitterStrategy | UnsetType = UNSET,
     disable_logging: bool | UnsetType = UNSET,
     disable_warnings: bool | UnsetType = UNSET,
-    retry_on: _RetryOnType | UnsetType = UNSET,
-    no_retry_on: _RetryOnType | UnsetType = UNSET,
+    retry_on: RetryOnExceptionType | UnsetType = UNSET,
+    no_retry_on: RetryOnExceptionType | UnsetType = UNSET,
     callbacks: RetryCallbacks | UnsetType | None = UNSET,
 ) -> Callable[[_WrappedFunc], _WrappedFunc]: ...
 
@@ -266,8 +266,8 @@ def retry_async[**P, R](
     jitter: JitterStrategy | UnsetType = UNSET,
     disable_logging: bool | UnsetType = UNSET,
     disable_warnings: bool | UnsetType = UNSET,
-    retry_on: _RetryOnType | UnsetType = UNSET,
-    no_retry_on: _RetryOnType | UnsetType = UNSET,
+    retry_on: RetryOnExceptionType | UnsetType = UNSET,
+    no_retry_on: RetryOnExceptionType | UnsetType = UNSET,
     callbacks: RetryCallbacks | UnsetType | None = UNSET,
     executor: Executor | UnsetType = UNSET,
 ) -> Callable[
