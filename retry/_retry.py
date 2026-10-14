@@ -23,13 +23,16 @@ This module exposes two entry points:
 """
 
 from collections.abc import (
-    Awaitable,
     Callable,
 )
 from concurrent.futures import (
     Executor,
 )
+from types import (
+    CoroutineType,
+)
 from typing import (
+    Any,
     TypeVar,
     Unpack,
     overload,
@@ -41,6 +44,7 @@ from retry._types import (
 )
 from retry._utils import (
     UNSET,
+    CoroType,
     Delay,
     JitterStrategy,
     RetryCallbacks,
@@ -49,6 +53,7 @@ from retry._utils import (
 )
 from retry.async_retry import (
     AsyncRetrying,
+    WrappedCoroType,
 )
 from retry.sync_retry import (
     SyncRetrying,
@@ -79,15 +84,15 @@ def retry(
 
 
 def retry[**P, R](  # ruff: ignore[undocumented-param]
-    func: Callable[P, R] | Callable[P, Awaitable[R]] | None = None,
+    func: Callable[P, R] | Callable[P, CoroType[R]] | None = None,
     /,
     **kwargs: Unpack[RetryKwargs[R]],
 ) -> (
-    Callable[P, R]
-    | Callable[P, Awaitable[R]]
+    Callable[P, R | UnsetType]
+    | Callable[P, WrappedCoroType[R]]
     | Callable[
-        [Callable[P, R] | Callable[P, Awaitable[R]]],
-        Callable[P, R | UnsetType] | Callable[P, Awaitable[R | UnsetType]],
+        [Callable[P, R] | Callable[P, CoroType[R]]],
+        Callable[P, R | UnsetType] | Callable[P, WrappedCoroType[R]],
     ]
 ):
     """
@@ -232,24 +237,24 @@ def retry[**P, R](  # ruff: ignore[undocumented-param]
     whose type is compatible with the function's declared return type.
 
     """
-    if func is not None:
-        return retry()(func)
 
     def wrap(
-        func: Callable[P, R] | Callable[P, Awaitable[R]],
-    ) -> Callable[P, R | UnsetType] | Callable[P, Awaitable[R | UnsetType]]:
+        func: Callable[P, R] | Callable[P, CoroType[R]],
+    ) -> Callable[P, R | UnsetType] | Callable[P, WrappedCoroType[R]]:
         if is_coroutine_function(func):
             return AsyncRetrying[P, R](**kwargs).wraps(func)
         return SyncRetrying[P, R](**kwargs).wraps(func)  # pyright: ignore[reportArgumentType]
 
+    if func is not None:
+        return wrap(func)
     return wrap
 
 
 @overload
 def retry_async[**P, R](
-    func: Callable[P, R] | Callable[P, Awaitable[R]],
+    func: Callable[P, R] | Callable[P, CoroType[R]],
     /,
-) -> Callable[P, Awaitable[R]]: ...
+) -> Callable[P, CoroutineType[Any, Any, R]]: ...
 
 
 @overload
@@ -266,20 +271,20 @@ def retry_async[**P, R](
     callbacks: RetryCallbacks | UnsetType | None = UNSET,
     executor: Executor | UnsetType = UNSET,
 ) -> Callable[
-    [Callable[P, R] | Callable[P, Awaitable[R]]],
-    Callable[P, Awaitable[R]],
+    [Callable[P, R] | Callable[P, CoroType[R]]],
+    Callable[P, CoroutineType[Any, Any, R]],
 ]: ...
 
 
 def retry_async[**P, R](  # ruff: ignore[undocumented-param]
-    func: Callable[P, R] | Callable[P, Awaitable[R]] | None = None,
+    func: Callable[P, R] | Callable[P, CoroType[R]] | None = None,
     /,
     **kwargs: Unpack[RetryWithExecutorKwargs[R]],
 ) -> (
-    Callable[P, Awaitable[R]]
+    Callable[P, WrappedCoroType[R]]
     | Callable[
-        [Callable[P, R] | Callable[P, Awaitable[R]]],
-        Callable[P, Awaitable[R | UnsetType]],
+        [Callable[P, R] | Callable[P, CoroType[R]]],
+        Callable[P, WrappedCoroType[R]],
     ]
 ):
     """
@@ -357,12 +362,12 @@ def retry_async[**P, R](  # ruff: ignore[undocumented-param]
     callable is invoked, not how retries are handled.
 
     """
-    if func is not None:
-        return retry_async()(func)
 
     def wrap(
-        func: Callable[P, R] | Callable[P, Awaitable[R]],
-    ) -> Callable[P, Awaitable[R | UnsetType]]:
-        return AsyncRetrying[P, R](**kwargs).wraps(func)
+        _func: Callable[P, R] | Callable[P, CoroType[R]],
+    ) -> Callable[P, WrappedCoroType[R]]:
+        return AsyncRetrying[P, R](**kwargs).wraps(_func)
 
+    if func is not None:
+        return wrap(func)
     return wrap

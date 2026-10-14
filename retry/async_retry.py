@@ -13,8 +13,10 @@ import time
 from collections.abc import (
     Awaitable,
     Callable,
+    Coroutine,
 )
 from typing import (
+    Any,
     Final,
     Unpack,
     override,
@@ -25,6 +27,7 @@ from retry._types import (
 )
 from retry._utils import (
     CallbackType,
+    CoroType,
     RetryStats,
     UnsetType,
     is_coroutine_function,
@@ -33,12 +36,14 @@ from retry.base import (
     BaseRetrying,
 )
 
+type WrappedCoroType[R] = Coroutine[Any, Any, R | UnsetType]
+
 
 class AsyncRetrying[**P, R](
     BaseRetrying[
         R,
-        Callable[P, R] | Callable[P, Awaitable[R]],
-        Callable[P, Awaitable[R | UnsetType]],
+        Callable[P, R] | Callable[P, CoroType[R]],
+        Callable[P, WrappedCoroType[R]],
     ],
 ):
     """
@@ -76,8 +81,8 @@ class AsyncRetrying[**P, R](
     @override
     def _wrap(
         self,
-        func: Callable[P, R] | Callable[P, Awaitable[R]],
-    ) -> Callable[P, Awaitable[R | UnsetType]]:
+        func: Callable[P, R] | Callable[P, CoroType[R]],
+    ) -> Callable[P, WrappedCoroType[R]]:
         fname = getattr(func, "__qualname__", "<anonymous>")
         on_success = self.callbacks.on_success
         on_retry = self.callbacks.on_retry

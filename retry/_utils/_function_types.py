@@ -12,7 +12,6 @@ import inspect
 import types
 import typing
 from collections.abc import (
-    Awaitable,
     Callable,
 )
 from typing import (
@@ -32,24 +31,26 @@ from retry._utils._warnings import (
     Warnings,
 )
 
+type CoroType[R] = types.CoroutineType[Any, Any, R]
+
 _UNION: tuple[object, ...] = (Union, types.UnionType)  # pyright: ignore[reportDeprecated]
 _UNCHECKABLE: tuple[object, ...] = (Any, object)
 
 
 def is_coroutine_function[**P, R](
-    func: Callable[P, R] | Callable[P, Awaitable[R]],
-) -> TypeIs[Callable[P, Awaitable[R]]]:
+    func: Callable[P, R] | Callable[P, CoroType[R]],
+) -> TypeIs[Callable[P, CoroType[R]]]:
     """
     Check whether ``func`` is a coroutine function.
 
     Parameters
     ----------
-    func : Callable[P, R] | Callable[P, Awaitable[R]]
+    func : Callable[P, R] | Callable[P, CoroutineType[Any, Any, R]]
         Callable to check.
 
     Returns
     -------
-    TypeIs[Callable[P, Awaitable[R]]]
+    TypeIs[Callable[P, CoroutineType[Any, Any, R]]]
         ``True`` if ``func`` is a coroutine function.
 
     """

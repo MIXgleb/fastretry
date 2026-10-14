@@ -5,6 +5,7 @@ __all__ = (
     "AttemptState",
     "CallOptions",
     "CallbackType",
+    "CoroType",
     "DecoratorOptions",
     "Delay",
     "DelayCalculator",
@@ -43,6 +44,7 @@ from retry._utils._delay import (
     JitterStrategy,
 )
 from retry._utils._function_types import (
+    CoroType,
     TypeChecker,
     is_coroutine_function,
 )
