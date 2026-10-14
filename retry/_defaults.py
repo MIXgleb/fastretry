@@ -110,7 +110,7 @@ class _Defaults:
 
 global_defaults: Final[_Defaults] = _Defaults()
 context_defaults: contextvars.ContextVar[_Defaults | None] = contextvars.ContextVar(
-    "retry_defaults",
+    name="retry_defaults",
     default=None,
 )
 
