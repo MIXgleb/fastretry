@@ -9,6 +9,7 @@ against it.
 
 import contextlib
 import inspect
+import sys
 import types
 import typing
 from collections.abc import (
@@ -19,9 +20,14 @@ from typing import (
     Union,  # pyright: ignore[reportDeprecated]
 )
 
-from typing_extensions import (
-    TypeIs,
-)
+if sys.version_info >= (3, 13):
+    from typing import (
+        TypeIs,
+    )
+else:
+    from typing_extensions import (
+        TypeIs,
+    )
 
 from retry._utils._unset import (
     UNSET,

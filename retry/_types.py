@@ -1,5 +1,6 @@
 """Shared type definitions for the retry package."""
 
+import sys
 from collections.abc import (
     Awaitable,
     Callable,
@@ -8,9 +9,14 @@ from concurrent.futures import (
     Executor,
 )
 
-from typing_extensions import (
-    TypedDict,
-)
+if sys.version_info >= (3, 15):
+    from typing import (
+        TypedDict,
+    )
+else:
+    from typing_extensions import (
+        TypedDict,
+    )
 
 from retry._utils import (
     CallbackType,
