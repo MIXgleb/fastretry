@@ -482,7 +482,7 @@ class BaseRetrying[
         if self.attempts < 1:
             self._warnings.warn(
                 f"\n\tNumber of attempts must be >= 1, got {self.attempts!r}. Falling back to 1.",
-                stacklevel=5,
+                stacklevel=7,
             )
             self.attempts = 1
 
@@ -506,7 +506,7 @@ class BaseRetrying[
         elif self.delay < 0:
             self._warnings.warn(
                 f"\n\tDelay must be >= 0, got {self.delay!r}. Falling back to 0.",
-                stacklevel=5,
+                stacklevel=7,
             )
             self.delay = 0
 

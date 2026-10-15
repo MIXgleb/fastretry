@@ -118,7 +118,7 @@ class TypeChecker:
                 f"of '{getattr(self._func, '__qualname__', '<anonymous>')}'.\n\t"
                 f"Set return_default_value to a value compatible with the function's "
                 f"return type to avoid returning an unexpected type.",
-                stacklevel=6,
+                stacklevel=5,
             )
 
     def _extract_return_hint(self) -> Any | UnsetType:  # ruff: ignore[any-type]
