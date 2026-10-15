@@ -23,7 +23,6 @@ from retry._utils._logs import (
 
 @pytest.fixture
 def _restore_retry_logger() -> Generator[None]:
-    """Save and restore the shared retry logger's handlers and level."""
     logger = logging.getLogger("retry")
     handlers = list(logger.handlers)
     level = logger.level
