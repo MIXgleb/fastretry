@@ -38,23 +38,31 @@ from typing import (
     overload,
 )
 
+from retry._compat.aliases import (
+    CoroType,
+    RetryOnExceptionType,
+    WrappedCoroType,
+)
+from retry._compat.functions import (
+    is_coroutine_function,
+)
+from retry._compat.sentinels import (
+    UNSET,
+    UnsetType,
+)
 from retry._types import (
     RetryKwargs,
-    RetryOnExceptionType,
     RetryWithExecutorKwargs,
 )
-from retry._utils import (
-    UNSET,
-    CoroType,
+from retry._utils.callbacks import (
+    RetryCallbacks,
+)
+from retry._utils.delay import (
     Delay,
     JitterStrategy,
-    RetryCallbacks,
-    UnsetType,
-    is_coroutine_function,
 )
 from retry.async_retry import (
     AsyncRetrying,
-    WrappedCoroType,
 )
 from retry.sync_retry import (
     SyncRetrying,

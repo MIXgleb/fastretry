@@ -1,10 +1,4 @@
-"""
-Abstract base class for retry decorators.
-
-:class:`~retry.base.BaseRetrying` holds the shared state and helpers.
-Concrete sync and async implementations live in
-:mod:`~retry.sync_retry` and :mod:`~retry.async_retry`.
-"""
+"""Abstract base class for retry decorators."""
 
 import copy
 import time
@@ -30,36 +24,48 @@ from typing import (
     override,
 )
 
+from retry._compat.aliases import (
+    RetryOnExceptionType,
+)
+from retry._compat.functions import (
+    TypeChecker,
+)
+from retry._compat.sentinels import (
+    UNSET,
+    UnsetType,
+)
 from retry._defaults import (
     get_defaults,
 )
-from retry._types import (
-    RetryOnExceptionType,
-)
-from retry._utils import (
-    UNSET,
-    AttemptState,
+from retry._utils.callbacks import (
     CallbackType,
-    CallOptions,
-    DecoratorOptions,
+    ResolvedRetryCallbacks,
+    RetryCallbacks,
+    noop_callback,
+)
+from retry._utils.delay import (
     Delay,
     DelayCalculator,
     ExponentialDelay,
-    GlobalOptions,
     JitterStrategy,
+)
+from retry._utils.logs import (
     Log,
     LoggerConfig,
-    ResolvedRetryCallbacks,
-    RetryCallbacks,
+)
+from retry._utils.stats import (
+    AttemptState,
+    CallOptions,
+    DecoratorOptions,
+    GlobalOptions,
     RetryStats,
-    TypeChecker,
-    UnsetType,
+)
+from retry._utils.warnings import (
     Warnings,
-    noop_callback,
 )
 
 if TYPE_CHECKING:
-    from retry._utils._logs import (
+    from retry._utils.logs import (
         LogLevel,
     )
 
@@ -69,7 +75,7 @@ class BaseRetrying[
     Wrapped: Callable[..., Any],
     Wrapper: Callable[..., Any | UnsetType],
 ](ABC):
-    """Retrying decorator for multiple attempts to execute a function in case of an error."""
+    """Base class for retry strategy implementations."""
 
     __slots__ = (
         "_delay_calculator",
@@ -97,6 +103,7 @@ class BaseRetrying[
 
     wrapper_kind: ClassVar[str] = "base"
 
+    @override
     def __init_subclass__(cls) -> None:
         """
         Ensure every concrete retry strategy defines :attr:`wrapper_kind`.
@@ -150,9 +157,8 @@ class BaseRetrying[
             Disable all warnings
         callbacks : RetryCallbacks | None, ``optional``
             Callbacks invoked during retry processing. When omitted, defaults
-            from :mod:`~retry._utils._callbacks` are used. Pass ``None`` to
-            disable every callback at once. Individual callbacks may also be
-            set to ``None`` to disable them.
+            callbacks are used. Pass ``None`` to disable every callback at once.
+            Individual callbacks may also be set to ``None`` to disable them.
         retry_on : type[BaseException] | tuple[type[BaseException], ...], ``optional``
             Exception types that trigger a retry. When omitted, the global
             default is used (``Exception``).
@@ -162,11 +168,7 @@ class BaseRetrying[
             is used (``()``).
         executor : Executor | UnsetType, ``optional``
             Executor used to run sync functions in an async context.
-            When omitted (``UNSET``), the running loop's default thread
-            pool is used. Pass an :class:`~concurrent.futures.Executor`
-            instance to run sync functions via
-            :meth:`asyncio.AbstractEventLoop.run_in_executor`. Only
-            relevant for :class:`~retry.async_retry.AsyncRetrying`.
+            Only relevant for :class:`~retry.async_retry.AsyncRetrying`.
 
         """
         # --- effective defaults ---
@@ -295,10 +297,6 @@ class BaseRetrying[
         """
         Immutable snapshot of the logging configuration.
 
-        Built on demand from the current logging-related attributes. Passed
-        to :class:`~retry._utils._logs.Log` so that the logger
-        cannot mutate the retry configuration.
-
         Returns
         -------
         LoggerConfig
@@ -336,15 +334,6 @@ class BaseRetrying[
         """
         Wrap a function with retry logic.
 
-        Performs shared pre-checks and delegates the actual wrapping to
-        :meth:`_wrap`. Which exceptions are retried is controlled by
-        :attr:`retry_on` and :attr:`no_retry_on`:
-
-        - :attr:`no_retry_on` takes precedence: a matching exception is
-        never retried.
-        - Otherwise, only exceptions matching :attr:`retry_on` are retried.
-        - Non-matching exceptions propagate immediately.
-
         Parameters
         ----------
         func : Callable[..., Any]
@@ -357,10 +346,17 @@ class BaseRetrying[
 
         """
         if not isinstance(self.return_default_value, UnsetType):
-            TypeChecker(func).warn_on_return_default_mismatch(
-                return_default_value=self.return_default_value,
-                disable_warnings=self.disable_warnings,
-            )
+            type_checker = TypeChecker(func)
+
+            if type_checker.matches_return_hint(self.return_default_value) is False:
+                self._warnings.warn(
+                    f"\n\treturn_default_value {self.return_default_value!r} does not match "
+                    f"the declared return type {type_checker.return_hint!r} "
+                    f"of '{getattr(func, '__qualname__', '<anonymous>')}'.\n\t"
+                    f"Set return_default_value to a value compatible with the function's "
+                    f"return type to avoid returning an unexpected type.",
+                    stacklevel=4,
+                )
 
         return self._wrap(func)
 
@@ -449,9 +445,7 @@ class BaseRetrying[
         """
         Invoke a retry callback, swallowing and logging any exception.
 
-        Callback errors must not abort the retry cycle: if the callback
-        raises, the error is logged via :meth:`_log_swallowed` and the
-        retry proceeds normally.
+        Callback errors must not abort the retry cycle.
 
         Only :exc:`Exception` subclasses are swallowed. :exc:`BaseException`
         subclasses (such as ``KeyboardInterrupt`` and ``SystemExit``) propagate.
@@ -531,8 +525,7 @@ class BaseRetrying[
         Parameters
         ----------
         operation : str
-            Human-readable name of the failed operation, e.g.
-            ``"on_retry callback"`` or ``"sync sleep callable"``.
+            Human-readable name of the failed operation.
         exc : Exception
             The swallowed exception.
         extra : Mapping[str, object]
@@ -644,20 +637,6 @@ class BaseRetrying[
         """
         Raise a single exception group if re-raising is enabled.
 
-        Does nothing when ``re_raise_exception`` is ``False`` or no
-        exceptions were caught. Otherwise, raises
-        :exc:`BaseExceptionGroup` containing every exception from the
-        failed attempts, in order.
-
-        :exc:`BaseExceptionGroup` automatically resolves to
-        :exc:`ExceptionGroup` when every contained exception is a subclass
-        of :exc:`Exception`. So in the common case (``retry_on`` defaults to
-        ``Exception``), callers can catch the result with
-        ``except* Exception``. Only when a :exc:`BaseException` subclass
-        (such as ``KeyboardInterrupt``) is actually caught does the result
-        become a :exc:`BaseExceptionGroup` that requires
-        ``except* BaseException``.
-
         Parameters
         ----------
         stats_attempt : AttemptState
@@ -724,17 +703,6 @@ class BaseRetrying[
     ) -> ResolvedRetryCallbacks:
         """
         Resolve the callbacks for a decorator.
-
-        Resolution order for each callback: per-decorator value, then global
-        default (from the effective default ``on_retry`` / ``on_success`` /
-        ``on_failure``). ``None`` values disable the callback by
-        substituting a no-op.
-
-        Three top-level cases are handled:
-
-        - ``UNSET``: use the global defaults only.
-        - ``None``: disable every callback (all resolved to no-op).
-        - a mapping: per-key overrides on top of the global defaults.
 
         Parameters
         ----------

@@ -1,22 +1,4 @@
-"""
-Global configuration for retry defaults and logging.
-
-All default values used by :class:`~retry.base.BaseRetrying`
-live in a single :class:`~retry._defaults._Defaults` instance.
-Public functions in the :mod:`~retry._config` module mutate
-that instance, changing the behaviour of all subsequently
-created retry decorators.
-
-Configuration is split into two groups:
-
-- **Retry defaults** — options that can also be passed per-decorator
-via ``@retry(...)``.
-- **Logging configuration** — log levels and traceback thresholds.
-
-Both are configured via :data:`~retry._config.config`. For per-task or
-per-thread overrides, use the :attr:`~retry._config.config.context`
-context manager.
-"""
+"""Global configuration for retry defaults and logging."""
 
 import asyncio
 import contextvars
@@ -32,23 +14,31 @@ from typing import (
     final,
 )
 
-from retry._types import (
-    DefaultsKwargs,
+from retry._compat.aliases import (
     RetryOnExceptionType,
 )
-from retry._utils import (
+from retry._types import (
+    DefaultsKwargs,
+)
+from retry._utils.callbacks import (
     CallbackType,
-    Delay,
-    JitterStrategy,
-    LogLevel,
     default_on_failure,
     default_on_retry,
     default_on_success,
+)
+from retry._utils.delay import (
+    Delay,
+    JitterStrategy,
+)
+from retry._utils.logs import (
+    LogLevel,
 )
 
 
 @dc.dataclass(slots=True)
 class _Defaults:
+    """Container for all default values."""
+
     # --- retry options (per-decorator, with global defaults) ---
     attempts: int = 1
     delay: Delay = 0
@@ -82,8 +72,6 @@ class _Defaults:
     ) -> None:
         """
         Set one or more defaults by name.
-
-        Values equal to ``UNSET`` are ignored.
 
         Raises
         ------
@@ -119,10 +107,6 @@ context_defaults: contextvars.ContextVar[_Defaults | None] = contextvars.Context
 def get_defaults() -> _Defaults:
     """
     Return the effective defaults for the current context.
-
-    If a per-context :class:`~retry._defaults._Defaults` instance was installed via
-    :attr:`~retry._config.config.context`, it is returned. Otherwise, the global
-    :data:`~retry._defaults.global_defaults` singleton is used.
 
     Returns
     -------

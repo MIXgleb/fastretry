@@ -1,10 +1,4 @@
-"""
-Synchronous retry decorator.
-
-:class:`~retry.sync_retry.SyncRetrying` wraps regular (non-coroutine)
-callables and uses :func:`time.sleep` (or a user-provided sync sleep callable)
-between attempts.
-"""
+"""Synchronous retry decorator."""
 
 import asyncio
 import concurrent.futures
@@ -20,13 +14,17 @@ from typing import (
     override,
 )
 
+from retry._compat.sentinels import (
+    UnsetType,
+)
 from retry._types import (
     RetryKwargs,
 )
-from retry._utils import (
+from retry._utils.callbacks import (
     CallbackType,
+)
+from retry._utils.stats import (
     RetryStats,
-    UnsetType,
 )
 from retry.base import (
     BaseRetrying,
@@ -43,16 +41,8 @@ class SyncRetrying[**P, R](
     """
     Sync retrying decorator for multiple attempts to execute a function in case of an error.
 
-    Wraps plain sync callables and runs them directly in the calling
-    thread. Coroutine functions are not supported: use
-    :class:`~retry.async_retry.AsyncRetrying` (or
-    :func:`~retry._retry.retry_async`) for coroutine functions.
+    Wraps plain sync callables and runs them directly in the calling thread.
 
-    Sleep and callbacks are synchronous: sleeps use the sync sleep
-    callable configured via :attr:`~retry._config.config.retry`, and
-    callbacks returning awaitables are run to completion by the
-    wrapper (via :func:`asyncio.run` when no event loop is running, or
-    in a separate thread with its own loop otherwise).
     """
 
     __slots__ = ("sleep_call",)

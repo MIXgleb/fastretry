@@ -1,9 +1,4 @@
-"""
-Asynchronous retry decorator.
-
-:class:`~retry.async_retry.AsyncRetrying` wraps coroutine functions
-(awaited directly) and sync functions (run in an executor).
-"""
+"""Asynchronous retry decorator."""
 
 import asyncio
 import contextvars
@@ -13,30 +8,35 @@ import time
 from collections.abc import (
     Awaitable,
     Callable,
-    Coroutine,
 )
 from typing import (
-    Any,
     Final,
     Unpack,
     override,
 )
 
+from retry._compat.aliases import (
+    CoroType,
+    WrappedCoroType,
+)
+from retry._compat.functions import (
+    is_coroutine_function,
+)
+from retry._compat.sentinels import (
+    UnsetType,
+)
 from retry._types import (
     RetryWithExecutorKwargs,
 )
-from retry._utils import (
+from retry._utils.callbacks import (
     CallbackType,
-    CoroType,
+)
+from retry._utils.stats import (
     RetryStats,
-    UnsetType,
-    is_coroutine_function,
 )
 from retry.base import (
     BaseRetrying,
 )
-
-type WrappedCoroType[R] = Coroutine[Any, Any, R | UnsetType]
 
 
 class AsyncRetrying[**P, R](
@@ -58,10 +58,6 @@ class AsyncRetrying[**P, R](
       an :class:`~concurrent.futures.Executor` instance is passed to
       :meth:`asyncio.AbstractEventLoop.run_in_executor`.
 
-    Sleep and callbacks are always asynchronous: sleeps use the async
-    sleep callable configured via
-    :attr:`~retry._config.config.retry`, and callbacks returning
-    awaitables are awaited in the same event loop.
     """
 
     __slots__ = ("sleep_call",)

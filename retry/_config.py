@@ -27,14 +27,7 @@ class _ResetNamespace:
     __slots__ = ()
 
     def __call__(self) -> None:
-        """
-        Reset all defaults to their factory values.
-
-        Restores every option configured via :attr:`~retry._config.config.retry` and
-        :attr:`~retry._config.config.logging` to the value it had at import time.
-        Useful in tests to avoid leaking configuration between test
-        cases.
-        """
+        """Reset all defaults to their factory values."""
         get_defaults().reset()
 
 
@@ -106,8 +99,7 @@ class _LoggingNamespace:
         Configure logging for the retry decorators.
 
         Logging is handled by the standard :mod:`logging` module
-        through a single logger named ``"retry"``, which writes to
-        stdout (falling back to stderr) by default.
+        through a single logger named ``"retry"``.
 
         Each log kind has its own level. Set a level to
         :attr:`~retry._utils._logs.LogLevel.OFF` to disable that kind.
@@ -165,11 +157,6 @@ class _ContextNamespace:
         ----------
         **kwargs : Unpack[DefaultsKwargs]
             Initial overrides applied on top of the copied defaults.
-
-        Yields
-        ------
-        None
-            Control to the caller.
 
         """
         fresh = dc.replace(global_defaults)

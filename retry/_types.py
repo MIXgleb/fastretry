@@ -1,6 +1,5 @@
 """Shared type definitions for the retry package."""
 
-import sys
 from collections.abc import (
     Awaitable,
     Callable,
@@ -9,25 +8,26 @@ from concurrent.futures import (
     Executor,
 )
 
-if sys.version_info >= (3, 15):
-    from typing import (
-        TypedDict,
-    )
-else:
-    from typing_extensions import (
-        TypedDict,
-    )
-
-from retry._utils import (
-    CallbackType,
-    Delay,
-    JitterStrategy,
-    LogLevel,
-    RetryCallbacks,
+from retry._compat.aliases import (
+    RetryOnExceptionType,
+)
+from retry._compat.nodes import (
+    TypedDict,
+)
+from retry._compat.sentinels import (
     UnsetType,
 )
-
-type RetryOnExceptionType = type[BaseException] | tuple[type[BaseException], ...]
+from retry._utils.callbacks import (
+    CallbackType,
+    RetryCallbacks,
+)
+from retry._utils.delay import (
+    Delay,
+    JitterStrategy,
+)
+from retry._utils.logs import (
+    LogLevel,
+)
 
 
 class _RetryOptions[R](TypedDict, total=False):
