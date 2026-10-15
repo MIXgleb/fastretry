@@ -173,18 +173,18 @@ class BaseRetrying[
         self._effective_defaults: Final = get_defaults()
 
         # --- per-decorator options ---
+        # --- mutable ---
         self.attempts: int = self._resolve(
             passed=attempts,
             default=self._effective_defaults.attempts,
-        )
-        self.return_default_value: Final[R | UnsetType] = self._resolve(
-            passed=return_default_value,
-            default=UNSET,
         )
         self.delay: Delay = self._resolve(
             passed=delay,
             default=self._effective_defaults.delay,
         )
+
+        # --- immutable ---
+        self.return_default_value: Final[R | UnsetType] = return_default_value
         self.disable_logging: Final[bool] = self._resolve(
             passed=disable_logging,
             default=self._effective_defaults.disable_logging,
