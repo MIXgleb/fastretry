@@ -1,10 +1,4 @@
-"""
-Delay computation for retry attempts.
-
-Provides :class:`~retry._utils._delay.ExponentialDelay` for configuring
-exponential backoff and :class:`~retry._utils._delay.DelayCalculator`
-for computing the effective delay of an attempt, including jitter.
-"""
+"""Delay computation for retry attempts."""
 
 import random
 from typing import (
@@ -122,20 +116,6 @@ class DelayCalculator:
         self,
         retry_index: int,
     ) -> float:
-        """
-        Compute the base delay with exponential backoff and cap.
-
-        Parameters
-        ----------
-        retry_index : int
-            1-based attempt index.
-
-        Returns
-        -------
-        float
-            Delay before jitter.
-
-        """
         if not isinstance(self._delay, ExponentialDelay):
             return self._delay
 
@@ -150,22 +130,6 @@ class DelayCalculator:
         computed: float,
         previous_delay: float | None,
     ) -> float:
-        """
-        Apply the jitter strategy to the computed delay.
-
-        Parameters
-        ----------
-        computed : float
-            Delay before jitter.
-        previous_delay : float | None
-            Delay used on the previous attempt, or ``None`` on the first retry.
-
-        Returns
-        -------
-        float
-            Delay after jitter.
-
-        """
         match self._jitter:
             case "none":
                 return computed
@@ -183,22 +147,6 @@ class DelayCalculator:
         computed: float,
         previous_delay: float | None,
     ) -> float:
-        """
-        Apply the decorrelated jitter strategy to the computed delay.
-
-        Parameters
-        ----------
-        computed : float
-            Delay before jitter.
-        previous_delay : float | None
-            Delay used on the previous attempt, or ``None`` on the first retry.
-
-        Returns
-        -------
-        float
-            Delay after jitter.
-
-        """
         base = self._delay.delay if isinstance(self._delay, ExponentialDelay) else self._delay
         previous = previous_delay if previous_delay is not None else computed
         upper = max(base, previous * 3)
@@ -211,37 +159,9 @@ class DelayCalculator:
 
     @staticmethod
     def __calculate_full_jitter(computed: float) -> float:
-        """
-        Apply the full jitter strategy to the computed delay.
-
-        Parameters
-        ----------
-        computed : float
-            Delay before jitter.
-
-        Returns
-        -------
-        float
-            Delay after jitter.
-
-        """
         return random.uniform(0, computed)  # ruff: ignore[suspicious-non-cryptographic-random-usage]
 
     @staticmethod
     def __calculate_equal_jitter(computed: float) -> float:
-        """
-        Apply the equal jitter strategy to the computed delay.
-
-        Parameters
-        ----------
-        computed : float
-            Delay before jitter.
-
-        Returns
-        -------
-        float
-            Delay after jitter.
-
-        """
         half = computed / 2
         return half + random.uniform(0, half)  # ruff: ignore[suspicious-non-cryptographic-random-usage]

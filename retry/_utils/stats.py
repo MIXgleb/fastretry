@@ -1,14 +1,4 @@
-"""
-Retry statistics passed to callbacks.
-
-Defines :class:`~retry._utils._stats.RetryStats` —
-the state object passed to every retry
-callback — together with its component dataclasses
-(:class:`~retry._utils._stats.DecoratorOptions`,
- :class:`~retry._utils._stats.GlobalOptions`,
-:class:`~retry._utils._stats.CallOptions`,
-:class:`~retry._utils._stats.AttemptState`).
-"""
+"""Retry statistics passed to callbacks."""
 
 import dataclasses as dc
 import traceback
@@ -24,17 +14,17 @@ from typing import (
     Any,
 )
 
-from retry._utils._delay import (
+from retry._compat.sentinels import (
+    UNSET,
+    UnsetType,
+)
+from retry._utils.delay import (
     Delay,
     JitterStrategy,
 )
-from retry._utils._logs import (
+from retry._utils.logs import (
     Log,
     LogLevel,
-)
-from retry._utils._unset import (
-    UNSET,
-    UnsetType,
 )
 
 
@@ -42,10 +32,6 @@ from retry._utils._unset import (
 class DecoratorOptions:
     """
     Options fixed at decorator construction.
-
-    These values come from ``@retry(...)`` arguments and global defaults,
-    resolved once in ``BaseRetrying.__init__``. They do not change across
-    calls.
 
     Attributes
     ----------
@@ -91,9 +77,6 @@ class GlobalOptions:
     """
     Application-wide options resolved from global defaults.
 
-    Configured via :attr:`~retry._config.config.retry`.
-    Read-only per decorator.
-
     Attributes
     ----------
     jitter_for_exponential : JitterStrategy
@@ -123,9 +106,6 @@ class GlobalOptions:
 class CallOptions:
     """
     Arguments of the wrapped call.
-
-    Created per call by the wrapper. ``args`` and ``kwargs`` are stored
-    by reference and must be treated as read-only by callbacks.
 
     Attributes
     ----------
@@ -193,10 +173,6 @@ class AttemptState:
         """
         Formatted tracebacks of all caught exceptions.
 
-        Each item is a string produced by :func:`traceback.format_exception`
-        for the corresponding exception in :attr:`exceptions`. Useful for
-        logging or displaying the full history of failures.
-
         Returns
         -------
         tuple[str, ...]
@@ -219,9 +195,7 @@ class AttemptState:
         ----------
         exc : BaseException | UnsetType | None, ``optional``
             Exception to format. When omitted (``UNSET``), the value of
-            :attr:`last_exception` is used. Pass ``None`` explicitly
-            to get a human-readable message indicating no exception
-            was recorded.
+            :attr:`last_exception` is used.
 
         Returns
         -------
@@ -246,10 +220,9 @@ class RetryStats:
     """
     State passed to retry callbacks.
 
-    A template instance is created once per decorator in ``wraps``; the
+    A template instance is created once per decorator; the
     wrapper derives a fresh copy per call via :meth:`for_call`
-    and mutates it as attempts progress. Callbacks receive the same
-    instance within a single call and should treat it as read-only.
+    and mutates it as attempts progress.
 
     Attributes
     ----------
@@ -277,16 +250,14 @@ class RetryStats:
         """
         Structured fields for the ``logging`` ``extra`` argument.
 
-        Suitable for passing to :meth:`~retry._utils._logs.Log.record`
-        via ``extra``. Useful for structured logging backends
+        Suitable for passing to log via ``extra``.
+        Useful for structured logging backends
         (Sentry, Datadog) that index ``LogRecord`` attributes.
 
         Returns
         -------
         Mapping[str, object]
-            Fields including function name, attempt index, total attempts,
-            monotonic start time, elapsed time, computed delay, the type of
-            the last exception, and whether the retry loop was aborted early.
+            Fields describing the current call and attempt.
 
         """
         attempt = self.attempt
@@ -316,11 +287,6 @@ class RetryStats:
     ) -> "RetryStats":
         """
         Return a fresh copy of this template for a single call.
-
-        The returned instance has its own :class:`~retry._utils._stats.CallOptions`
-        and :class:`~retry._utils._stats.AttemptState`, so mutations
-        do not affect the template or other calls.
-        Safe to use from concurrent sync and async callers.
 
         Parameters
         ----------

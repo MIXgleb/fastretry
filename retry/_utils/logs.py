@@ -1,11 +1,4 @@
-"""
-Logging utilities for retry decorators.
-
-Provides the :class:`~retry._utils._logs.Log` helper —
-a kind-aware wrapper around a :class:`~retry._utils._logs.LoggerConfig`
-that centralizes level selection and traceback
-handling for a single shared logger named ``"retry"``.
-"""
+"""Logging utilities for retry decorators."""
 
 import dataclasses as dc
 import logging
@@ -32,8 +25,7 @@ class LogLevel(IntEnum):
     Log level for a retry log kind.
 
     Extends :mod:`logging` levels with ``OFF`` to disable a kind
-    entirely. Values match :mod:`logging` constants so they can be
-    passed directly to :meth:`logging.Logger.log`.
+    entirely.
     """
 
     OFF = 0
@@ -50,7 +42,7 @@ class LogLevel(IntEnum):
     """Critical level."""
 
 
-def _make_retry_logger() -> logging.Logger:
+def _make_default_logger() -> logging.Logger:
     """
     Create the default logger writing to stdout or stderr.
 
@@ -91,17 +83,13 @@ def _make_retry_logger() -> logging.Logger:
     return logger
 
 
-_RETRY_LOGGER: Final[logging.Logger] = _make_retry_logger()
+_DEFAULT_LOGGER: Final[logging.Logger] = _make_default_logger()
 
 
 @dc.dataclass(frozen=True, slots=True)
 class LoggerConfig:
     """
     Immutable snapshot of logging configuration.
-
-    Passed to :class:`~retry._utils._logs.Log` so that the
-    logger cannot mutate the retry configuration.
-    All fields are read-only after construction.
 
     Attributes
     ----------
@@ -115,7 +103,7 @@ class LoggerConfig:
         Level for sleep messages, or ``OFF`` to disable.
     traceback_min_level : LogLevel
         Minimum level at which a traceback is attached to the log
-        record. Messages below this level are logged without traceback.
+        record.
     disable_logging : bool
         If ``True``, all logging is skipped.
     disable_warnings : bool
@@ -217,14 +205,6 @@ class Log:
         argument checks. Prefer :meth:`use` unless you have a specific
         reason to call this directly.
 
-        The message is emitted through the shared ``"retry"`` logger at the
-        level configured for ``log_kind``. If logging is disabled or the
-        level is :attr:`~retry._utils._logs.LogLevel.OFF`, the call is a no-op.
-
-        When ``last_exception`` is provided and the message's level is at
-        or above :attr:`~retry._utils._logs.LoggerConfig.traceback_min_level`,
-        the exception is attached as ``exc_info``. Otherwise it is ignored.
-
         Parameters
         ----------
         log_kind : _LogKind
@@ -245,11 +225,12 @@ class Log:
         Returns
         -------
         bool
-            ``True`` if the message was dispatched, ``False`` if logging is
-            disabled or the level for ``log_kind`` is ``OFF``.
+            - ``True`` if the message was dispatched,
+            - ``False`` if logging is disabled or the level for
+            ``log_kind`` is ``OFF``.
 
         """
-        log_level = self._resolve(log_kind)
+        log_level = self._resolve_log_kind(log_kind)
 
         if self._config.disable_logging or log_level == LogLevel.OFF:
             return False
@@ -262,28 +243,13 @@ class Log:
         if extra:
             kwargs["extra"] = dict(extra)
 
-        _RETRY_LOGGER.log(log_level, message, *args, **kwargs)
+        _DEFAULT_LOGGER.log(log_level, message, *args, **kwargs)
         return True
 
-    def _resolve(
+    def _resolve_log_kind(
         self,
         log_kind: _LogKind,
     ) -> LogLevel:
-        """
-        Return the level for a log kind.
-
-        Parameters
-        ----------
-        log_kind : _LogKind
-            Logger kind.
-
-        Returns
-        -------
-        LogLevel
-            Level for the given kind, or
-            :attr:`~retry._utils._logs.LogLevel.OFF` if disabled.
-
-        """
         config = self._config
 
         match log_kind:
@@ -367,14 +333,14 @@ class _BoundLog[LK: _LogKind]:
             at or above :attr:`~retry._utils._logs.LoggerConfig.traceback_min_level`.
         extra : Mapping[str, object] | None, ``optional``
             Additional fields to attach to the log record via the
-            ``logging`` ``extra`` argument. Useful for structured logging
-            backends (Sentry, Datadog).
+            ``logging`` ``extra`` argument.
 
         Returns
         -------
         bool
-            ``True`` if the message was dispatched, ``False`` if logging is
-            disabled or the level for the bound kind is ``OFF``.
+            - ``True`` if the message was dispatched,
+            - ``False`` if logging is disabled or the level for
+            the bound kind is ``OFF``.
 
         """
         return self._log.record(

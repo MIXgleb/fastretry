@@ -1,11 +1,9 @@
 """
 Retry lifecycle callbacks.
 
-Defines the :class:`~retry._utils._callbacks.RetryCallbacks`
-mapping accepted by the retry decorators, its fully
-resolved counterpart :class:`~retry._utils._callbacks.ResolvedRetryCallbacks`,
-and the built-in callback implementations used when the
-user does not provide their own.
+Defines the callback mapping accepted by retry decorators, its resolved
+counterpart, and the built-in defaults used when no callback is
+provided.
 """
 
 import dataclasses as dc
@@ -18,11 +16,11 @@ from typing import (
     TypedDict,
 )
 
-from retry._utils._stats import (
-    RetryStats,
-)
-from retry._utils._unset import (
+from retry._compat.sentinels import (
     UnsetType,
+)
+from retry._utils.stats import (
+    RetryStats,
 )
 
 _PRIMITIVE_TYPES: Final[tuple[type, ...]] = (
@@ -50,7 +48,7 @@ class RetryCallbacks(TypedDict, total=False):
     Attributes
     ----------
     on_success : CallbackType, ``optional``
-        Called after a successful attempt. No default is provided.
+        Called after a successful attempt.
     on_retry : CallbackType, ``optional``
         Called after a failed attempt, before sleeping.
     on_failure : CallbackType, ``optional``
@@ -68,17 +66,13 @@ class ResolvedRetryCallbacks:
     """
     Fully resolved retry callbacks.
 
-    Produced by :func:`~retry.base.BaseRetrying._resolve_callbacks`
-    from a user-provided :class:`~retry._utils._callbacks.RetryCallbacks` mapping.
-    All keys are present and every value is a callable:
-    omitted entries are filled with built-in defaults, and explicit
-    ``None`` values are replaced with a no-op callback.
+    All fields are populated: omitted entries are filled with built-in
+    defaults, and explicit ``None`` values are replaced with a no-op.
 
     Attributes
     ----------
     on_success : CallbackType
-        Called after a successful attempt. Falls back to a no-op when not
-        provided.
+        Called after a successful attempt.
     on_retry : CallbackType
         Called after a failed attempt, before sleeping.
     on_failure : CallbackType
@@ -93,12 +87,7 @@ class ResolvedRetryCallbacks:
 
 def default_on_success(stats: RetryStats) -> None:
     """
-    Default ``on_success`` callback: log the successful attempt.
-
-    Records a ``"success"`` message via ``stats.log``, attaching
-    structured fields from :attr:`~retry._utils._stats.RetryStats.log_extra`
-    to the log record. The result value is included in the message when it is a
-    primitive type; for complex objects only the type name is logged.
+    Log the successful attempt.
 
     Parameters
     ----------
@@ -125,13 +114,7 @@ def default_on_success(stats: RetryStats) -> None:
 
 def default_on_retry(stats: RetryStats) -> None:
     """
-    Default ``on_retry`` callback: log the failed attempt.
-
-    Records a ``"retry"`` message via ``stats.log``, and, when a delay
-    is scheduled before the next attempt, also records a ``"sleep"``
-    message. Structured fields from
-    :attr:`~retry._utils._stats.RetryStats.log_extra`
-    are attached to both records.
+    Log the failed attempt and, when a delay is scheduled, the sleep.
 
     Parameters
     ----------
@@ -160,17 +143,7 @@ def default_on_retry(stats: RetryStats) -> None:
 
 def default_on_failure(stats: RetryStats) -> None:
     """
-    Default ``on_failure`` callback: log the final failure.
-
-    Records a ``"failure"`` message via ``stats.log``, attaching structured
-    fields from :attr:`~retry._utils._stats.RetryStats.log_extra`
-    to the log record.
-
-    The message distinguishes two cases:
-
-    - all attempts were exhausted;
-    - the retry loop was aborted early because the caught exception did
-      not match ``retry_on`` or matched ``no_retry_on``.
+    Log the final failure.
 
     Parameters
     ----------
@@ -195,15 +168,4 @@ def default_on_failure(stats: RetryStats) -> None:
 
 
 def noop_callback(stats: RetryStats) -> None:
-    """
-    No-op retry callback.
-
-    Used as the resolved value when a user disables a callback by
-    passing ``None``. Keeps the invoke path branch-free.
-
-    Parameters
-    ----------
-    stats : RetryStats
-        Unused.
-
-    """
+    """No-op callback used when a callback is disabled."""
