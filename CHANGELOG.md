@@ -1,0 +1,78 @@
+# Changelog
+
+All notable changes to this project are documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+### Added
+
+### Changed
+
+### Fixed
+
+### Tests
+
+## [0.3.0] - 2026-10-15
+
+### Added
+
+- `retry_async` decorator: runs sync and coroutine functions
+  asynchronously, always returning a coroutine function. Sync callables
+  are executed in an executor so the event loop is not blocked.
+- `executor` option for `retry_async`: pass a `concurrent.futures.Executor` 
+  instance to use a custom executor.
+- Context variables are propagated to executor threads via
+  `contextvars.copy_context`.
+- `is_coroutine_function` helper with `TypeIs` narrowing.
+
+### Changed
+
+- `retry` dispatches sync functions to `SyncRetrying` and coroutine
+  functions to `AsyncRetrying`. Use `retry_async` to run a sync function
+  in an executor.
+- `FunctionTypes` replaced with `TypeChecker`.
+- `RetryKwargs` split into `RetryKwargs` and `RetryWithExecutorKwargs`.
+- `TypedDict` definitions now use `closed=True` (via `typing_extensions`)
+  to reject unknown keys at type-check time.
+- Return type of `retry` and `retry_async` decorators changed from
+  `Awaitable` to `CoroutineType` for more precise typing.
+
+### Fixed
+
+- All type checker errors reported by mypy and pyrefly.
+
+### Tests
+
+- 100% test coverage, including branch coverage.
+
+## [0.2.0] - 2026-10-08
+
+### Added
+
+- `config.context` context manager for per-task / per-thread defaults.
+- Global defaults via `config.retry(...)` and `config.logging(...)`.
+- `ExponentialDelay` with backoff factor and max delay.
+- Jitter strategies: `"none"`, `"full"`, `"equal"`, `"decorrelated"`.
+- Lifecycle callbacks: `on_success`, `on_retry`, `on_failure`.
+- Logging via a shared `"retry"` logger with per-kind levels.
+- `RetryStats` passed to callbacks.
+
+### Changed
+
+- Failure raises an `ExceptionGroup` (or `BaseExceptionGroup`) instead of
+  the last exception, so callers can inspect every attempt.
+
+### Tests
+
+- Full test suite with 100% coverage.
+
+## [0.1.0] - 2026-10-01
+
+### Added
+
+- Initial release: `retry` decorator for sync and async functions.
+- `SyncRetrying` and `AsyncRetrying` strategies.
+- Configurable attempts, delay, retry conditions, and logging.
