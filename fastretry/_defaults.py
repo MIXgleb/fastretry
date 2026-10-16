@@ -14,23 +14,23 @@ from typing import (
     final,
 )
 
-from retry._compat.aliases import (
+from fastretry._compat.aliases import (
     RetryOnExceptionType,
 )
-from retry._types import (
+from fastretry._types import (
     DefaultsKwargs,
 )
-from retry._utils.callbacks import (
+from fastretry._utils.callbacks import (
     CallbackType,
     default_on_failure,
     default_on_retry,
     default_on_success,
 )
-from retry._utils.delay import (
+from fastretry._utils.delay import (
     Delay,
     JitterStrategy,
 )
-from retry._utils.logs import (
+from fastretry._utils.logs import (
     LogLevel,
 )
 

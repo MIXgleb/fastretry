@@ -24,48 +24,48 @@ from typing import (
     override,
 )
 
-from retry._compat.aliases import (
+from fastretry._compat.aliases import (
     RetryOnExceptionType,
 )
-from retry._compat.functions import (
+from fastretry._compat.functions import (
     TypeChecker,
 )
-from retry._compat.sentinels import (
+from fastretry._compat.sentinels import (
     UNSET,
     UnsetType,
 )
-from retry._defaults import (
+from fastretry._defaults import (
     get_defaults,
 )
-from retry._utils.callbacks import (
+from fastretry._utils.callbacks import (
     CallbackType,
     ResolvedRetryCallbacks,
     RetryCallbacks,
     noop_callback,
 )
-from retry._utils.delay import (
+from fastretry._utils.delay import (
     Delay,
     DelayCalculator,
     ExponentialDelay,
     JitterStrategy,
 )
-from retry._utils.logs import (
+from fastretry._utils.logs import (
     Log,
     LoggerConfig,
 )
-from retry._utils.stats import (
+from fastretry._utils.stats import (
     AttemptState,
     CallOptions,
     DecoratorOptions,
     GlobalOptions,
     RetryStats,
 )
-from retry._utils.warnings import (
+from fastretry._utils.warnings import (
     Warnings,
 )
 
 if TYPE_CHECKING:
-    from retry._utils.logs import (
+    from fastretry._utils.logs import (
         LogLevel,
     )
 
@@ -145,7 +145,7 @@ class BaseRetrying[
             Default value returned if the function fails after all attempts,
         delay : Delay, ``optional``
             Delay between attempts in seconds. May be a plain ``float`` for a
-            fixed delay or an :class:`~retry._utils._delay.ExponentialDelay` for
+            fixed delay or an :class:`~fastretry._utils.delay.ExponentialDelay` for
             exponential backoff.
         jitter : JitterStrategy, ``optional``
             Jitter strategy overriding the default for the given delay type.
@@ -168,7 +168,7 @@ class BaseRetrying[
             is used (``()``).
         executor : Executor | UnsetType, ``optional``
             Executor used to run sync functions in an async context.
-            Only relevant for :class:`~retry.async_retry.AsyncRetrying`.
+            Only relevant for :class:`~fastretry.async_retry.AsyncRetrying`.
 
         """
         # --- effective defaults ---
@@ -412,8 +412,8 @@ class BaseRetrying[
 
         Subclasses decide how to handle an awaitable result:
 
-        - :class:`~retry.async_retry.AsyncRetrying` always awaits it.
-        - :class:`~retry.sync_retry.SyncRetrying` runs it synchronously.
+        - :class:`~fastretry.async_retry.AsyncRetrying` always awaits it.
+        - :class:`~fastretry.sync_retry.SyncRetrying` runs it synchronously.
         When no event loop is running, :func:`asyncio.run` is used;
         when a loop is already running, the coroutine is executed
         in a separate thread with its own loop.
@@ -468,7 +468,7 @@ class BaseRetrying[
         Raises
         ------
         ValueError
-            If ``delay`` is an :class:`~retry._utils._delay.ExponentialDelay`
+            If ``delay`` is an :class:`~fastretry._utils.delay.ExponentialDelay`
             with a non-positive ``delay``, ``backoff_factor``, or
             ``max_delay``, or with ``max_delay`` less than ``delay``.
 
@@ -518,7 +518,7 @@ class BaseRetrying[
         Used when a user-provided callback or sleep callable raises: the
         error must not abort the retry cycle, but should still be visible.
 
-        If the failure level is disabled (:attr:`~retry._utils._logs.LogLevel.OFF`)
+        If the failure level is disabled (:attr:`~fastretry._utils.logs.LogLevel.OFF`)
         or logging is globally disabled, a warning is emitted instead
         so the swallowed exception is not lost silently.
 
@@ -531,7 +531,7 @@ class BaseRetrying[
         extra : Mapping[str, object]
             Structured fields attached to the log record via the ``logging``
             ``extra`` argument. Typically
-            :attr:`~retry._utils._stats.RetryStats.log_extra`.
+            :attr:`~fastretry._utils.stats.RetryStats.log_extra`.
 
         """
         if not self._log.record(
@@ -646,7 +646,7 @@ class BaseRetrying[
         ------
         BaseExceptionGroup
             Containing all exceptions from
-            :attr:`~retry._utils._stats.AttemptState.exceptions`.
+            :attr:`~fastretry._utils.stats.AttemptState.exceptions`.
             Resolves to :exc:`ExceptionGroup` when all contained
             exceptions are subclasses of :exc:`Exception`.
 
@@ -673,7 +673,7 @@ class BaseRetrying[
 
         If ``jitter`` is not provided, the strategy is chosen based on the
         delay type: ``jitter_for_exponential`` for
-        :class:`~retry._utils._delay.ExponentialDelay`, or
+        :class:`~fastretry._utils.delay.ExponentialDelay`, or
         ``jitter_for_fixed`` for a plain ``float`` delay.
 
         Parameters

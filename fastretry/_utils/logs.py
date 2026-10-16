@@ -122,7 +122,7 @@ class LoggerConfig:
 
 class Log:
     """
-    Kind-aware logging wrapper around a :class:`~retry._utils._logs.LoggerConfig`.
+    Kind-aware logging wrapper around a :class:`~fastretry._utils.logs.LoggerConfig`.
 
     Use :meth:`use` to select a logger kind
     and then call the result to emit a message::
@@ -215,7 +215,7 @@ class Log:
             Format arguments.
         last_exception : BaseException | None, ``optional``
             Exception to attach as ``exc_info`` when the message's level is
-            at or above :attr:`~retry._utils._logs.LoggerConfig.traceback_min_level`.
+            at or above :attr:`~fastretry._utils.logs.LoggerConfig.traceback_min_level`.
         extra : Mapping[str, object] | None, ``optional``
             Additional fields to attach to the log record via the ``logging``
             ``extra`` argument. Useful for structured logging backends
@@ -269,8 +269,8 @@ class _BoundLog[LK: _LogKind]:
     """
     Callable bound to a specific logger kind.
 
-    Created by :meth:`~retry._utils._logs.Log.use`
-    and cached in :class:`~retry._utils._logs.Log`.
+    Created by :meth:`~fastretry._utils.logs.Log.use`
+    and cached in :class:`~fastretry._utils.logs.Log`.
     Not intended to be instantiated directly.
 
     Parameters
@@ -330,7 +330,7 @@ class _BoundLog[LK: _LogKind]:
             Format arguments.
         last_exception : BaseException | None, ``optional``
             Exception to attach as ``exc_info`` when the message's level is
-            at or above :attr:`~retry._utils._logs.LoggerConfig.traceback_min_level`.
+            at or above :attr:`~fastretry._utils.logs.LoggerConfig.traceback_min_level`.
         extra : Mapping[str, object] | None, ``optional``
             Additional fields to attach to the log record via the
             ``logging`` ``extra`` argument.

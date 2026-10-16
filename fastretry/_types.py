@@ -8,24 +8,24 @@ from concurrent.futures import (
     Executor,
 )
 
-from retry._compat.aliases import (
+from fastretry._compat.aliases import (
     RetryOnExceptionType,
 )
-from retry._compat.nodes import (
+from fastretry._compat.nodes import (
     TypedDict,
 )
-from retry._compat.sentinels import (
+from fastretry._compat.sentinels import (
     UnsetType,
 )
-from retry._utils.callbacks import (
+from fastretry._utils.callbacks import (
     CallbackType,
     RetryCallbacks,
 )
-from retry._utils.delay import (
+from fastretry._utils.delay import (
     Delay,
     JitterStrategy,
 )
-from retry._utils.logs import (
+from fastretry._utils.logs import (
     LogLevel,
 )
 
@@ -71,7 +71,7 @@ class RetryKwargs[R](
     total=False,
     closed=True,
 ):
-    """Keyword arguments accepted by :func:`~retry._retry.retry`."""
+    """Keyword arguments accepted by :func:`~fastretry._retry.retry`."""
 
 
 class RetryWithExecutorKwargs[R](
@@ -79,7 +79,7 @@ class RetryWithExecutorKwargs[R](
     total=False,
     closed=True,
 ):
-    """Keyword arguments accepted by :func:`~retry._retry.retry_async`."""
+    """Keyword arguments accepted by :func:`~fastretry._retry.retry_async`."""
 
     executor: Executor | UnsetType
 
@@ -89,7 +89,7 @@ class RetryDefaultsKwargs(
     total=False,
     closed=True,
 ):
-    """Options accepted by :attr:`~retry._config.config.retry`."""
+    """Options accepted by :attr:`~fastretry._config.config.retry`."""
 
 
 class LoggingDefaultsKwargs(
@@ -97,7 +97,7 @@ class LoggingDefaultsKwargs(
     total=False,
     closed=True,
 ):
-    """Options related to logging, configured via :attr:`~retry._config.config.logging`."""
+    """Options related to logging, configured via :attr:`~fastretry._config.config.logging`."""
 
 
 class DefaultsKwargs(
@@ -106,4 +106,4 @@ class DefaultsKwargs(
     total=False,
     closed=True,
 ):
-    """All keyword arguments accepted by :data:`~retry._config.config`."""
+    """All keyword arguments accepted by :data:`~fastretry._config.config`."""

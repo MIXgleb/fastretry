@@ -12,13 +12,13 @@ from typing import (
     Union,  # pyright: ignore[reportDeprecated]
 )
 
-from retry._compat.aliases import (
+from fastretry._compat.aliases import (
     CoroType,
 )
-from retry._compat.nodes import (
+from fastretry._compat.nodes import (
     TypeIs,
 )
-from retry._compat.sentinels import (
+from fastretry._compat.sentinels import (
     UNSET,
     UnsetType,
 )

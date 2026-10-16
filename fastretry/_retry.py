@@ -3,11 +3,11 @@ Public retry decorators.
 
 This module exposes two entry points:
 
-- :func:`~retry._retry.retry` — the main decorator, dispatches to
-  :class:`~retry.sync_retry.SyncRetrying` or
-  :class:`~retry.async_retry.AsyncRetrying` depending on whether the
+- :func:`~fastretry._retry.retry` — the main decorator, dispatches to
+  :class:`~fastretry.sync_retry.SyncRetrying` or
+  :class:`~fastretry.async_retry.AsyncRetrying` depending on whether the
   decorated function is a coroutine function.
-- :func:`~retry._retry.retry_async` — always returns a coroutine
+- :func:`~fastretry._retry.retry_async` — always returns a coroutine
   function; sync callables are run in an executor, coroutine functions
   are awaited directly.
 
@@ -38,33 +38,33 @@ from typing import (
     overload,
 )
 
-from retry._compat.aliases import (
+from fastretry._compat.aliases import (
     CoroType,
     RetryOnExceptionType,
     WrappedCoroType,
 )
-from retry._compat.functions import (
+from fastretry._compat.functions import (
     is_coroutine_function,
 )
-from retry._compat.sentinels import (
+from fastretry._compat.sentinels import (
     UNSET,
     UnsetType,
 )
-from retry._types import (
+from fastretry._types import (
     RetryKwargs,
     RetryWithExecutorKwargs,
 )
-from retry._utils.callbacks import (
+from fastretry._utils.callbacks import (
     RetryCallbacks,
 )
-from retry._utils.delay import (
+from fastretry._utils.delay import (
     Delay,
     JitterStrategy,
 )
-from retry.async_retry import (
+from fastretry.async_retry import (
     AsyncRetrying,
 )
-from retry.sync_retry import (
+from fastretry.sync_retry import (
     SyncRetrying,
 )
 
@@ -112,10 +112,10 @@ def retry[**P, R](  # ruff: ignore[undocumented-param]
     selected automatically.
 
     To run a sync function in an executor from async code, use
-    :func:`~retry._retry.retry_async` instead.
+    :func:`~fastretry._retry.retry_async` instead.
 
     Options not passed explicitly fall back to the global retry
-    defaults (see :attr:`~retry._config.config.retry`). The factory
+    defaults (see :attr:`~fastretry._config.config.retry`). The factory
     values are listed below.
 
     Parameters
@@ -129,7 +129,7 @@ def retry[**P, R](  # ruff: ignore[undocumented-param]
     delay : Delay, ``optional``
         Delay between attempts in seconds. A plain ``float`` gives a
         fixed delay (factory default: 0); an
-        :class:`~retry._utils._delay.ExponentialDelay` enables exponential
+        :class:`~fastretry._utils.delay.ExponentialDelay` enables exponential
         backoff with ``backoff_factor=2.0`` and no upper bound.
     jitter : JitterStrategy, ``optional``
         Jitter strategy for the delay. When omitted, the default for
@@ -151,7 +151,7 @@ def retry[**P, R](  # ruff: ignore[undocumented-param]
         Callbacks may be synchronous or asynchronous.
 
         You may pass a plain ``dict`` with any subset of these keys, or
-        build a :class:`~retry._utils._callbacks.RetryCallbacks` instance
+        build a :class:`~fastretry._utils.callbacks.RetryCallbacks` instance
         directly. Pass ``None`` for the whole mapping to disable every
         callback.
 
@@ -317,7 +317,7 @@ def retry_async[**P, R](  # ruff: ignore[undocumented-param]
     but without the boilerplate and with copied context.
 
     Options not passed explicitly fall back to the global retry
-    defaults (see :attr:`~retry._config.config.retry`). The factory
+    defaults (see :attr:`~fastretry._config.config.retry`). The factory
     values are listed below.
 
     Parameters
@@ -331,7 +331,7 @@ def retry_async[**P, R](  # ruff: ignore[undocumented-param]
     delay : Delay, ``optional``
         Delay between attempts in seconds. A plain ``float`` gives a
         fixed delay (factory default: 0); an
-        :class:`~retry._utils._delay.ExponentialDelay` enables exponential
+        :class:`~fastretry._utils.delay.ExponentialDelay` enables exponential
         backoff with ``backoff_factor=2.0`` and no upper bound.
     jitter : JitterStrategy, ``optional``
         Jitter strategy for the delay. When omitted, the default for
@@ -348,7 +348,7 @@ def retry_async[**P, R](  # ruff: ignore[undocumented-param]
         ``retry_on``. Takes precedence. Defaults to ``()``.
     callbacks : RetryCallbacks | None, ``optional``
         Mapping of retry lifecycle callbacks, same as in
-        :func:`~retry._retry.retry`.
+        :func:`~fastretry._retry.retry`.
     executor : Executor | None, ``optional``
         Executor used to run sync functions in an async context.
         When omitted (``UNSET``), the running loop's default thread
@@ -365,7 +365,7 @@ def retry_async[**P, R](  # ruff: ignore[undocumented-param]
 
     Notes
     -----
-    See :func:`~retry._retry.retry` for failure handling and exception
+    See :func:`~fastretry._retry.retry` for failure handling and exception
     group semantics. This decorator only changes how the wrapped
     callable is invoked, not how retries are handled.
 

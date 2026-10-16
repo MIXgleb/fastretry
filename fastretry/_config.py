@@ -9,12 +9,12 @@ from typing import (
     Unpack,
 )
 
-from retry._defaults import (
+from fastretry._defaults import (
     context_defaults,
     get_defaults,
     global_defaults,
 )
-from retry._types import (
+from fastretry._types import (
     DefaultsKwargs,
     LoggingDefaultsKwargs,
     RetryDefaultsKwargs,
@@ -64,13 +64,13 @@ class _RetryNamespace:
             ``retry_on``. Takes precedence. Defaults to ``()``.
         on_success : CallbackType | None, ``optional``
             Default callback invoked after a successful attempt,
-            by default :func:`~retry._utils._callbacks.default_on_success`.
+            by default :func:`~fastretry._utils.callbacks.default_on_success`.
         on_retry : CallbackType | None, ``optional``
             Default callback invoked after a failed attempt,
-            by default :func:`~retry._utils._callbacks.default_on_retry`.
+            by default :func:`~fastretry._utils.callbacks.default_on_retry`.
         on_failure : CallbackType | None, ``optional``
             Default callback invoked after all attempts have failed,
-            by default :func:`~retry._utils._callbacks.default_on_failure`.
+            by default :func:`~fastretry._utils.callbacks.default_on_failure`.
         jitter_for_exponential : JitterStrategy, ``optional``
             Default jitter strategy for exponential delay,
             by default ``"none"``.
@@ -102,25 +102,25 @@ class _LoggingNamespace:
         through a single logger named ``"retry"``.
 
         Each log kind has its own level. Set a level to
-        :attr:`~retry._utils._logs.LogLevel.OFF` to disable that kind.
+        :attr:`~fastretry._utils.logs.LogLevel.OFF` to disable that kind.
 
         Parameters
         ----------
         level_success : LogLevel, ``optional``
             Level for messages emitted after a successful attempt,
-            by default :attr:`~retry._utils._logs.LogLevel.OFF`.
+            by default :attr:`~fastretry._utils.logs.LogLevel.OFF`.
         level_retry : LogLevel, ``optional``
             Level for messages emitted after a failed attempt,
-            by default :attr:`~retry._utils._logs.LogLevel.WARNING`.
+            by default :attr:`~fastretry._utils.logs.LogLevel.WARNING`.
         level_failure : LogLevel, ``optional``
             Level for messages emitted after all attempts have failed,
-            by default :attr:`~retry._utils._logs.LogLevel.ERROR`.
+            by default :attr:`~fastretry._utils.logs.LogLevel.ERROR`.
         level_sleep : LogLevel, ``optional``
             Level for messages emitted before sleeping between attempts,
-            by default :attr:`~retry._utils._logs.LogLevel.OFF`.
+            by default :attr:`~fastretry._utils.logs.LogLevel.OFF`.
         traceback_min_level : LogLevel, ``optional``
             Minimum level at which a traceback is attached to the log
-            record, by default :attr:`~retry._utils._logs.LogLevel.ERROR`.
+            record, by default :attr:`~fastretry._utils.logs.LogLevel.ERROR`.
 
         """
         get_defaults().set(**kwargs)

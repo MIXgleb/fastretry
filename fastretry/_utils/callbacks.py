@@ -16,10 +16,10 @@ from typing import (
     TypedDict,
 )
 
-from retry._compat.sentinels import (
+from fastretry._compat.sentinels import (
     UnsetType,
 )
-from retry._utils.stats import (
+from fastretry._utils.stats import (
     RetryStats,
 )
 

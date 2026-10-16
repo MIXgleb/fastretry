@@ -8,7 +8,7 @@ from typing import (
     Any,
 )
 
-from retry._compat.sentinels import (
+from fastretry._compat.sentinels import (
     UnsetType,
 )
 

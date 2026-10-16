@@ -15,26 +15,26 @@ from typing import (
     override,
 )
 
-from retry._compat.aliases import (
+from fastretry._compat.aliases import (
     CoroType,
     WrappedCoroType,
 )
-from retry._compat.functions import (
+from fastretry._compat.functions import (
     is_coroutine_function,
 )
-from retry._compat.sentinels import (
+from fastretry._compat.sentinels import (
     UnsetType,
 )
-from retry._types import (
+from fastretry._types import (
     RetryWithExecutorKwargs,
 )
-from retry._utils.callbacks import (
+from fastretry._utils.callbacks import (
     CallbackType,
 )
-from retry._utils.stats import (
+from fastretry._utils.stats import (
     RetryStats,
 )
-from retry.base import (
+from fastretry.base import (
     BaseRetrying,
 )
 
