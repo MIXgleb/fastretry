@@ -15,6 +15,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Tests
 
+## [0.5.1] - 2026-10-16
+
+### Fixed
+
+- CI/CD pipeline fixes for Trusted Publishing.
+
 ## [0.5.0] - 2026-10-16
 
 ### Added

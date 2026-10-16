@@ -9,7 +9,7 @@ packages = ["fastretry"]
 # Project
 [project]
 name = "fastretry"
-version = "0.5.0"
+version = "0.5.1"
 description = "Retry decorator for synchronous and asynchronous functions."
 authors = [{ name = "Gleb Mikhalev", email = "gleb1@bk.ru" }]
 requires-python = ">=3.13"
