@@ -15,6 +15,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Tests
 
+## [0.4.0] - 2026-10-16
+
+### Added
+
+- `_compat` package: version-gated imports for typing constructs and
+  shared type aliases.
+- `LICENSE` file (MIT).
+- `CHANGELOG.md`.
+
+### Changed
+
+- **Breaking:** renamed the project from `retry` to `fastretry`. The
+  import path is now `fastretry` instead of `retry`.
+- **Breaking:** renamed modules under `fastretry._utils` to drop the
+  leading underscore: `_callbacks` → `callbacks`, `_delay` → `delay`,
+  `_logs` → `logs`, `_stats` → `stats`, `_warnings` → `warnings`.
+- **Breaking:** renamed `_unset.py` to `sentinels.py` and
+  `_function_types.py` to `functions.py`.
+- Internal `__init__` modules no longer re-export imports.
+- Docstrings reformatted to be shorter and focused on purpose.
+
+### Fixed
+
+- Correct `stacklevel` in emitted warnings.
+
+### Tests
+
+- 100% test coverage, including branch coverage.
+
 ## [0.3.0] - 2026-10-15
 
 ### Added
