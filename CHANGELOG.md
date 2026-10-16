@@ -15,6 +15,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Tests
 
+## [0.5.0] - 2026-10-16
+
+### Added
+
+- `uv` as the project's package manager, with a committed `uv.lock` for
+  reproducible installs.
+- `README.md` with installation and usage examples.
+- GitHub Actions `CI` workflow: lint, format check, type check, and tests
+  across supported Python versions.
+- GitHub Actions `Publish` workflow: build, publish to TestPyPI, then
+  publish to PyPI via Trusted Publishing.
+- `[tool.uv]` configuration in `pyproject.toml`.
+
+### Changed
+
+- **Breaking:** minimum supported Python version raised to 3.13.
+
 ## [0.4.0] - 2026-10-16
 
 ### Added
