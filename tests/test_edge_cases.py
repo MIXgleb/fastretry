@@ -8,7 +8,7 @@ from typing import (
 
 import pytest
 
-from retry._retry import (
+from fastretry._retry import (
     retry,
 )
 

@@ -6,34 +6,34 @@ from typing import (
 
 import pytest
 
-from retry._compat.sentinels import (
+from fastretry._compat.sentinels import (
     UNSET,
 )
-from retry._config import (
+from fastretry._config import (
     config,
 )
-from retry._retry import (
+from fastretry._retry import (
     retry,
 )
-from retry._utils.callbacks import (
+from fastretry._utils.callbacks import (
     default_on_failure,
     default_on_retry,
     default_on_success,
     noop_callback,
 )
-from retry._utils.delay import (
+from fastretry._utils.delay import (
     ExponentialDelay,
 )
-from retry._utils.logs import (
+from fastretry._utils.logs import (
     LogLevel,
 )
-from retry._utils.stats import (
+from fastretry._utils.stats import (
     RetryStats,
 )
-from retry.base import (
+from fastretry.base import (
     BaseRetrying,
 )
-from retry.sync_retry import (
+from fastretry.sync_retry import (
     SyncRetrying,
 )
 

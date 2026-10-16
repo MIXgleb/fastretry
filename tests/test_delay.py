@@ -7,7 +7,7 @@ from unittest.mock import (
 
 import pytest
 
-from retry._utils.delay import (
+from fastretry._utils.delay import (
     DelayCalculator,
     ExponentialDelay,
 )
@@ -58,7 +58,7 @@ def test_zero_delay_returns_zero(delay: object) -> None:
     assert calc.compute(retry_index=5) == 0
 
 
-@patch("retry._utils.delay.random.uniform")
+@patch("fastretry._utils.delay.random.uniform")
 def test_full_jitter(mock_uniform: MagicMock) -> None:
     mock_uniform.return_value = 2.5
     calc = DelayCalculator(delay=5, jitter="full")
@@ -66,14 +66,14 @@ def test_full_jitter(mock_uniform: MagicMock) -> None:
     mock_uniform.assert_called_once_with(0, 5)
 
 
-@patch("retry._utils.delay.random.uniform")
+@patch("fastretry._utils.delay.random.uniform")
 def test_equal_jitter(mock_uniform: MagicMock) -> None:
     mock_uniform.return_value = 1.25
     calc = DelayCalculator(delay=5, jitter="equal")
     assert calc.compute(retry_index=1) == pytest.approx(2.5 + 1.25)
 
 
-@patch("retry._utils.delay.random.uniform")
+@patch("fastretry._utils.delay.random.uniform")
 def test_decorrelated_jitter_first(mock_uniform: MagicMock) -> None:
     mock_uniform.return_value = 3
     calc = DelayCalculator(delay=5, jitter="decorrelated")
@@ -82,7 +82,7 @@ def test_decorrelated_jitter_first(mock_uniform: MagicMock) -> None:
     mock_uniform.assert_called_once_with(5, 15)
 
 
-@patch("retry._utils.delay.random.uniform")
+@patch("fastretry._utils.delay.random.uniform")
 def test_decorrelated_jitter_subsequent(mock_uniform: MagicMock) -> None:
     mock_uniform.side_effect = [3, 7]
     calc = DelayCalculator(delay=5, jitter="decorrelated")
@@ -93,7 +93,7 @@ def test_decorrelated_jitter_subsequent(mock_uniform: MagicMock) -> None:
     mock_uniform.assert_called_with(5, 9)
 
 
-@patch("retry._utils.delay.random.uniform")
+@patch("fastretry._utils.delay.random.uniform")
 def test_decorrelated_jitter_upper_leq_base(mock_uniform: MagicMock) -> None:
     mock_uniform.return_value = 1
     calc = DelayCalculator(delay=10, jitter="decorrelated")
@@ -102,7 +102,7 @@ def test_decorrelated_jitter_upper_leq_base(mock_uniform: MagicMock) -> None:
     mock_uniform.assert_called_once_with(10, 10)
 
 
-@patch("retry._utils.delay.random.uniform")
+@patch("fastretry._utils.delay.random.uniform")
 def test_decorrelated_with_max_delay(mock_uniform: MagicMock) -> None:
     mock_uniform.return_value = 3
     calc = DelayCalculator(

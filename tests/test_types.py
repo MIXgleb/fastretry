@@ -4,10 +4,10 @@ from typing import (
     get_type_hints,
 )
 
-from retry._compat.nodes import (
+from fastretry._compat.nodes import (
     is_typeddict,
 )
-from retry._types import (
+from fastretry._types import (
     DefaultsKwargs,
     LoggingDefaultsKwargs,
     RetryDefaultsKwargs,

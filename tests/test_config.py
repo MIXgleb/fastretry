@@ -2,17 +2,17 @@
 
 import pytest
 
-from retry import (
+from fastretry._config import (
     config,
 )
-from retry._defaults import (
+from fastretry._defaults import (
     get_defaults,
     global_defaults,
 )
-from retry._utils.callbacks import (
+from fastretry._utils.callbacks import (
     default_on_success,
 )
-from retry._utils.logs import (
+from fastretry._utils.logs import (
     LogLevel,
 )
 

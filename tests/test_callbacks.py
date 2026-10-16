@@ -10,11 +10,11 @@ from unittest.mock import (
 
 import pytest
 
-from retry._compat.sentinels import (
+from fastretry._compat.sentinels import (
     UNSET,
     UnsetType,
 )
-from retry._utils.callbacks import (
+from fastretry._utils.callbacks import (
     ResolvedRetryCallbacks,
     RetryCallbacks,
     default_on_failure,
@@ -22,10 +22,10 @@ from retry._utils.callbacks import (
     default_on_success,
     noop_callback,
 )
-from retry._utils.logs import (
+from fastretry._utils.logs import (
     Log,
 )
-from retry._utils.stats import (
+from fastretry._utils.stats import (
     AttemptState,
     CallOptions,
     DecoratorOptions,

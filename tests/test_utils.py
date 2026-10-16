@@ -12,14 +12,14 @@ from pytest_mock import (
     MockerFixture,
 )
 
-from retry._compat.functions import (
+from fastretry._compat.functions import (
     TypeChecker,
 )
-from retry._compat.sentinels import (
+from fastretry._compat.sentinels import (
     UNSET,
     UnsetType,
 )
-from retry._utils.warnings import (
+from fastretry._utils.warnings import (
     Warnings,
 )
 
@@ -33,14 +33,14 @@ def test_singleton() -> None:
 
 
 def test_warn(mocker: MockerFixture) -> None:
-    mock_warn = mocker.patch("retry._utils.warnings._warnings.warn")
+    mock_warn = mocker.patch("fastretry._utils.warnings._warnings.warn")
     w = Warnings(disable_warnings=False)
     w.warn("msg", stacklevel=2)
     mock_warn.assert_called_once_with("msg", stacklevel=2)
 
 
 def test_disabled(mocker: MockerFixture) -> None:
-    mock_warn = mocker.patch("retry._utils.warnings._warnings.warn")
+    mock_warn = mocker.patch("fastretry._utils.warnings._warnings.warn")
     w = Warnings(disable_warnings=True)
     w.warn("msg", stacklevel=2)
     mock_warn.assert_not_called()

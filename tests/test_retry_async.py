@@ -20,14 +20,14 @@ from pytest_mock import (
     MockerFixture,
 )
 
-from retry._config import (
+from fastretry._config import (
     config,
 )
-from retry._retry import (
+from fastretry._retry import (
     retry,
     retry_async,
 )
-from retry._utils.stats import (
+from fastretry._utils.stats import (
     RetryStats,
 )
 
@@ -180,7 +180,7 @@ async def test_sleep_callable_raises(mocker: MockerFixture) -> None:
         msg = "sleep error"
         raise RuntimeError(msg)
 
-    mock_log_swallowed = mocker.patch("retry.base.BaseRetrying._log_swallowed")
+    mock_log_swallowed = mocker.patch("fastretry.base.BaseRetrying._log_swallowed")
     config.retry(async_sleep_call=bad_sleep)
 
     @retry(attempts=2, delay=1)

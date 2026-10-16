@@ -12,7 +12,7 @@ from pytest_mock import (
     MockerFixture,
 )
 
-from retry._utils.logs import (
+from fastretry._utils.logs import (
     _DEFAULT_LOGGER,
     Log,
     LoggerConfig,
