@@ -27,7 +27,7 @@ from retry._retry import (
     retry,
     retry_async,
 )
-from retry._utils._stats import (
+from retry._utils.stats import (
     RetryStats,
 )
 

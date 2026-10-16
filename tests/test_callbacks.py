@@ -10,7 +10,11 @@ from unittest.mock import (
 
 import pytest
 
-from retry._utils._callbacks import (
+from retry._compat.sentinels import (
+    UNSET,
+    UnsetType,
+)
+from retry._utils.callbacks import (
     ResolvedRetryCallbacks,
     RetryCallbacks,
     default_on_failure,
@@ -18,19 +22,15 @@ from retry._utils._callbacks import (
     default_on_success,
     noop_callback,
 )
-from retry._utils._logs import (
+from retry._utils.logs import (
     Log,
 )
-from retry._utils._stats import (
+from retry._utils.stats import (
     AttemptState,
     CallOptions,
     DecoratorOptions,
     GlobalOptions,
     RetryStats,
-)
-from retry._utils._unset import (
-    UNSET,
-    UnsetType,
 )
 
 type _STATS_FACTORY_TYPE = Callable[..., RetryStats]

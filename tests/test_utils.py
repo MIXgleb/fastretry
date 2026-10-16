@@ -12,14 +12,14 @@ from pytest_mock import (
     MockerFixture,
 )
 
-from retry._utils._function_types import (
+from retry._compat.functions import (
     TypeChecker,
 )
-from retry._utils._unset import (
+from retry._compat.sentinels import (
     UNSET,
     UnsetType,
 )
-from retry._utils._warnings import (
+from retry._utils.warnings import (
     Warnings,
 )
 
@@ -33,14 +33,14 @@ def test_singleton() -> None:
 
 
 def test_warn(mocker: MockerFixture) -> None:
-    mock_warn = mocker.patch("retry._utils._warnings._warnings.warn")
+    mock_warn = mocker.patch("retry._utils.warnings._warnings.warn")
     w = Warnings(disable_warnings=False)
     w.warn("msg", stacklevel=2)
     mock_warn.assert_called_once_with("msg", stacklevel=2)
 
 
 def test_disabled(mocker: MockerFixture) -> None:
-    mock_warn = mocker.patch("retry._utils._warnings._warnings.warn")
+    mock_warn = mocker.patch("retry._utils.warnings._warnings.warn")
     w = Warnings(disable_warnings=True)
     w.warn("msg", stacklevel=2)
     mock_warn.assert_not_called()
@@ -52,6 +52,7 @@ def test_simple_return() -> None:
 
     ft = TypeChecker(fn)
     assert ft._return_hint is int
+    assert fn() == 1
 
 
 def test_no_annotation() -> None:
@@ -60,6 +61,7 @@ def test_no_annotation() -> None:
 
     ft = TypeChecker(fn)
     assert ft._return_hint is UNSET
+    assert fn() == 1
 
 
 def test_unresolvable() -> None:
@@ -68,50 +70,41 @@ def test_unresolvable() -> None:
 
     ft = TypeChecker(fn)
     assert ft._return_hint is UNSET
+    assert fn() == 1
 
 
-def test_warn_mismatch(mocker: MockerFixture) -> None:
+def test_warn_mismatch() -> None:
     def fn() -> int:
         return 1
 
-    mock_warn = mocker.patch("retry._utils._warnings._warnings.warn")
     ft = TypeChecker(fn)
-    ft.warn_on_return_default_mismatch(
-        return_default_value="str",
-        disable_warnings=False,
-    )
-    mock_warn.assert_called_once()
+    assert ft.matches_return_hint("str") is False
+    assert fn() == 1
 
 
-def test_no_warn_match(mocker: MockerFixture) -> None:
+def test_no_warn_match() -> None:
     def fn() -> int:
         return 1
 
-    mock_warn = mocker.patch("retry._utils._warnings._warnings.warn")
     ft = TypeChecker(fn)
-    ft.warn_on_return_default_mismatch(
-        return_default_value=5,
-        disable_warnings=False,
-    )
-    mock_warn.assert_not_called()
+    assert ft.matches_return_hint(5) is True
+    assert fn() == 1
 
 
-def test_no_warn_when_disabled(mocker: MockerFixture) -> None:
-    def fn() -> int:
+def test_no_warn_when_disabled() -> None:
+    def fn() -> Any:  # ruff: ignore[any-type]
         return 1
 
-    mock_warn = mocker.patch("retry._utils._warnings._warnings.warn")
     ft = TypeChecker(fn)
-    ft.warn_on_return_default_mismatch(
-        return_default_value="str",
-        disable_warnings=True,
-    )
-    mock_warn.assert_not_called()
+    assert ft.matches_return_hint(int) is None
+    assert fn() == 1
 
 
 def _make_fn(return_hint: object) -> Callable[..., object]:
     def fn() -> object:
         return None
+
+    assert fn() is None
 
     fn.__annotations__["return"] = return_hint
     return fn
@@ -133,7 +126,7 @@ def _make_fn(return_hint: object) -> Callable[..., object]:
 )
 def test_matches_return_hint(hint: object, value: object, expected: bool | None) -> None:
     ft = TypeChecker(_make_fn(hint))
-    assert ft._matches_return_hint(value) is expected
+    assert ft.matches_return_hint(value) is expected
 
 
 def test_matches_return_hint_unset() -> None:
@@ -141,4 +134,5 @@ def test_matches_return_hint_unset() -> None:
         return 1
 
     ft = TypeChecker(fn)
-    assert ft._matches_return_hint(5) is None
+    assert ft.matches_return_hint(5) is None
+    assert fn() == 1

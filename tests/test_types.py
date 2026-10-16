@@ -1,19 +1,12 @@
 """Tests for TypedDict definitions."""
 
-import sys
 from typing import (
     get_type_hints,
 )
 
-if sys.version_info >= (3, 15):
-    from typing import (
-        is_typeddict,
-    )
-else:
-    from typing_extensions import (
-        is_typeddict,
-    )
-
+from retry._compat.nodes import (
+    is_typeddict,
+)
 from retry._types import (
     DefaultsKwargs,
     LoggingDefaultsKwargs,

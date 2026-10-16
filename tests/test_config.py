@@ -9,10 +9,10 @@ from retry._defaults import (
     get_defaults,
     global_defaults,
 )
-from retry._utils._callbacks import (
+from retry._utils.callbacks import (
     default_on_success,
 )
-from retry._utils._logs import (
+from retry._utils.logs import (
     LogLevel,
 )
 

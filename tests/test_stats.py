@@ -4,18 +4,18 @@ import dataclasses as dc
 
 import pytest
 
-from retry._utils._logs import (
+from retry._compat.sentinels import (
+    UNSET,
+)
+from retry._utils.logs import (
     LogLevel,
 )
-from retry._utils._stats import (
+from retry._utils.stats import (
     AttemptState,
     CallOptions,
     DecoratorOptions,
     GlobalOptions,
     RetryStats,
-)
-from retry._utils._unset import (
-    UNSET,
 )
 
 

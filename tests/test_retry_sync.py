@@ -102,6 +102,7 @@ def test_functools_wraps() -> None:
         """Docstring."""  # ruff: ignore[docstring-missing-returns]
         return 1
 
+    assert my_func() == 1
     assert my_func.__name__ == "my_func"
     assert my_func.__doc__ == "Docstring."
 

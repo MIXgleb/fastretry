@@ -6,26 +6,28 @@ from typing import (
 
 import pytest
 
+from retry._compat.sentinels import (
+    UNSET,
+)
 from retry._config import (
     config,
 )
 from retry._retry import (
     retry,
 )
-from retry._utils import (
-    UNSET,
-    ExponentialDelay,
-    noop_callback,
-)
-from retry._utils._callbacks import (
+from retry._utils.callbacks import (
     default_on_failure,
     default_on_retry,
     default_on_success,
+    noop_callback,
 )
-from retry._utils._logs import (
+from retry._utils.delay import (
+    ExponentialDelay,
+)
+from retry._utils.logs import (
     LogLevel,
 )
-from retry._utils._stats import (
+from retry._utils.stats import (
     RetryStats,
 )
 from retry.base import (
@@ -69,6 +71,7 @@ def test_resolve_callbacks_partial() -> None:
         return None
 
     r = SyncRetrying(callbacks={"on_retry": cb})
+    assert cb(None) is None
     assert r.callbacks.on_retry is cb
     assert r.callbacks.on_success is default_on_success
     assert r.callbacks.on_failure is default_on_failure
@@ -198,6 +201,11 @@ def test_abstract_wrap_raises() -> None:
         def _safe_call_callback(self, *, callback, stats):  # ruff: ignore[missing-return-type-private-function, missing-type-function-argument, no-self-use]
             return callback(stats)
 
+    assert _Concrete()._wrap(lambda: None)() is None
+    assert _Concrete()._sleep(stats=None) is None
+    assert _Concrete()._call_callback(callback=lambda x: x, stats=None) is None
+    assert _Concrete()._safe_call_callback(callback=lambda x: x, stats=None) is None
+
     instance = _Concrete()
 
     with pytest.raises(NotImplementedError):
@@ -225,3 +233,36 @@ def test_log_swallowed_falls_back_to_warning() -> None:
 
     with pytest.warns(UserWarning, match="The failure log level is disabled;"):
         r._log_swallowed(operation="test", exc=ValueError("x"), extra={})
+
+
+def test_validate_return_type_is_false() -> None:
+
+    with pytest.warns(
+        expected_warning=UserWarning,
+        match="return_default_value None does not match the declared return type",
+    ):
+
+        @retry(return_default_value=None)
+        def fn() -> int:
+            return 1
+
+    r = fn()
+    assert r == 1
+
+
+def test_validate_return_type_is_true() -> None:
+    @retry(return_default_value=123)
+    def fn() -> int:
+        return 1
+
+    r = fn()
+    assert r == 1
+
+
+def test_validate_return_type_is_none() -> None:
+    @retry(return_default_value="result")
+    def fn() -> object:
+        return 1
+
+    r = fn()
+    assert r == 1
