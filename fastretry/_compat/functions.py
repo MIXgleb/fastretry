@@ -9,14 +9,12 @@ from collections.abc import (
 )
 from typing import (
     Any,
+    TypeIs,
     Union,  # pyright: ignore[reportDeprecated]
 )
 
 from fastretry._compat.aliases import (
     CoroType,
-)
-from fastretry._compat.nodes import (
-    TypeIs,
 )
 from fastretry._compat.sentinels import (
     UNSET,
