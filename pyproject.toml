@@ -1,29 +1,72 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["fastretry"]
+
+
+# Project
 [project]
-name = "retry"
-version = "0.2.0"
+name = "fastretry"
+version = "0.4.0"
 description = "Retry decorator for synchronous and asynchronous functions."
-requires-python = ">=3.12"
 authors = [{ name = "Gleb Mikhalev", email = "gleb1@bk.ru" }]
+requires-python = ">=3.13"
+
+dependencies = ["typing_extensions>=4.11; python_version < '3.15'"]
+
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Typing :: Typed",
+]
+
+
+[project.urls]
+Repository = "https://github.com/MIXgleb/fastretry"
+
 
 [dependency-groups]
 dev = [
     "ruff",
     "mypy",
-    "ty",
     "pyrefly",
     "pytest",
     "pytest-cov",
     "pytest-mock",
     "pytest-asyncio",
     "pytest-randomly",
+    "covdefaults",
 ]
-docs = ["sphinx>=7.2.6", "furo"]
+docs = [
+    "sphinx",
+    "sphinx-autodoc-typehints",
+    "sphinxcontrib-mermaid",
+    "furo",
+    "added-value",
+    "tomli",
+    "myst-parser",
+]
 
 
-# Ruff config: https://docs.astral.sh/ruff/settings
+# Uv: https://docs.astral.sh/uv/
+[tool.uv]
+default-groups = ["dev"]
+
+
+# Ruff: https://docs.astral.sh/ruff/settings
 [tool.ruff]
 line-length = 100
-target-version = "py312"
+target-version = "py313"
 
 
 [tool.ruff.format]
@@ -60,11 +103,11 @@ ignore = [
 ]
 
 
-# Mypy config: https://mypy.readthedocs.io/en/stable/index.html
+# Mypy: https://mypy.readthedocs.io/en/stable/index.html
 [tool.mypy]
-python_version = "3.12"
+python_version = "3.13"
 strict = true
-files = ["retry"]
+files = ["fastretry"]
 
 warn_unreachable = true
 warn_no_return = true
@@ -73,6 +116,8 @@ strict_equality = true
 extra_checks = true
 warn_return_any = true
 warn_unused_ignores = true
+ignore_missing_imports = true
+local_partial_types = true
 
 show_error_codes = true
 show_error_context = true
@@ -85,39 +130,55 @@ enable_error_code = [
     "mutable-override",
     "unimported-reveal",
     "truthy-bool",
+    "truthy-iterable",
+    "redundant-expr",
+    "possibly-undefined",
+    "redundant-self",
+    "explicit-override",
+    "unimported-reveal",
+    "deprecated",
 ]
 
 
-# Ty config: https://docs.astral.sh/ty/
+# Ty: https://docs.astral.sh/ty/
 [tool.ty.environment]
-python-version = "3.12"
+python-version = "3.13"
 
 
 [tool.ty.src]
-include = ["retry"]
+include = ["fastretry"]
 
 
 [tool.ty.rules]
 all = "error"
 
 
-# Pyrefly config: https://pyrefly.org/
+# Pyrefly: https://pyrefly.org/
 [tool.pyrefly]
-python-version = "3.12"
+python-version = "3.13"
 preset = "strict"
-project-includes = ["retry"]
+project-includes = ["fastretry"]
 
 
-# Pytest
+# Pytest: http://doc.pytest.org/en/latest/customize.html
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+xfail_strict = true
+filterwarnings = ["error"]
 testpaths = ["tests"]
 addopts = [
-    "--cov=retry",
+    "--cov=fastretry",
+    "--cov=tests",
     "--cov-branch",
-    "--cov-report=term-missing",
+    "--cov-report=term-missing:skip-covered",
     "--cov-report=html",
     "--cov-fail-under=100",
     "--strict-markers",
     "--strict-config",
+    "--doctest-modules",
 ]
+
+
+# Coverage: https://coverage.readthedocs.io/
+[tool.coverage.run]
+plugins = ["covdefaults"]
