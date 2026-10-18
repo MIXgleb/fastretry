@@ -15,6 +15,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Tests
 
+## [0.5.2] - 2026-10-18
+
+### Added
+
+- Coverage badge generation via `H3nSte1n/coverage-badge-creator`
+  in CI, with the badge committed to `README.md` automatically.
+- Dependabot configuration for automated updates of GitHub Actions and
+  `uv` dependencies, with auto-merge for patch and minor updates.
+
+### Changed
+
+- `README.md` rewritten with installation, usage examples, options
+  reference, and configuration guide.
+- All keys in `TypedDict` definitions are now `ReadOnly`, preventing
+  accidental mutation.
+
+### Tests
+
+- Added tests verifying that all `TypedDict` keys are `ReadOnly`.
+
 ## [0.5.1] - 2026-10-16
 
 ### Fixed
