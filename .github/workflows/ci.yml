@@ -9,6 +9,8 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     strategy:
       fail-fast: false
       matrix:
@@ -44,3 +46,11 @@ jobs:
 
       - name: Run tests
         run: uv run pytest
+
+      - name: Update coverage badge
+        uses: H3nSte1n/coverage-badge-creator@v2
+        with:
+          format: coverage-py
+          coverage-file-path: ./coverage.json
+          readme-file-path: ./README.md
+          commit: true
