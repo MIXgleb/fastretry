@@ -7,6 +7,9 @@ from collections.abc import (
 from concurrent.futures import (
     Executor,
 )
+from typing import (
+    ReadOnly,
+)
 
 from fastretry._compat.aliases import (
     RetryOnExceptionType,
@@ -31,39 +34,39 @@ from fastretry._utils.logs import (
 
 
 class _RetryOptions[R](TypedDict, total=False):
-    attempts: int | UnsetType
-    return_default_value: R | UnsetType
-    delay: Delay | UnsetType
-    jitter: JitterStrategy | UnsetType
-    disable_logging: bool | UnsetType
-    disable_warnings: bool | UnsetType
-    retry_on: RetryOnExceptionType | UnsetType
-    no_retry_on: RetryOnExceptionType | UnsetType
-    callbacks: RetryCallbacks | UnsetType | None
+    attempts: ReadOnly[int | UnsetType]
+    return_default_value: ReadOnly[R | UnsetType]
+    delay: ReadOnly[Delay | UnsetType]
+    jitter: ReadOnly[JitterStrategy | UnsetType]
+    disable_logging: ReadOnly[bool | UnsetType]
+    disable_warnings: ReadOnly[bool | UnsetType]
+    retry_on: ReadOnly[RetryOnExceptionType | UnsetType]
+    no_retry_on: ReadOnly[RetryOnExceptionType | UnsetType]
+    callbacks: ReadOnly[RetryCallbacks | UnsetType | None]
 
 
 class _RetryDefaultOptions(TypedDict, total=False):
-    attempts: int
-    delay: Delay
-    disable_logging: bool
-    disable_warnings: bool
-    retry_on: RetryOnExceptionType
-    no_retry_on: RetryOnExceptionType
-    on_success: CallbackType | None
-    on_retry: CallbackType | None
-    on_failure: CallbackType | None
-    jitter_for_exponential: JitterStrategy
-    jitter_for_fixed: JitterStrategy
-    sync_sleep_call: Callable[[float], None]
-    async_sleep_call: Callable[[float], Awaitable[None]]
+    attempts: ReadOnly[int]
+    delay: ReadOnly[Delay]
+    disable_logging: ReadOnly[bool]
+    disable_warnings: ReadOnly[bool]
+    retry_on: ReadOnly[RetryOnExceptionType]
+    no_retry_on: ReadOnly[RetryOnExceptionType]
+    on_success: ReadOnly[CallbackType | None]
+    on_retry: ReadOnly[CallbackType | None]
+    on_failure: ReadOnly[CallbackType | None]
+    jitter_for_exponential: ReadOnly[JitterStrategy]
+    jitter_for_fixed: ReadOnly[JitterStrategy]
+    sync_sleep_call: ReadOnly[Callable[[float], None]]
+    async_sleep_call: ReadOnly[Callable[[float], Awaitable[None]]]
 
 
 class _LoggingDefaultOptions(TypedDict, total=False):
-    level_success: LogLevel
-    level_retry: LogLevel
-    level_failure: LogLevel
-    level_sleep: LogLevel
-    traceback_min_level: LogLevel
+    level_success: ReadOnly[LogLevel]
+    level_retry: ReadOnly[LogLevel]
+    level_failure: ReadOnly[LogLevel]
+    level_sleep: ReadOnly[LogLevel]
+    traceback_min_level: ReadOnly[LogLevel]
 
 
 class RetryKwargs[R](

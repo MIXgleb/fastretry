@@ -13,9 +13,12 @@ from collections.abc import (
 )
 from typing import (
     Final,
-    TypedDict,
+    ReadOnly,
 )
 
+from fastretry._compat.nodes import (
+    TypedDict,
+)
 from fastretry._compat.sentinels import (
     UnsetType,
 )
@@ -56,9 +59,9 @@ class RetryCallbacks(TypedDict, total=False):
 
     """
 
-    on_success: CallbackType | None
-    on_retry: CallbackType | None
-    on_failure: CallbackType | None
+    on_success: ReadOnly[CallbackType | None]
+    on_retry: ReadOnly[CallbackType | None]
+    on_failure: ReadOnly[CallbackType | None]
 
 
 @dc.dataclass(frozen=True, slots=True)

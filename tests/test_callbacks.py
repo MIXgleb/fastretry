@@ -198,3 +198,12 @@ def test_failure_no_exception(stats_factory: _STATS_FACTORY_TYPE) -> None:
 def test_noop(stats_factory: _STATS_FACTORY_TYPE) -> None:
     stats = stats_factory()
     noop_callback(stats)
+
+
+def test_callbacks_all_keys_readonly() -> None:
+    assert RetryCallbacks.__readonly_keys__ == frozenset({
+        "on_success",
+        "on_retry",
+        "on_failure",
+    })
+    assert RetryCallbacks.__mutable_keys__ == frozenset()
