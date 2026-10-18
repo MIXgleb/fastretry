@@ -1,7 +1,7 @@
 # fastretry
 
 [![test](https://github.com/MIXgleb/fastretry/actions/workflows/ci.yml/badge.svg)](https://github.com/MIXgleb/fastretry/actions/workflows/ci.yml)
-$coverage$
+![](https://img.shields.io/badge/Coverage-100%25-83A603.svg?prefix=$coverage$)
 [![Python](https://img.shields.io/pypi/pyversions/fastretry)](https://pypi.org/project/fastretry/)
 [![PyPI](https://img.shields.io/pypi/v/fastretry)](https://pypi.org/project/fastretry/)
 
