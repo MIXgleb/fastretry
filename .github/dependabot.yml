@@ -5,6 +5,8 @@ updates:
     schedule:
       interval: daily
       time: "02:00"
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 3
     commit-message:
       prefix: "ci"
