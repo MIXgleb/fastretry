@@ -113,7 +113,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `retry_async` decorator: runs sync and coroutine functions
   asynchronously, always returning a coroutine function. Sync callables
   are executed in an executor so the event loop is not blocked.
-- `executor` option for `retry_async`: pass a `concurrent.futures.Executor` 
+- `executor` option for `retry_async`: pass a `concurrent.futures.Executor`
   instance to use a custom executor.
 - Context variables are propagated to executor threads via
   `contextvars.copy_context`.
