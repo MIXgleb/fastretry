@@ -113,7 +113,7 @@ ignore = [
 [tool.mypy]
 python_version = "3.13"
 strict = true
-files = ["fastretry", "docs"]
+files = ["fastretry"]
 
 warn_unreachable = true
 warn_no_return = true
@@ -152,7 +152,7 @@ python-version = "3.13"
 
 
 [tool.ty.src]
-include = ["fastretry", "docs"]
+include = ["fastretry"]
 
 
 [tool.ty.rules]
@@ -163,7 +163,7 @@ all = "error"
 [tool.pyrefly]
 python-version = "3.13"
 preset = "strict"
-project-includes = ["fastretry", "docs"]
+project-includes = ["fastretry"]
 
 
 # Pytest: http://doc.pytest.org/en/latest/customize.html
