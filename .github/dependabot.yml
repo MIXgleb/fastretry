@@ -3,7 +3,8 @@ updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "monthly"
+      interval: daily
+      time: "02:00"
     open-pull-requests-limit: 3
     commit-message:
       prefix: "ci"
@@ -14,7 +15,8 @@ updates:
   - package-ecosystem: "uv"
     directory: "/"
     schedule:
-      interval: "monthly"
+      interval: daily
+      time: "02:00"
     open-pull-requests-limit: 5
     commit-message:
       prefix: "deps"

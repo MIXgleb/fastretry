@@ -1,0 +1,38 @@
+name: Coverage badge
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: true
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.3.0
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.13
+
+      - name: Install dependencies
+        run: uv sync --locked --dev
+
+      - name: Run tests
+        run: uv run pytest
+
+      - name: Update coverage badge
+        uses: H3nSte1n/coverage-badge-creator@v2.2.0
+        with:
+          format: coverage-py
+          coverage-file-path: ./coverage.json
+          readme-file-path: ./README.md
+          commit: true
