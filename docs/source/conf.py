@@ -5,8 +5,8 @@ import pathlib
 import sys
 import tomllib
 from typing import (
-    Any,
     Final,
+    cast,
     override,
 )
 
@@ -19,9 +19,9 @@ _ROOT: Final[pathlib.Path] = pathlib.Path(__file__).resolve().parent.parent.pare
 sys.path.insert(0, str(_ROOT))
 
 
-def _get_project_meta() -> dict[str, Any]:
+def _get_project_meta() -> dict[str, object]:
     with (_ROOT / "pyproject.toml").open(mode="rb") as pyproject:
-        return tomllib.load(pyproject)["project"]
+        return cast("dict[str, object]", tomllib.load(pyproject)["project"])
 
 
 # -- Project information -----------------------------------------------------
