@@ -1,0 +1,21 @@
+* text=auto eol=lf
+
+*.py text eol=lf
+*.pyi text eol=lf
+
+*.toml text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+*.lock text eol=lf
+.gitattributes text eol=lf
+LICENSE text eol=lf
+
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+*.png binary
+*.jpg binary
+*.whl binary

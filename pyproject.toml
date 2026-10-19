@@ -42,6 +42,7 @@ classifiers = [
 dev = [
     "covdefaults>=2.3.0",
     "mypy>=2.4.0",
+    "pre-commit>=4.7.0",
     "pyrefly>=1.4.0",
     "pytest>=9.1.1",
     "pytest-asyncio>=1.4.0",
@@ -114,6 +115,7 @@ ignore = [
 python_version = "3.13"
 strict = true
 files = ["fastretry"]
+exclude = ["tests/"]
 
 warn_unreachable = true
 warn_no_return = true
@@ -164,7 +166,7 @@ all = "error"
 python-version = "3.13"
 preset = "strict"
 project-includes = ["fastretry"]
-
+project-excludes = ["tests/"]
 
 # Pytest: http://doc.pytest.org/en/latest/customize.html
 [tool.pytest.ini_options]
