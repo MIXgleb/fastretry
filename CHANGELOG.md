@@ -15,6 +15,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Tests
 
+## [0.6.0] - 2026-10-19
+
+### Added
+
+- Sphinx documentation under `docs/source/`:
+  - `conf.py` — Sphinx configuration (Furo theme, napoleon, MyST, autodoc).
+  - `index.md` — landing page, includes `README.md` via MyST.
+  - `api.md` — API reference generated from docstrings.
+- Documentation builds cleanly with `-W` (warnings as errors).
+- `docs` dependency group to `pyproject.toml`.
+- `docs.yml` — builds Sphinx docs on push/PR to `main`, deploys to GitHub Pages on push to `main` via `actions/deploy-pages`.
+- `coverage-badge.yml` — separate workflow that runs tests on Python 3.13, generates `coverage.json`, and updates the coverage badge in `README.md` via `H3nSte1n/coverage-badge-creator`. Runs only on `push` to `main` to avoid concurrent commits from the test matrix.
+
+### Changed
+
+- `ci.yml` — removed `contents: write`, `persist-credentials`, and the `Update coverage badge` step. Tests no longer write to the repository.
+- `dependabot.yml` — daily updates for GitHub Actions and `uv` dependencies at 02:00 UTC.
+- `.gitignore` — added `coverage.json`
+
 ## [0.5.3] - 2026-10-18
 
 ### Added
