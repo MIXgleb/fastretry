@@ -112,10 +112,10 @@ def retry[**P, R](  # ruff: ignore[undocumented-param]
     selected automatically.
 
     To run a sync function in an executor from async code, use
-    :func:`~fastretry._retry.retry_async` instead.
+    :func:`~fastretry.retry_async` instead.
 
     Options not passed explicitly fall back to the global retry
-    defaults (see :attr:`~fastretry._config.config.retry`). The factory
+    defaults (see ``config.retry``). The factory
     values are listed below.
 
     Parameters
@@ -317,7 +317,7 @@ def retry_async[**P, R](  # ruff: ignore[undocumented-param]
     but without the boilerplate and with copied context.
 
     Options not passed explicitly fall back to the global retry
-    defaults (see :attr:`~fastretry._config.config.retry`). The factory
+    defaults (see ``config.retry``). The factory
     values are listed below.
 
     Parameters
@@ -348,7 +348,7 @@ def retry_async[**P, R](  # ruff: ignore[undocumented-param]
         ``retry_on``. Takes precedence. Defaults to ``()``.
     callbacks : RetryCallbacks | None, ``optional``
         Mapping of retry lifecycle callbacks, same as in
-        :func:`~fastretry._retry.retry`.
+        :func:`~fastretry.retry`.
     executor : Executor | None, ``optional``
         Executor used to run sync functions in an async context.
         When omitted (``UNSET``), the running loop's default thread
@@ -365,7 +365,7 @@ def retry_async[**P, R](  # ruff: ignore[undocumented-param]
 
     Notes
     -----
-    See :func:`~fastretry._retry.retry` for failure handling and exception
+    See :func:`~fastretry.retry` for failure handling and exception
     group semantics. This decorator only changes how the wrapped
     callable is invoked, not how retries are handled.
 
