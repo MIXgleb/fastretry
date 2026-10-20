@@ -215,3 +215,51 @@ Exceptions that do **not** match `retry_on` (or match `no_retry_on`)
 are not retried and propagate immediately. With the default
 configuration, this includes `KeyboardInterrupt`, `SystemExit`, and
 `asyncio.CancelledError`.
+
+## Development
+
+This project uses `uv` for dependency management and `just` as a task runner.
+
+### Prerequisites
+
+Install `uv` and `just`:
+
+```bash
+# uv (Python package manager)
+pip install uv
+
+# just (task runner)
+uv tool install rust-just
+```
+
+### Common Commands
+
+All development tasks are available via `just`. Run `just` without arguments to see the full list.
+
+```bash
+just ci             # run all checks (used by CI)
+just check          # run all linters and type checks
+just format         # format code with ruff
+just format-check   # format code without modifying with ruff
+just ruff           # lint with ruff
+just mypy           # type check with mypy
+just pyrefly        # type check with pyrefly
+just test           # run tests with coverage
+just test-fast      # run tests without coverage (fast)
+just docs           # build documentation locally
+just docs-no-warn   # build documentation locally without failing on warnings
+just build          # build wheel and sdist
+just sync           # sync dependencies
+just update         # update dependencies
+just clean          # clean build artifacts and caches
+```
+
+### Pre-commit hooks
+
+The project uses `pre-commit` to run checks before each commit:
+
+```bash
+uv run pre-commit install
+```
+
+After installation, `ruff`, `mypy`, `pyrefly`, and other hooks will run automatically on `git commit`.
