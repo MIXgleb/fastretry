@@ -15,6 +15,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Tests
 
+## [0.6.1] - 2026-10-20
+
+### Added
+
+- `pre-commit` configuration and hooks for `ruff`, `mypy`, `pyrefly`, and other checks.
+- `update-pre-commit.yml` workflow for automatic hook updates.
+- `justfile` with common development tasks (`format`, `lint`, `test`, `docs`, `build`, etc.).
+- Renovate configuration (`renovate.json`) for automated dependency updates, replacing Dependabot.
+- Read the Docs (RTD) configuration (`.readthedocs.yaml`) and project setup.
+
+### Changed
+
+- **Breaking (docs):** moved documentation from GitHub Pages to Read the Docs. GitHub Pages and `docs.yml` workflow removed.
+- Removed Dependabot configuration and its auto-merge workflow.
+- Improved warning messages for type mismatch in `return_default_value` and swallowed exceptions in callbacks.
+
+### Fixed
+
+- Documentation API reference now lists `retry` and `retry_async` first, before other symbols.
+
 ## [0.6.0] - 2026-10-19
 
 ### Added
