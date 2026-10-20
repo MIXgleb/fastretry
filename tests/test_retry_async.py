@@ -70,10 +70,7 @@ async def test_all_fail() -> None:
 
 
 async def test_return_default_value() -> None:
-    with pytest.warns(
-        expected_warning=UserWarning,
-        match="return_default_value 99 does not match the declared return type",
-    ):
+    with pytest.warns(expected_warning=UserWarning, match="Type mismatch for"):
 
         @retry(attempts=1, delay=0, return_default_value=99)
         async def fn() -> NoReturn:

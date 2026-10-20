@@ -24,10 +24,7 @@ def test_zero_attempts() -> None:
 
 
 def test_return_none_as_default() -> None:
-    with pytest.warns(
-        expected_warning=UserWarning,
-        match="return_default_value None does not match the declared return type",
-    ):
+    with pytest.warns(expected_warning=UserWarning, match="Type mismatch for"):
 
         @retry(attempts=1, delay=0, return_default_value=None)
         def fn() -> NoReturn:

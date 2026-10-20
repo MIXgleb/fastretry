@@ -66,10 +66,7 @@ def test_all_attempts_fail() -> None:
 
 
 def test_return_default_value() -> None:
-    with pytest.warns(
-        expected_warning=UserWarning,
-        match="return_default_value 42 does not match the declared return type",
-    ):
+    with pytest.warns(expected_warning=UserWarning, match="Type mismatch for"):
 
         @retry(attempts=2, delay=0, return_default_value=42)
         def fn() -> NoReturn:

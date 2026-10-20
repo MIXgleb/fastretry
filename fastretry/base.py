@@ -350,11 +350,14 @@ class BaseRetrying[
 
             if type_checker.matches_return_hint(self.return_default_value) is False:
                 self._warnings.warn(
-                    f"\n\treturn_default_value {self.return_default_value!r} does not match "
-                    f"the declared return type {type_checker.return_hint!r} "
-                    f"of '{getattr(func, '__qualname__', '<anonymous>')}'.\n\t"
-                    f"Set return_default_value to a value compatible with the function's "
-                    f"return type to avoid returning an unexpected type.",
+                    f"Type mismatch for '{getattr(func, '__qualname__', '<anonymous>')}'.\n\t"
+                    f"The declared return type is {type_checker.return_hint!r}, but you passed "
+                    f"return_default_value={self.return_default_value!r}.\n\t"
+                    f"If all attempts fail, the wrapper will return {self.return_default_value!r} "
+                    f"instead of raising, which may break callers expecting "
+                    f"{type_checker.return_hint!r}.\n\t"
+                    f"Either pass a value of the correct type or remove return_default_value "
+                    f"to re-raise the exception.",
                     stacklevel=4,
                 )
 
@@ -542,10 +545,12 @@ class BaseRetrying[
             extra=extra,
         ):
             self._warnings.warn(
-                f"\n\tNo logger available for swallowed exception in {operation}: "
-                f"{exc!r}.\n\t"
-                f"The failure log level is disabled; "
-                f"falling back to a warning.",
+                f"Swallowed exception in {operation!r}: {exc!r}.\n\t"
+                f"Logging is disabled or the 'failure' log level is OFF, so this "
+                f"warning is shown instead.\n\t"
+                f"To see these messages in the log, call "
+                f"config.logging(level_failure=LogLevel.WARNING) "
+                f"or remove disable_logging=True.",
                 stacklevel=5,
             )
 

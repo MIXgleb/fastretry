@@ -221,7 +221,7 @@ def test_abstract_wrap_raises() -> None:
 def test_disabled_log_swallowed() -> None:
     config.logging(level_failure=LogLevel.OFF)
 
-    with pytest.warns(UserWarning, match="No logger available for swallowed exception"):
+    with pytest.warns(UserWarning, match="Logging is disabled or the 'failure' log level is OFF"):
         SyncRetrying()._log_swallowed(operation="test call", exc=AssertionError, extra={})
 
 
@@ -231,16 +231,13 @@ def test_log_swallowed_falls_back_to_warning() -> None:
         disable_logging=True,
     )
 
-    with pytest.warns(UserWarning, match="The failure log level is disabled;"):
+    with pytest.warns(UserWarning, match="Logging is disabled or the 'failure' log level is OFF"):
         r._log_swallowed(operation="test", exc=ValueError("x"), extra={})
 
 
 def test_validate_return_type_is_false() -> None:
 
-    with pytest.warns(
-        expected_warning=UserWarning,
-        match="return_default_value None does not match the declared return type",
-    ):
+    with pytest.warns(expected_warning=UserWarning, match="Type mismatch for"):
 
         @retry(return_default_value=None)
         def fn() -> int:
