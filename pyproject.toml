@@ -36,6 +36,7 @@ classifiers = [
 "Bug Tracker" = "https://github.com/MIXgleb/fastretry/issues"
 "Changelog" = "https://github.com/MIXgleb/fastretry/blob/main/CHANGELOG.md"
 "Source" = "https://github.com/MIXgleb/fastretry"
+"Documentation" = "https://fastretry.readthedocs.io/"
 
 
 [dependency-groups]
