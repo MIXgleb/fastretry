@@ -138,13 +138,11 @@ enable_error_code = [
     "truthy-bool",
     "mutable-override",
     "unimported-reveal",
-    "truthy-bool",
     "truthy-iterable",
     "redundant-expr",
     "possibly-undefined",
     "redundant-self",
     "explicit-override",
-    "unimported-reveal",
     "deprecated",
 ]
 
