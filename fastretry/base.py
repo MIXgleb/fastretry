@@ -253,8 +253,6 @@ class BaseRetrying[
             global_options=GlobalOptions(
                 jitter_for_exponential=self._effective_defaults.jitter_for_exponential,
                 jitter_for_fixed=self._effective_defaults.jitter_for_fixed,
-                sync_sleep_call=self._effective_defaults.sync_sleep_call,
-                async_sleep_call=self._effective_defaults.async_sleep_call,
                 traceback_min_level=self._traceback_min_level,
                 unwrap_single_exception=self._unwrap_single_exception,
             ),
@@ -280,7 +278,6 @@ class BaseRetrying[
             f"return_default_value={self.return_default_value!r},\n\t"
             f"delay={self.delay!r},\n\t"
             f"jitter={self.jitter!r},\n\t"
-            f"sleep_call={getattr(self, 'sleep_call', None)!r},\n\t"
             f"re_raise_exception={self._re_raise_exception!r},\n\t"
             f"disable_logging={self.disable_logging!r},\n\t"
             f"disable_warnings={self.disable_warnings!r},\n\t"

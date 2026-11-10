@@ -1,9 +1,5 @@
 """Shared type definitions for the retry package."""
 
-from collections.abc import (
-    Awaitable,
-    Callable,
-)
 from concurrent.futures import (
     Executor,
 )
@@ -58,8 +54,6 @@ class _RetryDefaultOptions(TypedDict, total=False):
     on_failure: ReadOnly[CallbackType | None]
     jitter_for_exponential: ReadOnly[JitterStrategy]
     jitter_for_fixed: ReadOnly[JitterStrategy]
-    sync_sleep_call: ReadOnly[Callable[[float], None]]
-    async_sleep_call: ReadOnly[Callable[[float], Awaitable[None]]]
 
 
 class _LoggingDefaultOptions(TypedDict, total=False):

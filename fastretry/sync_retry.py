@@ -9,16 +9,11 @@ from collections.abc import (
     Callable,
 )
 from typing import (
-    Final,
-    Unpack,
     override,
 )
 
 from fastretry._compat.sentinels import (
     UnsetType,
-)
-from fastretry._types import (
-    RetryKwargs,
 )
 from fastretry._utils.callbacks import (
     CallbackType,
@@ -45,17 +40,7 @@ class SyncRetrying[**P, R](
 
     """
 
-    __slots__ = ("sleep_call",)
-
     wrapper_kind = "sync"
-
-    @override
-    def __init__(
-        self,
-        **kwargs: Unpack[RetryKwargs[R]],
-    ) -> None:
-        super().__init__(**kwargs)
-        self.sleep_call: Final[Callable[[float], None]] = self._effective_defaults.sync_sleep_call
 
     @override
     def _wrap(
@@ -116,14 +101,7 @@ class SyncRetrying[**P, R](
         if isinstance(stats_attempt.computed_delay, UnsetType) or stats_attempt.computed_delay <= 0:
             return
 
-        try:
-            self.sleep_call(stats_attempt.computed_delay)
-        except Exception as exc:  # ruff: ignore[blind-except]
-            self._log_swallowed(
-                operation="sleep callable",
-                exc=exc,
-                extra=stats.log_extra,
-            )
+        time.sleep(stats_attempt.computed_delay)
 
     @override
     def _call_callback(

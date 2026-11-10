@@ -83,10 +83,6 @@ class _RetryNamespace:
         jitter_for_fixed : JitterStrategy, ``optional``
             Default jitter strategy for fixed delay,
             by default ``"none"``.
-        sync_sleep_call : Callable[[float], None], ``optional``
-            Default sync sleep callable, by default :func:`time.sleep`.
-        async_sleep_call : Callable[[float], Awaitable[None]], ``optional``
-            Default async sleep callable, by default :func:`asyncio.sleep`.
 
         """
         get_defaults().set(**kwargs)

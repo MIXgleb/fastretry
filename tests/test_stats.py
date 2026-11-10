@@ -37,8 +37,6 @@ def _make_stats(attempt: AttemptState, attempts: int = 3) -> RetryStats:
         global_options=GlobalOptions(
             jitter_for_exponential="none",
             jitter_for_fixed="none",
-            sync_sleep_call=lambda _: None,
-            async_sleep_call=lambda _: None,
             traceback_min_level=LogLevel.ERROR,
             unwrap_single_exception=False,
         ),
@@ -87,8 +85,6 @@ def test_global_fields() -> None:
     opts = GlobalOptions(
         jitter_for_exponential="none",
         jitter_for_fixed="none",
-        sync_sleep_call=lambda _: None,
-        async_sleep_call=lambda _: None,
         traceback_min_level=LogLevel.ERROR,
         unwrap_single_exception=False,
     )

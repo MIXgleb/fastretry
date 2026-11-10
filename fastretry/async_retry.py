@@ -6,12 +6,9 @@ import functools
 import inspect
 import time
 from collections.abc import (
-    Awaitable,
     Callable,
 )
 from typing import (
-    Final,
-    Unpack,
     override,
 )
 
@@ -24,9 +21,6 @@ from fastretry._compat.functions import (
 )
 from fastretry._compat.sentinels import (
     UnsetType,
-)
-from fastretry._types import (
-    RetryWithExecutorKwargs,
 )
 from fastretry._utils.callbacks import (
     CallbackType,
@@ -60,19 +54,7 @@ class AsyncRetrying[**P, R](
 
     """
 
-    __slots__ = ("sleep_call",)
-
     wrapper_kind = "async"
-
-    @override
-    def __init__(
-        self,
-        **kwargs: Unpack[RetryWithExecutorKwargs[R]],
-    ) -> None:
-        super().__init__(**kwargs)
-        self.sleep_call: Final[Callable[[float], Awaitable[None]]] = (
-            self._effective_defaults.async_sleep_call
-        )
 
     @override
     def _wrap(
@@ -136,14 +118,7 @@ class AsyncRetrying[**P, R](
         if isinstance(stats_attempt.computed_delay, UnsetType) or stats_attempt.computed_delay <= 0:
             return
 
-        try:
-            await self.sleep_call(stats_attempt.computed_delay)
-        except Exception as exc:  # ruff: ignore[blind-except]
-            self._log_swallowed(
-                operation="sleep callable",
-                exc=exc,
-                extra=stats.log_extra,
-            )
+        await asyncio.sleep(stats_attempt.computed_delay)
 
     @override
     async def _call_callback(

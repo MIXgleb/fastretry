@@ -1,13 +1,7 @@
 """Global configuration for retry defaults and logging."""
 
-import asyncio
 import contextvars
 import dataclasses as dc
-import time
-from collections.abc import (
-    Awaitable,
-    Callable,
-)
 from typing import (
     Final,
     Unpack,
@@ -49,14 +43,11 @@ class _Defaults:
     on_failure: CallbackType | None = default_on_failure
     retry_on: RetryOnExceptionType = Exception
     no_retry_on: RetryOnExceptionType = ()
-    unwrap_single_exception: bool = False
 
     # --- global options (application-wide) ---
     jitter_for_exponential: JitterStrategy = "none"
     jitter_for_fixed: JitterStrategy = "none"
-
-    sync_sleep_call: Callable[[float], None] = time.sleep
-    async_sleep_call: Callable[[float], Awaitable[None]] = asyncio.sleep
+    unwrap_single_exception: bool = False
 
     # --- logging ---
     level_success: LogLevel = LogLevel.OFF

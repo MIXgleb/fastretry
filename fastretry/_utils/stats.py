@@ -3,8 +3,6 @@
 import dataclasses as dc
 import traceback
 from collections.abc import (
-    Awaitable,
-    Callable,
     Mapping,
 )
 from concurrent.futures import (
@@ -83,10 +81,6 @@ class GlobalOptions:
         Default jitter strategy for exponential delay.
     jitter_for_fixed : JitterStrategy
         Default jitter strategy for fixed delay.
-    sync_sleep_call : Callable[[float], None]
-        Sync callable used to sleep between attempts.
-    async_sleep_call : Callable[[float], Awaitable[None]]
-        Async callable used to sleep between attempts.
     traceback_min_level : LogLevel
         Minimum level at which a traceback is attached to the log record.
         Messages below this level are logged without traceback.
@@ -99,9 +93,6 @@ class GlobalOptions:
 
     jitter_for_exponential: JitterStrategy
     jitter_for_fixed: JitterStrategy
-
-    sync_sleep_call: Callable[[float], None]
-    async_sleep_call: Callable[[float], Awaitable[None]]
 
     traceback_min_level: LogLevel
     unwrap_single_exception: bool

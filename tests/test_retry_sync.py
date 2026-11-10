@@ -12,9 +12,6 @@ from unittest.mock import (
 )
 
 import pytest
-from pytest_mock import (
-    MockerFixture,
-)
 
 from fastretry._config import (
     config,
@@ -354,22 +351,3 @@ def test_async_callback_in_running_loop() -> None:
         assert results == [1]
 
     asyncio.run(main())
-
-
-def test_sleep_callable_raises(mocker: MockerFixture) -> None:
-    def bad_sleep(_: float) -> None:
-        msg = "sleep error"
-        raise RuntimeError(msg)
-
-    mock_log_swallowed = mocker.patch("fastretry.base.BaseRetrying._log_swallowed")
-    config.retry(sync_sleep_call=bad_sleep)
-
-    @retry(attempts=2, delay=1)
-    def fn() -> Literal[1]:
-        raise ValueError
-
-    with pytest.raises(ExceptionGroup):
-        fn()
-
-    mock_log_swallowed.assert_called_once()
-    assert mock_log_swallowed.call_args.kwargs["operation"] == "sleep callable"

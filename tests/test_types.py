@@ -83,8 +83,6 @@ def test_retry_defaults_kwargs_keys() -> None:
     assert "on_failure" in d
     assert "jitter_for_exponential" in d
     assert "jitter_for_fixed" in d
-    assert "sync_sleep_call" in d
-    assert "async_sleep_call" in d
 
 
 def test_logging_kwargs_keys() -> None:
@@ -112,8 +110,6 @@ def test_defaults_kwargs_combines() -> None:
     assert "on_failure" in d
     assert "jitter_for_exponential" in d
     assert "jitter_for_fixed" in d
-    assert "sync_sleep_call" in d
-    assert "async_sleep_call" in d
     assert "level_success" in d
     assert "level_retry" in d
     assert "level_failure" in d
@@ -151,8 +147,6 @@ def test_retry_default_options_all_keys_readonly() -> None:
         "on_failure",
         "jitter_for_exponential",
         "jitter_for_fixed",
-        "sync_sleep_call",
-        "async_sleep_call",
     })
     assert _RetryDefaultOptions.__mutable_keys__ == frozenset()
 
