@@ -49,6 +49,7 @@ class _Defaults:
     on_failure: CallbackType | None = default_on_failure
     retry_on: RetryOnExceptionType = Exception
     no_retry_on: RetryOnExceptionType = ()
+    unwrap_single_exception: bool = False
 
     # --- global options (application-wide) ---
     jitter_for_exponential: JitterStrategy = "none"

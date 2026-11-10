@@ -191,6 +191,12 @@ def retry[**P, R](  # ruff: ignore[undocumented-param]
       single failed attempt still produces a group with one member, so
       the failure type is always the same.
 
+    Set ``config.retry(unwrap_single_exception=True)`` to re-raise a
+    failure with exactly one collected exception as is, without wrapping
+    it in a group. Two or more collected exceptions still produce a group.
+    This is handy when migrating from libraries that re-raise the original
+    exception.
+
     By default, ``retry_on`` is ``Exception`` and ``no_retry_on`` is
     ``()``, so every caught exception is a subclass of :exc:`Exception`
     and the wrapper raises a standard :exc:`ExceptionGroup`. Catch it

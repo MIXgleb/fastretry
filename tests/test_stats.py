@@ -40,6 +40,7 @@ def _make_stats(attempt: AttemptState, attempts: int = 3) -> RetryStats:
             sync_sleep_call=lambda _: None,
             async_sleep_call=lambda _: None,
             traceback_min_level=LogLevel.ERROR,
+            unwrap_single_exception=False,
         ),
         call=CallOptions(),
         attempt=attempt,
@@ -89,8 +90,10 @@ def test_global_fields() -> None:
         sync_sleep_call=lambda _: None,
         async_sleep_call=lambda _: None,
         traceback_min_level=LogLevel.ERROR,
+        unwrap_single_exception=False,
     )
     assert opts.traceback_min_level == LogLevel.ERROR
+    assert opts.unwrap_single_exception is False
 
 
 def test_call_defaults() -> None:

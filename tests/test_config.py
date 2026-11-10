@@ -22,6 +22,13 @@ def test_retry_sets_global() -> None:
     assert global_defaults.attempts == 7
 
 
+def test_retry_sets_unwrap_single_exception() -> None:
+    config.retry(unwrap_single_exception=True)
+    assert global_defaults.unwrap_single_exception is True
+    config.retry(unwrap_single_exception=False)
+    assert global_defaults.unwrap_single_exception is False
+
+
 def test_logging_sets_global() -> None:
     config.logging(level_retry=LogLevel.INFO)
     assert global_defaults.level_retry == LogLevel.INFO

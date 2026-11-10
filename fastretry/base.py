@@ -88,6 +88,7 @@ class BaseRetrying[
         "_re_raise_exception",
         "_stats",
         "_traceback_min_level",
+        "_unwrap_single_exception",
         "_warnings",
         "attempts",
         "callbacks",
@@ -206,6 +207,9 @@ class BaseRetrying[
             passed=no_retry_on,
             default=self._effective_defaults.no_retry_on,
         )
+        self._unwrap_single_exception: Final[bool] = (
+            self._effective_defaults.unwrap_single_exception
+        )
         self.executor: Final[Executor | None] = self._resolve(
             passed=executor,
             default=None,
@@ -252,6 +256,7 @@ class BaseRetrying[
                 sync_sleep_call=self._effective_defaults.sync_sleep_call,
                 async_sleep_call=self._effective_defaults.async_sleep_call,
                 traceback_min_level=self._traceback_min_level,
+                unwrap_single_exception=self._unwrap_single_exception,
             ),
             call=CallOptions(),
             attempt=AttemptState(),
@@ -281,6 +286,7 @@ class BaseRetrying[
             f"disable_warnings={self.disable_warnings!r},\n\t"
             f"retry_on={self.retry_on!r},\n\t"
             f"no_retry_on={self.no_retry_on!r},\n\t"
+            f"unwrap_single_exception={self._unwrap_single_exception!r},\n\t"
             f"level_success={self._level_success!r},\n\t"
             f"level_retry={self._level_retry!r},\n\t"
             f"level_failure={self._level_failure!r},\n\t"
@@ -642,7 +648,12 @@ class BaseRetrying[
         stats_attempt: AttemptState,
     ) -> None:
         """
-        Raise a single exception group if re-raising is enabled.
+        Re-raise the failure if re-raising is enabled.
+
+        When exactly one exception was collected and
+        :attr:`~fastretry._utils.stats.GlobalOptions.unwrap_single_exception`
+        is enabled, that exception is raised as is. Otherwise all collected
+        exceptions are raised together, in the order they were raised.
 
         Parameters
         ----------
@@ -658,16 +669,21 @@ class BaseRetrying[
             exceptions are subclasses of :exc:`Exception`.
 
         """
-        if self._re_raise_exception and stats_attempt.exceptions:
-            if stats_attempt.retry_aborted:
-                msg = (
-                    f"Retry aborted after {stats_attempt.retry_index} attempt(s): "
-                    f"exception is not retryable"
-                )
-            else:
-                msg = f"All {stats_attempt.retry_index} attempts failed"
+        if not self._re_raise_exception or not stats_attempt.exceptions:
+            return
 
-            raise BaseExceptionGroup(msg, stats_attempt.exceptions)
+        if len(stats_attempt.exceptions) == 1 and self._unwrap_single_exception:
+            raise stats_attempt.exceptions[0]
+
+        if stats_attempt.retry_aborted:
+            msg = (
+                f"Retry aborted after {stats_attempt.retry_index} attempt(s): "
+                f"exception is not retryable"
+            )
+        else:
+            msg = f"All {stats_attempt.retry_index} attempts failed"
+
+        raise BaseExceptionGroup(msg, stats_attempt.exceptions)
 
     @final
     def _derive_jitter(

@@ -85,6 +85,54 @@ def test_no_return_default_raises() -> None:
         fn()
 
 
+def test_unwrap_single_exception() -> None:
+    config.retry(unwrap_single_exception=True)
+
+    @retry(attempts=1, delay=0)
+    def fn() -> NoReturn:
+        msg = "boom"
+        raise ValueError(msg)
+
+    with pytest.raises(ValueError, match="boom"):
+        fn()
+
+
+def test_unwrap_single_exception_multiple_failures() -> None:
+    config.retry(unwrap_single_exception=True)
+
+    @retry(attempts=3, delay=0)
+    def fn() -> NoReturn:
+        raise ValueError
+
+    with pytest.raises(ExceptionGroup) as exc_info:
+        fn()
+
+    assert len(exc_info.value.exceptions) == 3
+
+
+def test_unwrap_single_exception_aborted() -> None:
+    config.retry(unwrap_single_exception=True)
+
+    @retry(attempts=5, delay=0, no_retry_on=ValueError)
+    def fn() -> NoReturn:
+        msg = "not retryable"
+        raise ValueError(msg)
+
+    with pytest.raises(ValueError, match="not retryable"):
+        fn()
+
+
+def test_unwrap_single_exception_disabled_by_default() -> None:
+    @retry(attempts=1, delay=0)
+    def fn() -> NoReturn:
+        raise ValueError
+
+    with pytest.raises(ExceptionGroup) as exc_info:
+        fn()
+
+    assert len(exc_info.value.exceptions) == 1
+
+
 def test_args_kwargs_forwarded() -> None:
     @retry(attempts=1, delay=0)
     def fn(a: int, b: int = 2) -> int:

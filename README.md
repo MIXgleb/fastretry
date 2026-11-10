@@ -237,6 +237,33 @@ except* ValueError as eg:
         ...
 ```
 
+### Re-raise the single exception as is
+
+Migration helper for code coming from `tenacity` or `backoff`, where
+callers expect the original exception. Enable it globally:
+
+```python
+from fastretry import config
+
+config.retry(unwrap_single_exception=True)
+```
+
+Now a failure with exactly one collected exception is re-raised
+directly, so regular `except` blocks work:
+
+```python
+@retry(attempts=1)
+def fetch() -> bytes: ...
+
+
+try:
+    fetch()
+except ValueError:
+    ...
+```
+
+Two or more collected exceptions still produce an exception group.
+
 Exceptions that do **not** match `retry_on` (or match `no_retry_on`)
 are not retried and propagate immediately. With the default
 configuration, this includes `KeyboardInterrupt`, `SystemExit`, and

@@ -90,6 +90,10 @@ class GlobalOptions:
     traceback_min_level : LogLevel
         Minimum level at which a traceback is attached to the log record.
         Messages below this level are logged without traceback.
+    unwrap_single_exception : bool
+        If ``True``, a failure with exactly one collected exception
+        re-raises that exception as is instead of wrapping it in an
+        exception group.
 
     """
 
@@ -100,6 +104,7 @@ class GlobalOptions:
     async_sleep_call: Callable[[float], Awaitable[None]]
 
     traceback_min_level: LogLevel
+    unwrap_single_exception: bool
 
 
 @dc.dataclass(frozen=True, slots=True, repr=False)

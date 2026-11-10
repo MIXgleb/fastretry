@@ -52,6 +52,7 @@ class _RetryDefaultOptions(TypedDict, total=False):
     disable_warnings: ReadOnly[bool]
     retry_on: ReadOnly[RetryOnExceptionType]
     no_retry_on: ReadOnly[RetryOnExceptionType]
+    unwrap_single_exception: ReadOnly[bool]
     on_success: ReadOnly[CallbackType | None]
     on_retry: ReadOnly[CallbackType | None]
     on_failure: ReadOnly[CallbackType | None]

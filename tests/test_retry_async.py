@@ -69,6 +69,31 @@ async def test_all_fail() -> None:
     assert len(exc_info.value.exceptions) == 2
 
 
+async def test_unwrap_single_exception() -> None:
+    config.retry(unwrap_single_exception=True)
+
+    @retry(attempts=1, delay=0)
+    async def fn() -> NoReturn:
+        msg = "boom"
+        raise ValueError(msg)
+
+    with pytest.raises(ValueError, match="boom"):
+        await fn()
+
+
+async def test_unwrap_single_exception_multiple_failures() -> None:
+    config.retry(unwrap_single_exception=True)
+
+    @retry(attempts=2, delay=0)
+    async def fn() -> NoReturn:
+        raise ValueError
+
+    with pytest.raises(ExceptionGroup) as exc_info:
+        await fn()
+
+    assert len(exc_info.value.exceptions) == 2
+
+
 async def test_return_default_value() -> None:
     with pytest.warns(expected_warning=UserWarning, match="Type mismatch for"):
 

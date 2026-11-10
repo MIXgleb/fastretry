@@ -77,6 +77,7 @@ def test_retry_defaults_kwargs_keys() -> None:
     assert "disable_warnings" in d
     assert "retry_on" in d
     assert "no_retry_on" in d
+    assert "unwrap_single_exception" in d
     assert "on_success" in d
     assert "on_retry" in d
     assert "on_failure" in d
@@ -105,6 +106,7 @@ def test_defaults_kwargs_combines() -> None:
     assert "disable_warnings" in d
     assert "retry_on" in d
     assert "no_retry_on" in d
+    assert "unwrap_single_exception" in d
     assert "on_success" in d
     assert "on_retry" in d
     assert "on_failure" in d
@@ -143,6 +145,7 @@ def test_retry_default_options_all_keys_readonly() -> None:
         "disable_warnings",
         "retry_on",
         "no_retry_on",
+        "unwrap_single_exception",
         "on_success",
         "on_retry",
         "on_failure",

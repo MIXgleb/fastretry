@@ -77,6 +77,7 @@ def stats_factory() -> _STATS_FACTORY_TYPE:
                 sync_sleep_call=lambda _: None,
                 async_sleep_call=lambda _: None,
                 traceback_min_level=0,
+                unwrap_single_exception=False,
             ),
             call=CallOptions(),
             attempt=attempt,

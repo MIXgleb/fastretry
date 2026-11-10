@@ -62,6 +62,12 @@ class _RetryNamespace:
         no_retry_on : type[BaseException] | tuple[type[BaseException], ...], ``optional``
             Exception types that are never retried, even if they match
             ``retry_on``. Takes precedence. Defaults to ``()``.
+        unwrap_single_exception : bool, ``optional``
+            Re-raise the single collected exception as is instead of
+            wrapping it in an exception group. When two or more exceptions
+            were collected, an exception group is still raised. Useful when
+            migrating from libraries that re-raise the original exception,
+            by default False.
         on_success : CallbackType | None, ``optional``
             Default callback invoked after a successful attempt,
             by default :func:`~fastretry._utils.callbacks.default_on_success`.
