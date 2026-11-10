@@ -117,6 +117,7 @@ def test_defaults_kwargs_combines() -> None:
     assert "level_failure" in d
     assert "level_sleep" in d
     assert "traceback_min_level" in d
+    assert "install_default_handler" in d
 
 
 def test_retry_options_all_keys_readonly() -> None:
@@ -160,5 +161,6 @@ def test_logging_default_options_all_keys_readonly() -> None:
         "level_failure",
         "level_sleep",
         "traceback_min_level",
+        "install_default_handler",
     })
     assert _LoggingDefaultOptions.__mutable_keys__ == frozenset()

@@ -286,6 +286,7 @@ class BaseRetrying[
             f"level_failure={self._level_failure!r},\n\t"
             f"level_sleep={self._level_sleep!r},\n\t"
             f"traceback_min_level={self._traceback_min_level!r},\n\t"
+            f"install_default_handler={self._effective_defaults.install_default_handler!r},\n\t"
             f"callbacks={self.callbacks!r},\n\t"
             f"executor={self.executor!r},\n\t"
             f")"
@@ -311,6 +312,7 @@ class BaseRetrying[
             traceback_min_level=self._traceback_min_level,
             disable_logging=self.disable_logging,
             disable_warnings=self.disable_warnings,
+            install_default_handler=self._effective_defaults.install_default_handler,
         )
 
     @final

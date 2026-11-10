@@ -176,8 +176,34 @@ Restores all defaults to their factory values. Useful in tests.
 ## Logging
 
 Logging is handled by the standard `logging` module through a logger
-named `"retry"`, which writes to stdout (falling back to stderr) by
-default.
+named `"retry"`.
+
+A console handler writing to `sys.stderr` is installed automatically on
+the first log message, so retry warnings and failures are visible
+without any setup:
+
+```python
+from fastretry import retry
+
+
+@retry(attempts=3)
+def fetch() -> bytes: ...
+```
+
+To take full control, configure `logging` in your application
+(`logging.basicConfig()`, `logging.dictConfig()`, or a handler on the
+`"retry"` logger). Once the `"retry"` logger or any of its ancestors has
+handlers, the built-in handler is **not** installed and your
+configuration is used as is. The decision is taken on the first log
+message, so configure `logging` during application startup.
+
+To keep the package completely silent until you configure `logging`.
+
+```python
+from fastretry import config
+
+config.logging(install_default_handler=False)
+```
 
 Each log kind has its own level:
 

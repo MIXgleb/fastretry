@@ -64,6 +64,7 @@ class _Defaults:
     level_sleep: LogLevel = LogLevel.OFF
 
     traceback_min_level: LogLevel = LogLevel.ERROR
+    install_default_handler: bool = True
 
     @final
     def set(

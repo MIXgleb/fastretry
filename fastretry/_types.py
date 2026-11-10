@@ -67,6 +67,7 @@ class _LoggingDefaultOptions(TypedDict, total=False):
     level_failure: ReadOnly[LogLevel]
     level_sleep: ReadOnly[LogLevel]
     traceback_min_level: ReadOnly[LogLevel]
+    install_default_handler: ReadOnly[bool]
 
 
 class RetryKwargs[R](

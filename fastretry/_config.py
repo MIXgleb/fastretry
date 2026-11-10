@@ -101,6 +101,19 @@ class _LoggingNamespace:
         Logging is handled by the standard :mod:`logging` module
         through a single logger named ``"retry"``.
 
+        By default, a console handler writing to :data:`sys.stderr` is
+        installed on the first log record, so messages are visible in the
+        console without any setup. The handler is used only when neither
+        the ``"retry"`` logger nor any of its ancestors has handlers, and
+        the decision is taken once per process. Once the application
+        configures :mod:`logging` (:func:`logging.basicConfig`,
+        :func:`logging.config.dictConfig`, or a handler attached to the
+        ``"retry"`` logger), the built-in handler is not installed and the
+        application configuration is used as is.
+
+        To keep the package silent until :mod:`logging` is configured,
+        pass ``install_default_handler=False``.
+
         Each log kind has its own level. Set a level to
         :attr:`~fastretry._utils.logs.LogLevel.OFF` to disable that kind.
 
@@ -121,6 +134,14 @@ class _LoggingNamespace:
         traceback_min_level : LogLevel, ``optional``
             Minimum level at which a traceback is attached to the log
             record, by default :attr:`~fastretry._utils.logs.LogLevel.ERROR`.
+        install_default_handler : bool, ``optional``
+            Whether to install the built-in console handler on the
+            ``"retry"`` logger. When ``True``, a handler writing to
+            :data:`sys.stderr` is attached on the first log record, unless
+            :mod:`logging` is already configured. When ``False``, a
+            :class:`logging.NullHandler` is attached instead, so the package
+            emits nothing until :mod:`logging` is configured by the
+            application. By default True.
 
         """
         get_defaults().set(**kwargs)

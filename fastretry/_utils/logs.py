@@ -11,13 +11,68 @@ from enum import (
 )
 from typing import (
     Any,
+    ClassVar,
     Final,
     Literal,
+    TextIO,
     assert_never,
     overload,
+    override,
 )
 
 type _LogKind = Literal["success", "retry", "failure", "sleep"]
+
+_LOGGER_NAME: Final[str] = "retry"
+_DEFAULT_LOGGER: Final[logging.Logger] = logging.getLogger(_LOGGER_NAME)
+_DEFAULT_LOG_FORMAT: Final[str] = (
+    "{asctime} [{levelname:^9}] {fname} "
+    "[{retry_index}/{attempts}] "
+    "({elapsed:.2f}s) [{exception_type}]: {message}"
+)
+_FORMAT_DEFAULTS: Final[dict[str, object]] = {
+    "fname": "<unknown>",
+    "retry_index": "?",
+    "attempts": "?",
+    "elapsed": 0.0,
+    "exception_type": "-",
+}
+
+
+class _StderrHandler(logging.StreamHandler[TextIO]):
+    """
+    Stream handler writing to the current :data:`sys.stderr`.
+
+    The stream is resolved on every emit, so replacing :data:`sys.stderr` at
+    runtime (``contextlib.redirect_stderr``, test runners, embedded
+    interpreters) works as expected. When no stream is available, the record
+    is dropped silently.
+
+    """
+
+    def __init__(self) -> None:
+        super().__init__(stream=sys.stderr)
+
+    @override
+    def emit(
+        self,
+        record: logging.LogRecord,
+    ) -> None:
+        """
+        Emit a record to the current :data:`sys.stderr`.
+
+        Parameters
+        ----------
+        record : logging.LogRecord
+            Record to emit.
+
+        """
+        stream = sys.stderr or sys.__stderr__
+
+        if stream is None:
+            return
+
+        self.stream = stream
+        super().emit(record)
 
 
 class LogLevel(IntEnum):
@@ -42,50 +97,6 @@ class LogLevel(IntEnum):
     """Critical level."""
 
 
-def _make_default_logger() -> logging.Logger:
-    """
-    Create the default logger writing to stdout or stderr.
-
-    Uses :data:`sys.stdout` when available, otherwise falls back to
-    :data:`sys.stderr`. If neither stream is available, no handler is
-    attached.
-
-    Returns
-    -------
-    logging.Logger
-        default logger
-
-    """
-    logger = logging.getLogger("retry")
-    stream = sys.stdout or sys.stderr
-
-    if not logger.handlers and stream is not None:
-        logger.setLevel(logging.DEBUG)
-        logger.propagate = False
-        handler = logging.StreamHandler(stream)
-        handler.setFormatter(
-            logging.Formatter(
-                "{asctime} [{levelname:^9}] {fname} "
-                "[{retry_index}/{attempts}] "
-                "({elapsed:.2f}s) [{exception_type}]: {message}",
-                style="{",
-                defaults={
-                    "fname": "<unknown>",
-                    "retry_index": "?",
-                    "attempts": "?",
-                    "elapsed": 0.0,
-                    "exception_type": "-",
-                },
-            )
-        )
-        logger.addHandler(handler)
-
-    return logger
-
-
-_DEFAULT_LOGGER: Final[logging.Logger] = _make_default_logger()
-
-
 @dc.dataclass(frozen=True, slots=True)
 class LoggerConfig:
     """
@@ -108,6 +119,12 @@ class LoggerConfig:
         If ``True``, all logging is skipped.
     disable_warnings : bool
         If ``True``, warnings are suppressed.
+    install_default_handler : bool
+        If ``True``, the built-in console handler writing to
+        :data:`sys.stderr` is installed on the first record, unless the
+        application configured :mod:`logging`. If ``False``, a
+        :class:`logging.NullHandler` is attached instead, so nothing is
+        emitted until the application configures :mod:`logging`.
 
     """
 
@@ -118,6 +135,7 @@ class LoggerConfig:
     traceback_min_level: LogLevel
     disable_logging: bool
     disable_warnings: bool
+    install_default_handler: bool
 
 
 class Log:
@@ -131,6 +149,12 @@ class Log:
         log.use("retry")("Error executing '%s'", fname)
         log.use("failure")("Failed: %s", fname, last_exception=exc)
 
+    The built-in console handler is installed lazily on the first dispatched
+    record, and only when the application has not configured :mod:`logging`.
+    When :attr:`LoggerConfig.install_default_handler` is ``False``, a
+    :class:`logging.NullHandler` is attached instead, so the package stays
+    silent until the application configures :mod:`logging`.
+
     Parameters
     ----------
     config : LoggerConfig
@@ -139,6 +163,8 @@ class Log:
     """
 
     __slots__ = ("_bound", "_config")
+
+    _installed_handler: ClassVar[bool] = False
 
     def __init__(
         self,
@@ -235,6 +261,8 @@ class Log:
         if self._config.disable_logging or log_level == LogLevel.OFF:
             return False
 
+        self._ensure_default_handler()
+
         kwargs: dict[str, Any] = {}
 
         if log_level >= self._config.traceback_min_level and last_exception is not None:
@@ -263,6 +291,39 @@ class Log:
                 return config.level_failure
             case _:
                 assert_never(log_kind)
+
+    def _ensure_default_handler(self) -> None:
+        if self._installed_handler:
+            return
+
+        if not self._config.install_default_handler:
+            _DEFAULT_LOGGER.addHandler(logging.NullHandler())
+            self._install_handler()
+            return
+
+        if _DEFAULT_LOGGER.hasHandlers():
+            self._install_handler()
+            return
+
+        _DEFAULT_LOGGER.addHandler(self._build_default_handler())
+        _DEFAULT_LOGGER.setLevel(logging.DEBUG)
+        self._install_handler()
+
+    @staticmethod
+    def _build_default_handler() -> logging.Handler:
+        handler = _StderrHandler()
+        handler.setFormatter(
+            logging.Formatter(
+                fmt=_DEFAULT_LOG_FORMAT,
+                style="{",
+                defaults=dict(_FORMAT_DEFAULTS),
+            )
+        )
+        return handler
+
+    @classmethod
+    def _install_handler(cls) -> None:
+        cls._installed_handler = True
 
 
 class _BoundLog[LK: _LogKind]:
