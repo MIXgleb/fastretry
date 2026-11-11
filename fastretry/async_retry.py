@@ -61,10 +61,19 @@ class AsyncRetrying[**P, R](
         self,
         func: Callable[P, R] | Callable[P, Coro[R]],
     ) -> Callable[P, WrappedCoro[R]]:
-        fname = getattr(func, "__qualname__", "<anonymous>")
         on_success = self.callbacks.on_success
         on_retry = self.callbacks.on_retry
         on_failure = self.callbacks.on_failure
+
+        fname = getattr(func, "__qualname__", "<anonymous>")
+        invoke = (
+            func
+            if is_coroutine_function(func)
+            else functools.partial(
+                self._run_sync_in_executor,
+                func,  # pyright: ignore[reportArgumentType]
+            )
+        )
 
         @functools.wraps(func)
         async def async_wrapper(*args: P.args, **kwargs: P.kwargs) -> R | UnsetType:
@@ -80,10 +89,7 @@ class AsyncRetrying[**P, R](
                 stats_attempt.retry_index = retry_index
 
                 try:
-                    if is_coroutine_function(func):
-                        result = await func(*args, **kwargs)
-                    else:
-                        result = await self._run_in_executor(func, *args, **kwargs)  # pyright: ignore[reportArgumentType]
+                    result = await invoke(*args, **kwargs)
                 except BaseException as exc:  # ruff: ignore[blind-except]
                     self._prepare_retry(
                         stats_attempt=stats_attempt,
@@ -149,33 +155,13 @@ class AsyncRetrying[**P, R](
                 extra=stats.log_extra,
             )
 
-    async def _run_in_executor(
+    async def _run_sync_in_executor(
         self,
         func: Callable[P, R],
         /,
         *args: P.args,
         **kwargs: P.kwargs,
     ) -> R:
-        """
-        Invoke a sync callable in an executor.
-
-        Dispatched to an executor so the event loop is not blocked.
-
-        Parameters
-        ----------
-        func : Callable[P, R]
-            Sync callable.
-        *args : P.args
-            Positional arguments.
-        **kwargs : P.kwargs
-            Keyword arguments.
-
-        Returns
-        -------
-        R
-            Result of the call.
-
-        """
         executor = self.executor
         loop = asyncio.get_running_loop()
         context = contextvars.copy_context()

@@ -21,12 +21,12 @@ def is_coroutine_function[**P, R](
 
     Parameters
     ----------
-    func : Callable[P, R] | Callable[P, CoroutineType[Any, Any, R]]
+    func : Callable
         Callable to check.
 
     Returns
     -------
-    TypeIs[Callable[P, CoroutineType[Any, Any, R]]]
+    TypeIs[Callable[..., Coroutine]]
         ``True`` if ``func`` is a coroutine function.
 
     """
