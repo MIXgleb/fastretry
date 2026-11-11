@@ -47,10 +47,11 @@ class SyncRetrying[**P, R](
         self,
         func: Callable[P, R],
     ) -> Callable[P, R | UnsetType]:
-        fname = getattr(func, "__qualname__", "<anonymous>")
         on_success = self.callbacks.on_success
         on_retry = self.callbacks.on_retry
         on_failure = self.callbacks.on_failure
+
+        fname = getattr(func, "__qualname__", "<anonymous>")
 
         @functools.wraps(func)
         def wrapper(*args: P.args, **kwargs: P.kwargs) -> R | UnsetType:
