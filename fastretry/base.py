@@ -7,7 +7,6 @@ from abc import (
     abstractmethod,
 )
 from collections.abc import (
-    Awaitable,
     Callable,
     Mapping,
 )
@@ -25,6 +24,7 @@ from typing import (
 )
 
 from fastretry._compat.aliases import (
+    Coro,
     RetryOnExceptionType,
 )
 from fastretry._compat.sentinels import (
@@ -381,7 +381,7 @@ class BaseRetrying[
         self,
         *,
         stats: RetryStats,
-    ) -> Awaitable[None] | None:
+    ) -> Coro[None] | None:
         """
         Sleep between attempts.
 
@@ -399,7 +399,7 @@ class BaseRetrying[
         *,
         callback: CallbackType,
         stats: RetryStats,
-    ) -> Awaitable[None] | None:
+    ) -> Coro[None] | None:
         """
         Invoke a retry callback.
 
@@ -420,11 +420,6 @@ class BaseRetrying[
         stats : RetryStats
             Current retry statistics.
 
-        Returns
-        -------
-        Awaitable[None] | None
-            Awaitable when the callback is async, ``None`` otherwise.
-
         """
         raise NotImplementedError
 
@@ -434,7 +429,7 @@ class BaseRetrying[
         *,
         callback: CallbackType,
         stats: RetryStats,
-    ) -> Awaitable[None] | None:
+    ) -> Coro[None] | None:
         """
         Invoke a retry callback, swallowing and logging any exception.
 

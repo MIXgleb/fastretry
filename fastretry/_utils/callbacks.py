@@ -8,7 +8,6 @@ provided.
 
 import dataclasses as dc
 from collections.abc import (
-    Awaitable,
     Callable,
 )
 from typing import (
@@ -16,6 +15,9 @@ from typing import (
     ReadOnly,
 )
 
+from fastretry._compat.aliases import (
+    CoroType,
+)
 from fastretry._compat.nodes import (
     TypedDict,
 )
@@ -37,7 +39,7 @@ _PRIMITIVE_TYPES: Final[tuple[type, ...]] = (
     type(None),
 )
 
-type CallbackType = Callable[[RetryStats], Awaitable[None] | None]
+type CallbackType = Callable[[RetryStats], CoroType[None] | None]
 
 
 class RetryCallbacks(TypedDict, total=False):
