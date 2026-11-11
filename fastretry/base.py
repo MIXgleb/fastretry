@@ -138,13 +138,17 @@ class BaseRetrying[
         Parameters
         ----------
         attempts : int, ``optional``
-            Number of attempts
+            Number of attempts. Values below 1 are replaced with 1 and
+            reported with a :exc:`UserWarning`.
         return_default_value : Any, ``optional``
             Default value returned if the function fails after all attempts,
         delay : Delay, ``optional``
             Delay between attempts in seconds. May be a plain ``float`` for a
             fixed delay or an :class:`~fastretry._utils.delay.ExponentialDelay` for
-            exponential backoff.
+            exponential backoff. A negative fixed delay is replaced with 0 and
+            reported with a :exc:`UserWarning`; invalid
+            :class:`~fastretry._utils.delay.ExponentialDelay` parameters raise
+            :exc:`ValueError`.
         jitter : JitterStrategy, ``optional``
             Jitter strategy overriding the default for the given delay type.
             When omitted, ``jitter_for_exponential`` or ``jitter_for_fixed``

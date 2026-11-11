@@ -166,16 +166,20 @@ def retry_async[**P, R](
         Callable to decorate. When omitted, the decorator itself is
         returned.
     attempts : int, ``optional``
-        Number of attempts (factory default: 1).
+        Number of attempts (factory default: 1). Values below 1 are replaced
+        with 1 and reported with a :exc:`UserWarning`, so the function is
+        still called once.
     return_default_value : Any, ``optional``
         Default value returned if the function fails after all attempts.
         When provided, the wrapper returns it instead of re-raising the
         last exception.
     delay : Delay, ``optional``
         Delay between attempts in seconds. A plain ``float`` gives a
-        fixed delay (factory default: 0); an
+        fixed delay (factory default: 0); a negative value is replaced with 0
+        and reported with a :exc:`UserWarning`. An
         :class:`~fastretry._utils.delay.ExponentialDelay` enables exponential
-        backoff with ``backoff_factor=2.0`` and no upper bound.
+        backoff with ``backoff_factor=2.0`` and no upper bound; invalid
+        parameters raise :exc:`ValueError` when the decorator is applied.
     jitter : JitterStrategy, ``optional``
         Jitter strategy for the delay. When omitted, the default for
         the configured delay type is used (``"none"`` for exponential,

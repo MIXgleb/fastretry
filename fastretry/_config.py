@@ -50,9 +50,15 @@ class _RetryNamespace:
         Parameters
         ----------
         attempts : int, ``optional``
-            Default number of attempts, by default 1.
+            Default number of attempts, by default 1. A value below 1 is
+            replaced with 1 and reported with a :exc:`UserWarning` when a
+            decorator using these defaults is created.
         delay : Delay, ``optional``
-            Default delay between attempts, in seconds, by default 0.
+            Default delay between attempts, in seconds, by default 0. A
+            negative fixed delay is replaced with 0 and reported with a
+            :exc:`UserWarning` when a decorator using these defaults is
+            created; invalid :class:`~fastretry._utils.delay.ExponentialDelay`
+            parameters raise :exc:`ValueError` at that point.
         disable_logging : bool, ``optional``
             Disable all logging by default, by default False.
         disable_warnings : bool, ``optional``
