@@ -8,7 +8,7 @@ from typing import (
 
 import pytest
 
-from fastretry._retry import (
+from fastretry._decorators.retry import (
     retry,
 )
 
@@ -24,11 +24,9 @@ def test_zero_attempts() -> None:
 
 
 def test_return_none_as_default() -> None:
-    with pytest.warns(expected_warning=UserWarning, match="Type mismatch for"):
-
-        @retry(attempts=1, delay=0, return_default_value=None)
-        def fn() -> NoReturn:
-            raise ValueError
+    @retry(attempts=1, delay=0, return_default_value=None)
+    def fn() -> NoReturn:
+        raise ValueError
 
     assert fn() is None
 

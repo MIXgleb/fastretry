@@ -12,7 +12,7 @@ from fastretry._compat.sentinels import (
 from fastretry._config import (
     config,
 )
-from fastretry._retry import (
+from fastretry._decorators.retry import (
     retry,
 )
 from fastretry._utils.callbacks import (
@@ -235,31 +235,11 @@ def test_log_swallowed_falls_back_to_warning() -> None:
         r._log_swallowed(operation="test", exc=ValueError("x"), extra={})
 
 
-def test_validate_return_type_is_false() -> None:
-
-    with pytest.warns(expected_warning=UserWarning, match="Type mismatch for"):
-
-        @retry(return_default_value=None)
-        def fn() -> int:
-            return 1
-
-    r = fn()
-    assert r == 1
-
-
-def test_validate_return_type_is_true() -> None:
-    @retry(return_default_value=123)
+def test_return_default_value_is_not_checked_at_runtime() -> None:
+    @retry(attempts=1, return_default_value=None)
     def fn() -> int:
-        return 1
+        raise ValueError
 
-    r = fn()
-    assert r == 1
-
-
-def test_validate_return_type_is_none() -> None:
-    @retry(return_default_value="result")
-    def fn() -> object:
-        return 1
-
-    r = fn()
-    assert r == 1
+    # A mismatch between return_default_value and the declared return type
+    # is reported by type checkers, not at runtime.
+    assert fn() is None

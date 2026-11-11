@@ -100,11 +100,13 @@ Strategies: `"none"`, `"full"`, `"equal"`, `"decorrelated"`.
 
 ```python
 @retry(attempts=3, return_default_value=None)
-def fetch() -> bytes | None: ...
+def fetch() -> bytes: ...
 ```
 
 When all attempts fail, the wrapper returns `return_default_value`
-instead of raising.
+instead of raising. The return type is widened statically with the type of
+the default value, so type checkers see `fetch` above as
+`Callable[[], bytes | None]` — no changes are needed on your side.
 
 ### Retry on specific exceptions
 

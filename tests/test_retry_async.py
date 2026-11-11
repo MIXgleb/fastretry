@@ -20,8 +20,10 @@ import pytest
 from fastretry._config import (
     config,
 )
-from fastretry._retry import (
+from fastretry._decorators.retry import (
     retry,
+)
+from fastretry._decorators.retry_async import (
     retry_async,
 )
 from fastretry._utils.stats import (
@@ -92,11 +94,9 @@ async def test_unwrap_single_exception_multiple_failures() -> None:
 
 
 async def test_return_default_value() -> None:
-    with pytest.warns(expected_warning=UserWarning, match="Type mismatch for"):
-
-        @retry(attempts=1, delay=0, return_default_value=99)
-        async def fn() -> NoReturn:
-            raise ValueError
+    @retry(attempts=1, delay=0, return_default_value=99)
+    async def fn() -> NoReturn:
+        raise ValueError
 
     assert await fn() == 99
 

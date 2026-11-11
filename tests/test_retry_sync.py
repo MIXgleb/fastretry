@@ -16,7 +16,7 @@ import pytest
 from fastretry._config import (
     config,
 )
-from fastretry._retry import (
+from fastretry._decorators.retry import (
     retry,
 )
 from fastretry._utils.stats import (
@@ -63,11 +63,9 @@ def test_all_attempts_fail() -> None:
 
 
 def test_return_default_value() -> None:
-    with pytest.warns(expected_warning=UserWarning, match="Type mismatch for"):
-
-        @retry(attempts=2, delay=0, return_default_value=42)
-        def fn() -> NoReturn:
-            raise ValueError
+    @retry(attempts=2, delay=0, return_default_value=42)
+    def fn() -> NoReturn:
+        raise ValueError
 
     assert fn() == 42
 

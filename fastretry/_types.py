@@ -70,7 +70,7 @@ class RetryKwargs[R](
     total=False,
     closed=True,
 ):
-    """Keyword arguments accepted by :func:`~fastretry._retry.retry`."""
+    """Keyword arguments accepted by :func:`~fastretry._decorators.retry.retry`."""
 
 
 class RetryWithExecutorKwargs[R](
@@ -78,7 +78,7 @@ class RetryWithExecutorKwargs[R](
     total=False,
     closed=True,
 ):
-    """Keyword arguments accepted by :func:`~fastretry._retry.retry_async`."""
+    """Keyword arguments accepted by :func:`~fastretry._decorators.retry_async.retry_async`."""
 
     executor: Executor | UnsetType
 

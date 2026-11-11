@@ -27,9 +27,6 @@ from typing import (
 from fastretry._compat.aliases import (
     RetryOnExceptionType,
 )
-from fastretry._compat.functions import (
-    TypeChecker,
-)
 from fastretry._compat.sentinels import (
     UNSET,
     UnsetType,
@@ -350,22 +347,6 @@ class BaseRetrying[
             Wrapped function with the same signature
 
         """
-        if not isinstance(self.return_default_value, UnsetType):
-            type_checker = TypeChecker(func)
-
-            if type_checker.matches_return_hint(self.return_default_value) is False:
-                self._warnings.warn(
-                    f"Type mismatch for '{getattr(func, '__qualname__', '<anonymous>')}'.\n\t"
-                    f"The declared return type is {type_checker.return_hint!r}, but you passed "
-                    f"return_default_value={self.return_default_value!r}.\n\t"
-                    f"If all attempts fail, the wrapper will return {self.return_default_value!r} "
-                    f"instead of raising, which may break callers expecting "
-                    f"{type_checker.return_hint!r}.\n\t"
-                    f"Either pass a value of the correct type or remove return_default_value "
-                    f"to re-raise the exception.",
-                    stacklevel=4,
-                )
-
         return self._wrap(func)
 
     @abstractmethod

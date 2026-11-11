@@ -13,8 +13,8 @@ from typing import (
 )
 
 from fastretry._compat.aliases import (
-    CoroType,
-    WrappedCoroType,
+    Coro,
+    WrappedCoro,
 )
 from fastretry._compat.functions import (
     is_coroutine_function,
@@ -36,8 +36,8 @@ from fastretry.base import (
 class AsyncRetrying[**P, R](
     BaseRetrying[
         R,
-        Callable[P, R] | Callable[P, CoroType[R]],
-        Callable[P, WrappedCoroType[R]],
+        Callable[P, R] | Callable[P, Coro[R]],
+        Callable[P, WrappedCoro[R]],
     ],
 ):
     """
@@ -59,8 +59,8 @@ class AsyncRetrying[**P, R](
     @override
     def _wrap(
         self,
-        func: Callable[P, R] | Callable[P, CoroType[R]],
-    ) -> Callable[P, WrappedCoroType[R]]:
+        func: Callable[P, R] | Callable[P, Coro[R]],
+    ) -> Callable[P, WrappedCoro[R]]:
         fname = getattr(func, "__qualname__", "<anonymous>")
         on_success = self.callbacks.on_success
         on_retry = self.callbacks.on_retry
