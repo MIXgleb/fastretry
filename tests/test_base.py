@@ -103,6 +103,24 @@ def test_validate_delay_negative() -> None:
     assert r.delay == 0
 
 
+def test_attempts_is_read_only() -> None:
+    r = SyncRetrying(attempts=3)
+
+    with pytest.raises(AttributeError):
+        r.attempts = 5
+
+    assert r.attempts == 3
+
+
+def test_delay_is_read_only() -> None:
+    r = SyncRetrying(delay=5)
+
+    with pytest.raises(AttributeError):
+        r.delay = 2
+
+    assert r.delay == 5
+
+
 @pytest.mark.parametrize(
     ("delay", "match"),
     [

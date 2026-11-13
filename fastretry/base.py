@@ -79,6 +79,8 @@ class BaseRetrying[
 
     __slots__ = (
         "_async_callback_mode",
+        "_attempts",
+        "_delay",
         "_delay_calculator",
         "_effective_defaults",
         "_install_default_handler",
@@ -92,9 +94,7 @@ class BaseRetrying[
         "_traceback_min_level",
         "_unwrap_single_exception",
         "_warnings",
-        "attempts",
         "callbacks",
-        "delay",
         "disable_logging",
         "disable_warnings",
         "executor",
@@ -182,12 +182,12 @@ class BaseRetrying[
         self._effective_defaults: Final = get_defaults()
 
         # --- per-decorator options ---
-        # --- mutable ---
-        self.attempts: int = self._resolve(
+        # --- mutable while validating, exposed as read-only properties ---
+        self._attempts: int = self._resolve(
             passed=attempts,
             default=self._effective_defaults.attempts,
         )
-        self.delay: Delay = self._resolve(
+        self._delay: Delay = self._resolve(
             passed=delay,
             default=self._effective_defaults.delay,
         )
@@ -309,6 +309,36 @@ class BaseRetrying[
             f"executor={self.executor!r},\n\t"
             f")"
         )
+
+    @final
+    @property
+    def attempts(self) -> int:
+        """
+        Effective number of attempts.
+
+        Returns
+        -------
+        int
+            Number of attempts after validation: a value below 1 is replaced
+            with 1 during initialization. The property is read-only.
+
+        """
+        return self._attempts
+
+    @final
+    @property
+    def delay(self) -> Delay:
+        """
+        Effective delay between attempts.
+
+        Returns
+        -------
+        Delay
+            Delay configuration after validation: a negative fixed delay is
+            replaced with 0 during initialization. The property is read-only.
+
+        """
+        return self._delay
 
     @final
     @property
@@ -475,36 +505,38 @@ class BaseRetrying[
             ``max_delay``, or with ``max_delay`` less than ``delay``.
 
         """
-        if self.attempts < 1:
+        if self._attempts < 1:
             self._warnings.warn(
-                f"\n\tNumber of attempts must be >= 1, got {self.attempts!r}. Falling back to 1.",
+                f"\n\tNumber of attempts must be >= 1, got {self._attempts!r}. Falling back to 1.",
                 stacklevel=7,
             )
-            self.attempts = 1
+            self._attempts = 1
 
-        if isinstance(self.delay, ExponentialDelay):
-            if self.delay.delay <= 0:
-                msg = f"delay must be > 0, got {self.delay.delay!r}"
+        delay = self._delay
+
+        if isinstance(delay, ExponentialDelay):
+            if delay.delay <= 0:
+                msg = f"delay must be > 0, got {delay.delay!r}"
                 raise ValueError(msg)
-            if self.delay.backoff_factor <= 0:
-                msg = f"backoff factor must be > 0, got {self.delay.backoff_factor!r}"
+            if delay.backoff_factor <= 0:
+                msg = f"backoff factor must be > 0, got {delay.backoff_factor!r}"
                 raise ValueError(msg)
-            if self.delay.max_delay is not None:
-                if self.delay.max_delay <= 0:
-                    msg = f"maximum delay must be > 0, got {self.delay.max_delay!r}"
+            if delay.max_delay is not None:
+                if delay.max_delay <= 0:
+                    msg = f"maximum delay must be > 0, got {delay.max_delay!r}"
                     raise ValueError(msg)
-                if self.delay.max_delay < self.delay.delay:
+                if delay.max_delay < delay.delay:
                     msg = (
-                        f"maximum delay ({self.delay.max_delay!r}) must be >= "
-                        f"base delay ({self.delay.delay!r})"
+                        f"maximum delay ({delay.max_delay!r}) must be >= "
+                        f"base delay ({delay.delay!r})"
                     )
                     raise ValueError(msg)
-        elif self.delay < 0:
+        elif delay < 0:
             self._warnings.warn(
-                f"\n\tDelay must be >= 0, got {self.delay!r}. Falling back to 0.",
+                f"\n\tDelay must be >= 0, got {delay!r}. Falling back to 0.",
                 stacklevel=7,
             )
-            self.delay = 0
+            self._delay = 0
 
     @final
     def _log_swallowed(
