@@ -24,6 +24,9 @@ from fastretry._utils.logs import (
     Log,
     LogLevel,
 )
+from fastretry._utils.shared_loop import (
+    AsyncCallbackMode,
+)
 
 
 @dc.dataclass(frozen=True, slots=True)
@@ -84,6 +87,11 @@ class GlobalOptions:
     traceback_min_level : LogLevel
         Minimum level at which a traceback is attached to the log record.
         Messages below this level are logged without traceback.
+    install_default_handler : bool
+        Whether to install the built-in console handler on the
+        ``"retry"`` logger.
+    async_callback_mode : AsyncCallbackMode
+        How async callbacks of synchronous functions are dispatched.
     unwrap_single_exception : bool
         If ``True``, a failure with exactly one collected exception
         re-raises that exception as is instead of wrapping it in an
@@ -95,6 +103,9 @@ class GlobalOptions:
     jitter_for_fixed: JitterStrategy
 
     traceback_min_level: LogLevel
+    install_default_handler: bool
+
+    async_callback_mode: AsyncCallbackMode
     unwrap_single_exception: bool
 
 

@@ -89,6 +89,18 @@ class _RetryNamespace:
         jitter_for_fixed : JitterStrategy, ``optional``
             Default jitter strategy for fixed delay,
             by default ``"none"``.
+        async_callback_mode : AsyncCallbackMode, ``optional``
+            How async callbacks of synchronous functions are dispatched.
+
+            - ``"thread_per_call"`` (default) starts a thread with its own
+              event loop for every callback invocation when an event loop is
+              already running (about 3 ms per callback). This is the safest
+              and most isolated mode.
+            - ``"shared_loop_when_running"`` submits the callback to a process-wide
+              shared loop in that case (about 0.1 ms), and keeps
+              :func:`asyncio.run` when no loop is running.
+            - ``"shared_loop_always"`` submits the callback to the shared loop in
+              every case.
 
         """
         get_defaults().set(**kwargs)

@@ -2,6 +2,7 @@
 
 import asyncio
 import concurrent.futures
+import contextvars
 import functools
 import inspect
 import time
@@ -17,6 +18,9 @@ from fastretry._compat.sentinels import (
 )
 from fastretry._utils.callbacks import (
     CallbackType,
+)
+from fastretry._utils.shared_loop import (
+    shared_loop,
 )
 from fastretry._utils.stats import (
     RetryStats,
@@ -118,12 +122,36 @@ class SyncRetrying[**P, R](
 
         try:
             _ = asyncio.get_running_loop()
+            loop_is_running = True
         except RuntimeError:
-            asyncio.run(result)
-        else:
+            loop_is_running = False
+
+        if self._uses_shared_loop(loop_is_running=loop_is_running):
+            shared_loop.run_callback(result)
+            return
+
+        if loop_is_running:
+            context = contextvars.copy_context()
             with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-                future = pool.submit(asyncio.run, result)
-                future.result()
+                pool.submit(context.run, asyncio.run, result).result()
+            return
+
+        asyncio.run(result)
+
+    def _uses_shared_loop(
+        self,
+        *,
+        loop_is_running: bool,
+    ) -> bool:
+        mode = self._async_callback_mode
+
+        if mode == "thread_per_call":
+            return False
+
+        if mode == "shared_loop_when_running" and not loop_is_running:
+            return False
+
+        return not shared_loop.is_owner_thread()
 
     @override
     def _safe_call_callback(

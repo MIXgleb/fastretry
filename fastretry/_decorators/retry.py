@@ -202,10 +202,27 @@ def retry[**P, R](
           running (expensive — it blocks the caller until the callback
           completes).
 
-        The latter case is a deliberate trade-off: mixing async callbacks
-        with sync functions inside a running event loop is supported, but
-        costs a thread per invocation. Prefer synchronous callbacks for
-        sync functions, or move the async work outside the retry cycle.
+        The latter case is a deliberate default: every callback gets a fresh
+        thread and a fresh event loop, so failures stay isolated and nothing
+        leaks, but it blocks the caller and costs roughly 3 ms per
+        invocation (thread and loop creation included). The caller's
+        :mod:`contextvars` are copied into the callback, so logging and
+        tracing context is preserved.
+
+        For callback-heavy code this cost can be reduced with
+        ``config.retry(async_callback_mode=...)``:
+
+        - ``"thread_per_call"`` (default) — the behaviour described above;
+        - ``"shared_loop_when_running"`` — a process-wide shared loop replaces the
+          per-call thread when an event loop is already running (about 0.1 ms
+          per callback);
+        - ``"shared_loop_always"`` — the shared loop is used in every case.
+
+        Shared modes serialize callbacks in one daemon thread and share its
+        lifecycle across the process: one slow callback delays the others,
+        and the loop is recreated after ``fork()``. When in doubt, prefer
+        synchronous callbacks for sync functions, or move the async work
+        outside the retry cycle.
 
     Returns
     -------

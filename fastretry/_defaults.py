@@ -27,6 +27,9 @@ from fastretry._utils.delay import (
 from fastretry._utils.logs import (
     LogLevel,
 )
+from fastretry._utils.shared_loop import (
+    AsyncCallbackMode,
+)
 
 
 @dc.dataclass(slots=True)
@@ -47,6 +50,7 @@ class _Defaults:
     # --- global options (application-wide) ---
     jitter_for_exponential: JitterStrategy = "none"
     jitter_for_fixed: JitterStrategy = "none"
+    async_callback_mode: AsyncCallbackMode = "thread_per_call"
     unwrap_single_exception: bool = False
 
     # --- logging ---

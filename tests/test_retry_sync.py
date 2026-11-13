@@ -1,6 +1,8 @@
 """Tests for SyncRetrying decorator."""
 
 import asyncio
+import contextvars
+import threading
 import time
 import warnings
 from typing import (
@@ -349,3 +351,127 @@ def test_async_callback_in_running_loop() -> None:
         assert results == [1]
 
     asyncio.run(main())
+
+
+def test_async_callback_in_running_loop_keeps_contextvars() -> None:
+    cv = contextvars.ContextVar("cv", default="<unset>")
+    seen: list[str] = []
+
+    async def async_cb(_: RetryStats) -> None:
+        seen.append(cv.get())
+
+    @retry(attempts=1, delay=0, callbacks={"on_success": async_cb})
+    def fn() -> Literal[1]:
+        return 1
+
+    async def main() -> None:
+        cv.set("request-42")
+        _ = fn()
+
+    asyncio.run(main())
+
+    assert seen == ["request-42"]
+
+
+def test_shared_loop_when_running_uses_loop_thread() -> None:
+    config.retry(async_callback_mode="shared_loop_when_running")
+    seen: list[str] = []
+
+    async def async_cb(_: RetryStats) -> None:
+        seen.append(threading.current_thread().name)
+
+    @retry(attempts=1, delay=0, callbacks={"on_success": async_cb})
+    def fn() -> Literal[1]:
+        return 1
+
+    async def main() -> None:
+        _ = fn()
+
+    asyncio.run(main())
+
+    assert seen == ["fastretry-callback-loop"]
+
+
+def test_shared_loop_when_running_skips_without_loop() -> None:
+    config.retry(async_callback_mode="shared_loop_when_running")
+    seen: list[str] = []
+
+    async def async_cb(_: RetryStats) -> None:
+        seen.append(threading.current_thread().name)
+
+    @retry(attempts=1, delay=0, callbacks={"on_success": async_cb})
+    def fn() -> Literal[1]:
+        return 1
+
+    _ = fn()
+
+    assert seen == [threading.current_thread().name]
+
+
+def test_shared_loop_always_uses_loop_thread_without_loop() -> None:
+    config.retry(async_callback_mode="shared_loop_always")
+    seen: list[str] = []
+
+    async def async_cb(_: RetryStats) -> None:
+        seen.append(threading.current_thread().name)
+
+    @retry(attempts=1, delay=0, callbacks={"on_success": async_cb})
+    def fn() -> Literal[1]:
+        return 1
+
+    _ = fn()
+
+    assert seen == ["fastretry-callback-loop"]
+
+
+def test_shared_loop_reentrant_callback_does_not_deadlock() -> None:
+    config.retry(async_callback_mode="shared_loop_always")
+    outer: list[int] = []
+    inner: list[int] = []
+
+    async def inner_cb(_: RetryStats) -> None:
+        inner.append(1)
+
+    async def outer_cb(_: RetryStats) -> None:
+        outer.append(1)
+        _ = inner_fn()
+
+    @retry(attempts=1, delay=0, callbacks={"on_success": inner_cb})
+    def inner_fn() -> Literal[1]:
+        return 1
+
+    @retry(attempts=1, delay=0, callbacks={"on_success": outer_cb})
+    def outer_fn() -> Literal[1]:
+        return 1
+
+    _ = outer_fn()
+
+    assert outer == [1]
+    assert inner == [1]
+
+
+def test_shared_loop_keeps_working_after_base_exception() -> None:
+    config.retry(async_callback_mode="shared_loop_always")
+
+    async def stop_cb(_: RetryStats) -> None:
+        raise SystemExit(1)
+
+    @retry(attempts=1, delay=0, callbacks={"on_success": stop_cb})
+    def fn() -> Literal[1]:
+        return 1
+
+    with pytest.raises(SystemExit):
+        fn()
+
+    done: list[int] = []
+
+    async def ok_cb(_: RetryStats) -> None:
+        done.append(1)
+
+    @retry(attempts=1, delay=0, callbacks={"on_success": ok_cb})
+    def ok_fn() -> Literal[1]:
+        return 1
+
+    _ = ok_fn()
+
+    assert done == [1]

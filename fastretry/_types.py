@@ -27,6 +27,9 @@ from fastretry._utils.delay import (
 from fastretry._utils.logs import (
     LogLevel,
 )
+from fastretry._utils.shared_loop import (
+    AsyncCallbackMode,
+)
 
 
 class _RetryOptions[R](TypedDict, total=False):
@@ -54,6 +57,7 @@ class _RetryDefaultOptions(TypedDict, total=False):
     on_failure: ReadOnly[CallbackType | None]
     jitter_for_exponential: ReadOnly[JitterStrategy]
     jitter_for_fixed: ReadOnly[JitterStrategy]
+    async_callback_mode: ReadOnly[AsyncCallbackMode]
 
 
 class _LoggingDefaultOptions(TypedDict, total=False):

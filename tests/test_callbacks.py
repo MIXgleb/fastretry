@@ -75,6 +75,8 @@ def stats_factory() -> _STATS_FACTORY_TYPE:
                 jitter_for_exponential="none",
                 jitter_for_fixed="none",
                 traceback_min_level=0,
+                install_default_handler=True,
+                async_callback_mode="thread_per_call",
                 unwrap_single_exception=False,
             ),
             call=CallOptions(),

@@ -65,6 +65,9 @@ if TYPE_CHECKING:
     from fastretry._utils.logs import (
         LogLevel,
     )
+    from fastretry._utils.shared_loop import (
+        AsyncCallbackMode,
+    )
 
 
 class BaseRetrying[
@@ -75,8 +78,10 @@ class BaseRetrying[
     """Base class for retry strategy implementations."""
 
     __slots__ = (
+        "_async_callback_mode",
         "_delay_calculator",
         "_effective_defaults",
+        "_install_default_handler",
         "_level_failure",
         "_level_retry",
         "_level_sleep",
@@ -208,12 +213,18 @@ class BaseRetrying[
             passed=no_retry_on,
             default=self._effective_defaults.no_retry_on,
         )
-        self._unwrap_single_exception: Final[bool] = (
-            self._effective_defaults.unwrap_single_exception
-        )
         self.executor: Final[Executor | None] = self._resolve(
             passed=executor,
             default=None,
+        )
+        self._install_default_handler: Final[bool] = (
+            self._effective_defaults.install_default_handler
+        )
+        self._async_callback_mode: Final[AsyncCallbackMode] = (
+            self._effective_defaults.async_callback_mode
+        )
+        self._unwrap_single_exception: Final[bool] = (
+            self._effective_defaults.unwrap_single_exception
         )
 
         # --- logger configuration ---
@@ -255,6 +266,8 @@ class BaseRetrying[
                 jitter_for_exponential=self._effective_defaults.jitter_for_exponential,
                 jitter_for_fixed=self._effective_defaults.jitter_for_fixed,
                 traceback_min_level=self._traceback_min_level,
+                install_default_handler=self._install_default_handler,
+                async_callback_mode=self._async_callback_mode,
                 unwrap_single_exception=self._unwrap_single_exception,
             ),
             call=CallOptions(),
@@ -290,7 +303,8 @@ class BaseRetrying[
             f"level_failure={self._level_failure!r},\n\t"
             f"level_sleep={self._level_sleep!r},\n\t"
             f"traceback_min_level={self._traceback_min_level!r},\n\t"
-            f"install_default_handler={self._effective_defaults.install_default_handler!r},\n\t"
+            f"install_default_handler={self._install_default_handler!r},\n\t"
+            f"async_callback_mode={self._async_callback_mode!r},\n\t"
             f"callbacks={self.callbacks!r},\n\t"
             f"executor={self.executor!r},\n\t"
             f")"
@@ -316,7 +330,7 @@ class BaseRetrying[
             traceback_min_level=self._traceback_min_level,
             disable_logging=self.disable_logging,
             disable_warnings=self.disable_warnings,
-            install_default_handler=self._effective_defaults.install_default_handler,
+            install_default_handler=self._install_default_handler,
         )
 
     @final

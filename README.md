@@ -140,6 +140,40 @@ Available keys: `on_success`, `on_retry`, `on_failure`. Callbacks may be
 sync or async. Pass `None` for a key to disable that callback, or pass
 `callbacks=None` to disable all of them.
 
+#### Async callbacks on sync functions
+
+Async callbacks are awaited in the same loop when the wrapped function is a
+coroutine, so they are cheap. On a **sync** function the callback has to be
+run in a loop of its own:
+
+- when no event loop is running in the calling thread, `asyncio.run()` is
+  used — cheap;
+- when an event loop **is** already running, a new thread with a fresh event
+  loop is used for every callback, and the caller blocks until it completes.
+  This is the safest and most isolated behavior, but it costs roughly **3 ms
+  per callback** (the callback still sees the caller's `contextvars`).
+
+If callbacks are a hot path for sync functions, the dispatch can be switched
+to a process-wide shared loop:
+
+```python
+from fastretry import config
+
+config.retry(async_callback_mode="shared_loop_when_running")
+```
+
+| `async_callback_mode` | Behavior |
+|---|---|
+| `"thread_per_call"` (default) | `asyncio.run()` without a running loop; a new thread with its own loop per callback otherwise |
+| `"shared_loop_when_running"` | a process-wide loop instead of the per-call thread (≈0.1 ms per callback); `asyncio.run()` when no loop is running |
+| `"shared_loop_always"` | the process-wide loop in every case |
+
+The shared modes trade isolation for speed: callbacks are serialized in one
+daemon thread, one slow callback delays the others, and the loop is created
+lazily and recreated in a `fork()`ed child. Configure them only if you
+understand these trade-offs; sync callbacks are the simplest way to avoid
+the cost entirely.
+
 ## Configuration
 
 Global defaults apply to all subsequently created decorators.

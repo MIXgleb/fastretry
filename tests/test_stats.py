@@ -38,6 +38,8 @@ def _make_stats(attempt: AttemptState, attempts: int = 3) -> RetryStats:
             jitter_for_exponential="none",
             jitter_for_fixed="none",
             traceback_min_level=LogLevel.ERROR,
+            install_default_handler=True,
+            async_callback_mode="thread_per_call",
             unwrap_single_exception=False,
         ),
         call=CallOptions(),
@@ -86,9 +88,15 @@ def test_global_fields() -> None:
         jitter_for_exponential="none",
         jitter_for_fixed="none",
         traceback_min_level=LogLevel.ERROR,
+        install_default_handler=True,
+        async_callback_mode="thread_per_call",
         unwrap_single_exception=False,
     )
+    assert opts.jitter_for_exponential == "none"
+    assert opts.jitter_for_fixed == "none"
     assert opts.traceback_min_level == LogLevel.ERROR
+    assert opts.install_default_handler is True
+    assert opts.async_callback_mode == "thread_per_call"
     assert opts.unwrap_single_exception is False
 
 

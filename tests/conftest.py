@@ -10,6 +10,9 @@ from fastretry._defaults import (
     context_defaults,
     global_defaults,
 )
+from fastretry._utils.shared_loop import (
+    shared_loop,
+)
 
 
 @pytest.fixture(autouse=True)  # ruff: ignore[pytest-fixture-autouse]
@@ -22,3 +25,10 @@ def _isolate_defaults() -> Generator[None]:
 
     context_defaults.reset(token)
     global_defaults.reset()
+
+
+@pytest.fixture(autouse=True)  # ruff: ignore[pytest-fixture-autouse]
+def _shutdown_shared_loop() -> Generator[None]:
+    """Stop the process-wide callback loop after every test."""
+    yield
+    shared_loop.shutdown()

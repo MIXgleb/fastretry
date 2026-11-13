@@ -29,6 +29,13 @@ def test_retry_sets_unwrap_single_exception() -> None:
     assert global_defaults.unwrap_single_exception is False
 
 
+def test_retry_sets_async_callback_mode() -> None:
+    config.retry(async_callback_mode="shared_loop_always")
+    assert global_defaults.async_callback_mode == "shared_loop_always"
+    config.retry(async_callback_mode="thread_per_call")
+    assert global_defaults.async_callback_mode == "thread_per_call"
+
+
 def test_logging_sets_global() -> None:
     config.logging(level_retry=LogLevel.INFO)
     assert global_defaults.level_retry == LogLevel.INFO
