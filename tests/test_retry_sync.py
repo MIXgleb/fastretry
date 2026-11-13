@@ -475,3 +475,64 @@ def test_shared_loop_keeps_working_after_base_exception() -> None:
     _ = ok_fn()
 
     assert done == [1]
+
+
+def test_attempt_durations_are_recorded() -> None:
+    calls: list[int] = []
+    retries: list[tuple[float, int, float]] = []
+    successes: list[tuple[float, int, float]] = []
+
+    def on_retry(stats: RetryStats) -> None:
+        attempt = stats.attempt
+        retries.append(
+            (attempt.attempt_duration, len(attempt.attempt_durations), attempt.total_elapsed),
+        )
+
+    def on_success(stats: RetryStats) -> None:
+        attempt = stats.attempt
+        successes.append(
+            (attempt.attempt_duration, len(attempt.attempt_durations), attempt.total_elapsed),
+        )
+
+    @retry(attempts=3, delay=0, callbacks={"on_retry": on_retry, "on_success": on_success})
+    def fn() -> Literal[1]:
+        calls.append(1)
+        time.sleep(0.01)
+        if len(calls) < 3:
+            msg = "fail"
+            raise ValueError(msg)
+        return 1
+
+    assert fn() == 1
+
+    assert len(retries) == 2
+    assert [count for _, count, _ in retries] == [1, 2]
+    assert all(duration > 0 for duration, _, _ in retries)
+    assert all(total > 0 for _, _, total in retries)
+
+    duration, count, total = successes[0]
+    assert count == 3
+    assert duration > 0
+    assert total > duration
+
+
+def test_attempt_durations_on_failure() -> None:
+    seen: list[tuple[int, float, float]] = []
+
+    def on_failure(stats: RetryStats) -> None:
+        attempt = stats.attempt
+        durations = attempt.attempt_durations
+        seen.append((len(durations), attempt.attempt_duration, durations[-1]))
+
+    @retry(attempts=2, delay=0, callbacks={"on_failure": on_failure})
+    def fn() -> NoReturn:
+        raise ValueError
+
+    with pytest.raises(ExceptionGroup):
+        fn()
+
+    assert len(seen) == 1
+    count, current, last = seen[0]
+    assert count == 2
+    assert current == last
+    assert current >= 0

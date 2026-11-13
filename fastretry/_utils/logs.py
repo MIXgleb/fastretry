@@ -26,14 +26,15 @@ _LOGGER_NAME: Final[str] = "retry"
 _DEFAULT_LOGGER: Final[logging.Logger] = logging.getLogger(_LOGGER_NAME)
 _DEFAULT_LOG_FORMAT: Final[str] = (
     "{asctime} [{levelname:^9}] {fname} "
-    "[{retry_index}/{attempts}] "
-    "({elapsed:.2f}s) [{exception_type}]: {message}"
+    "[{retry_index}/{attempts} in {attempt_duration:.2f}s] "
+    "({total_elapsed:.2f}s) [{exception_type}]: {message}"
 )
 _FORMAT_DEFAULTS: Final[dict[str, object]] = {
     "fname": "<unknown>",
     "retry_index": "?",
     "attempts": "?",
-    "elapsed": 0.0,
+    "attempt_duration": 0.0,
+    "total_elapsed": 0.0,
     "exception_type": "-",
 }
 
@@ -117,8 +118,6 @@ class LoggerConfig:
         record.
     disable_logging : bool
         If ``True``, all logging is skipped.
-    disable_warnings : bool
-        If ``True``, warnings are suppressed.
     install_default_handler : bool
         If ``True``, the built-in console handler writing to
         :data:`sys.stderr` is installed on the first record, unless the
@@ -134,7 +133,6 @@ class LoggerConfig:
     level_sleep: LogLevel
     traceback_min_level: LogLevel
     disable_logging: bool
-    disable_warnings: bool
     install_default_handler: bool
 
 

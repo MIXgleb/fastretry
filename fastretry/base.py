@@ -359,7 +359,6 @@ class BaseRetrying[
             level_sleep=self._level_sleep,
             traceback_min_level=self._traceback_min_level,
             disable_logging=self.disable_logging,
-            disable_warnings=self.disable_warnings,
             install_default_handler=self._install_default_handler,
         )
 
@@ -603,8 +602,11 @@ class BaseRetrying[
             Result returned by the wrapped function.
 
         """
+        now = time.monotonic()
         stats_attempt.result = result
-        stats_attempt.elapsed = time.monotonic() - stats_attempt.started_at
+        stats_attempt.attempt_duration = now - stats_attempt.attempt_started_at
+        stats_attempt.attempt_durations.append(stats_attempt.attempt_duration)
+        stats_attempt.total_elapsed = now - stats_attempt.started_at
 
     @final
     def _prepare_retry(
@@ -624,9 +626,12 @@ class BaseRetrying[
             Exception raised by the wrapped function.
 
         """
+        now = time.monotonic()
         stats_attempt.last_exception = exc
         stats_attempt.exceptions.append(exc)
-        stats_attempt.elapsed = time.monotonic() - stats_attempt.started_at
+        stats_attempt.attempt_duration = now - stats_attempt.attempt_started_at
+        stats_attempt.attempt_durations.append(stats_attempt.attempt_duration)
+        stats_attempt.total_elapsed = now - stats_attempt.started_at
         stats_attempt.previous_delay = (
             None
             if isinstance(stats_attempt.computed_delay, UnsetType)
@@ -659,7 +664,7 @@ class BaseRetrying[
             Per-attempt state.
 
         """
-        stats_attempt.elapsed = time.monotonic() - stats_attempt.started_at
+        stats_attempt.total_elapsed = time.monotonic() - stats_attempt.started_at
 
         if not self._re_raise_exception or stats_attempt.last_exception is None:
             stats_attempt.result = self.return_default_value

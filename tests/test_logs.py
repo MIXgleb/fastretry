@@ -84,7 +84,6 @@ def test_frozen() -> None:
         level_sleep=LogLevel.OFF,
         traceback_min_level=LogLevel.ERROR,
         disable_logging=False,
-        disable_warnings=False,
         install_default_handler=True,
     )
 
@@ -102,7 +101,6 @@ def log() -> Log:
             level_sleep=LogLevel.OFF,
             traceback_min_level=LogLevel.ERROR,
             disable_logging=False,
-            disable_warnings=False,
             install_default_handler=True,
         )
     )
@@ -162,7 +160,6 @@ def test_record_below_traceback_level(mocker: MockerFixture) -> None:
         level_sleep=LogLevel.OFF,
         traceback_min_level=LogLevel.CRITICAL,
         disable_logging=False,
-        disable_warnings=False,
         install_default_handler=True,
     )
     log = Log(cfg)
@@ -194,7 +191,6 @@ def test_disable_logging(mocker: MockerFixture) -> None:
         level_sleep=LogLevel.OFF,
         traceback_min_level=LogLevel.ERROR,
         disable_logging=True,
-        disable_warnings=False,
         install_default_handler=True,
     )
     log = Log(cfg)
@@ -296,7 +292,6 @@ def test_default_handler_disabled(mocker: MockerFixture) -> None:
             level_sleep=LogLevel.OFF,
             traceback_min_level=LogLevel.ERROR,
             disable_logging=False,
-            disable_warnings=False,
             install_default_handler=False,
         )
     )
@@ -344,15 +339,14 @@ def test_build_default_handler_formats_record() -> None:
         "fname": "fn",
         "retry_index": 1,
         "attempts": 3,
-        "elapsed": 0.5,
+        "attempt_duration": 0.054321,
+        "total_elapsed": 0.5,
         "exception_type": "ValueError",
     })
 
     formatted = formatter.format(record)
 
-    assert "fn [1/3]" in formatted
-    assert "(0.50s)" in formatted
-    assert "[ValueError]: boom" in formatted
+    assert "fn [1/3 in 0.05s] (0.50s) [ValueError]: boom" in formatted
 
 
 def test_build_default_handler_uses_defaults() -> None:
@@ -362,7 +356,7 @@ def test_build_default_handler_uses_defaults() -> None:
 
     formatted = formatter.format(_make_record("boom"))
 
-    assert "<unknown> [?/?] (0.00s) [-]: boom" in formatted
+    assert "<unknown> [?/? in 0.00s] (0.00s) [-]: boom" in formatted
 
 
 def test_incorrect_log_kind() -> None:
@@ -373,7 +367,6 @@ def test_incorrect_log_kind() -> None:
         level_sleep=LogLevel.OFF,
         traceback_min_level=LogLevel.OFF,
         disable_logging=True,
-        disable_warnings=True,
         install_default_handler=True,
     )
     log = Log(cfg)

@@ -87,6 +87,7 @@ class AsyncRetrying[**P, R](
 
             for retry_index in range(1, self.attempts + 1):
                 stats_attempt.retry_index = retry_index
+                stats_attempt.attempt_started_at = time.monotonic()
 
                 try:
                     result = await invoke(*args, **kwargs)

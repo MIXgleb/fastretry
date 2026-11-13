@@ -296,3 +296,20 @@ async def test_retry_async_contextvars_propagated_custom_executor() -> None:
             assert await fn() == "hello"
         finally:
             var.reset(token)
+
+
+async def test_attempt_durations_are_recorded() -> None:
+    seen: list[tuple[int, float]] = []
+
+    def on_success(stats: RetryStats) -> None:
+        attempt = stats.attempt
+        seen.append((len(attempt.attempt_durations), attempt.attempt_duration))
+
+    @retry(attempts=1, delay=0, callbacks={"on_success": on_success})
+    async def fn() -> Literal[1]:
+        return 1
+
+    assert await fn() == 1
+
+    assert seen[0][0] == 1
+    assert seen[0][1] >= 0

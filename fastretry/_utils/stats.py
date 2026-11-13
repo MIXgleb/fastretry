@@ -140,8 +140,17 @@ class AttemptState:
         1-based index of the current attempt.
     started_at : float
         Monotonic timestamp captured at the start of the call.
-    elapsed : float
-        Seconds elapsed since ``started_at``.
+    total_elapsed : float
+        Seconds elapsed since ``started_at``: every finished attempt plus
+        every delay between them.
+    attempt_started_at : float
+        Monotonic timestamp captured at the start of the current attempt.
+    attempt_duration : float
+        Seconds the current (the most recently finished) attempt took,
+        excluding callbacks and delays. ``0.0`` until an attempt finishes.
+    attempt_durations : list[float]
+        Durations of all finished attempts, in order. The last item equals
+        :attr:`attempt_duration`.
     previous_delay : float | None
         Delay used on the previous attempt, or ``None`` on the first retry.
         Used by the ``"decorrelated"`` jitter strategy.
@@ -167,7 +176,10 @@ class AttemptState:
     fname: str = ""
     retry_index: int = 0
     started_at: float = 0.0
-    elapsed: float = 0.0
+    total_elapsed: float = 0.0
+    attempt_started_at: float = 0.0
+    attempt_duration: float = 0.0
+    attempt_durations: list[float] = dc.field(default_factory=list[float])
     previous_delay: float | None = None
     computed_delay: float | UnsetType = UNSET
     result: object | UnsetType = UNSET
@@ -273,7 +285,9 @@ class RetryStats:
             "retry_index": attempt.retry_index,
             "attempts": self.decorator.attempts,
             "started_at": attempt.started_at,
-            "elapsed": attempt.elapsed,
+            "total_elapsed": attempt.total_elapsed,
+            "attempt_started_at": attempt.attempt_started_at,
+            "attempt_duration": attempt.attempt_duration,
             "previous_delay": attempt.previous_delay,
             "computed_delay": attempt.computed_delay,
             "exception_type": (
