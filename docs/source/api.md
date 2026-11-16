@@ -8,6 +8,10 @@
 .. autofunction:: fastretry.retry_async
 ```
 
+## Version
+
+The installed version is available as `fastretry.__version__`.
+
 ## Full API
 
 ```{eval-rst}

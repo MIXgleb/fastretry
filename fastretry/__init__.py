@@ -37,3 +37,6 @@ from fastretry._utils.logs import (
 from fastretry._utils.stats import (
     RetryStats,
 )
+from fastretry._version import (
+    __getattr__ as __getattr__,
+)
