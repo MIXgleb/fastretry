@@ -21,6 +21,8 @@ Retry decorator for synchronous and asynchronous functions.
 pip install fastretry
 ```
 
+Requires Python 3.13 or newer.
+
 ## Usage
 
 ### Sync function
