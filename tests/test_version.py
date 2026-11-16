@@ -2,6 +2,9 @@
 
 import importlib
 import importlib.metadata
+from collections.abc import (
+    Generator,
+)
 
 import pytest
 from pytest_mock import (
@@ -9,10 +12,38 @@ from pytest_mock import (
 )
 
 import fastretry
+from fastretry import (
+    _version,
+)
+
+
+@pytest.fixture(autouse=True)  # ruff: ignore[pytest-fixture-autouse]
+def _reset_version_cache() -> Generator[None]:
+    """Drop the cached version, so that every test resolves it on its own."""
+    _version._resolve_version.cache_clear()
+
+    yield
+
+    _version._resolve_version.cache_clear()
 
 
 def test_version_matches_installed_metadata() -> None:
-    assert fastretry.__version__ == importlib.metadata.version("fastretry")
+    try:
+        installed = importlib.metadata.version("fastretry")
+    except importlib.metadata.PackageNotFoundError:  # pragma: no cover - not installed
+        pytest.skip("fastretry is not installed, so it has no metadata to compare with")
+
+    assert fastretry.__version__ == installed
+
+
+def test_version_falls_back_when_metadata_is_missing(mocker: MockerFixture) -> None:
+    _ = mocker.patch.object(
+        target=importlib.metadata,
+        attribute="version",
+        side_effect=importlib.metadata.PackageNotFoundError("fastretry"),
+    )
+
+    assert fastretry.__version__ == "0.0.0"
 
 
 def test_version_is_resolved_once(mocker: MockerFixture) -> None:

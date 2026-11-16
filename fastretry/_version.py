@@ -31,7 +31,7 @@ def _resolve_version() -> str:
 
     try:
         return metadata.version(_PACKAGE_NAME)
-    except metadata.PackageNotFoundError:  # pragma: no cover - installed in tests
+    except metadata.PackageNotFoundError:
         return _FALLBACK_VERSION
 
 
