@@ -59,9 +59,8 @@ def test_all_attempts_fail() -> None:
         msg = "always"
         raise ValueError(msg)
 
-    with pytest.raises(ExceptionGroup) as exc_info:
+    with pytest.RaisesGroup(ValueError, ValueError, ValueError):
         fn()
-    assert len(exc_info.value.exceptions) == 3
 
 
 def test_return_default_value() -> None:
@@ -78,7 +77,7 @@ def test_no_return_default_raises() -> None:
         msg = "boom"
         raise RuntimeError(msg)
 
-    with pytest.raises(ExceptionGroup):
+    with pytest.RaisesGroup(RuntimeError):
         fn()
 
 
@@ -101,10 +100,8 @@ def test_unwrap_single_exception_multiple_failures() -> None:
     def fn() -> NoReturn:
         raise ValueError
 
-    with pytest.raises(ExceptionGroup) as exc_info:
+    with pytest.RaisesGroup(ValueError, ValueError, ValueError):
         fn()
-
-    assert len(exc_info.value.exceptions) == 3
 
 
 def test_unwrap_single_exception_aborted() -> None:
@@ -124,10 +121,8 @@ def test_unwrap_single_exception_disabled_by_default() -> None:
     def fn() -> NoReturn:
         raise ValueError
 
-    with pytest.raises(ExceptionGroup) as exc_info:
+    with pytest.RaisesGroup(ValueError):
         fn()
-
-    assert len(exc_info.value.exceptions) == 1
 
 
 def test_args_kwargs_forwarded() -> None:
@@ -174,11 +169,10 @@ def test_retry_on_variants(
         calls.append(1)
         raise exc
 
-    with pytest.raises(ExceptionGroup) as eg:
+    with pytest.RaisesGroup(*([expected_in_group] * expected_calls)):
         fn()
 
     assert len(calls) == expected_calls
-    assert isinstance(eg.value.exceptions[0], expected_in_group)
 
 
 def test_retry_aborted_flag() -> None:
@@ -193,7 +187,7 @@ def test_retry_aborted_flag() -> None:
     def fn() -> NoReturn:
         raise ValueError
 
-    with pytest.raises(ExceptionGroup):
+    with pytest.RaisesGroup(ValueError):
         fn()
 
     assert len(captured) == 1
@@ -208,7 +202,7 @@ def test_delay_applied() -> None:
     def fn() -> NoReturn:
         raise ValueError
 
-    with pytest.raises(ExceptionGroup):
+    with pytest.RaisesGroup(ValueError, ValueError):
         fn()
 
     elapsed = time.monotonic() - start
@@ -233,7 +227,7 @@ def test_on_retry_called() -> None:
     def fn() -> NoReturn:
         raise ValueError
 
-    with pytest.raises(ExceptionGroup):
+    with pytest.RaisesGroup(ValueError, ValueError):
         fn()
 
     assert cb.call_count == 2
@@ -246,7 +240,7 @@ def test_on_failure_called() -> None:
     def fn() -> NoReturn:
         raise ValueError
 
-    with pytest.raises(ExceptionGroup):
+    with pytest.RaisesGroup(ValueError):
         fn()
 
     cb.assert_called_once()
@@ -279,16 +273,14 @@ def test_callback_exception_swallowed() -> None:
 
 
 def test_config_retry() -> None:
-    config.retry(attempts=5)
+    config.retry(attempts=3)
 
     @retry(delay=0)
     def fn() -> NoReturn:
         raise ValueError
 
-    with pytest.raises(ExceptionGroup) as eg:
+    with pytest.RaisesGroup(ValueError, ValueError, ValueError):
         fn()
-
-    assert len(eg.value.exceptions) == 5
 
 
 def test_context_isolation() -> None:
@@ -300,19 +292,15 @@ def test_context_isolation() -> None:
         def inner() -> NoReturn:
             raise ValueError
 
-        with pytest.raises(ExceptionGroup) as eg:
+        with pytest.RaisesGroup(ValueError, ValueError, ValueError):
             inner()
-
-        assert len(eg.value.exceptions) == 3
 
     @retry(delay=0)
     def outer() -> NoReturn:
         raise ValueError
 
-    with pytest.raises(ExceptionGroup) as eg:
+    with pytest.RaisesGroup(ValueError):
         outer()
-
-    assert len(eg.value.exceptions) == 1
 
 
 def test_disable_warnings_emits_nothing() -> None:
@@ -528,7 +516,7 @@ def test_attempt_durations_on_failure() -> None:
     def fn() -> NoReturn:
         raise ValueError
 
-    with pytest.raises(ExceptionGroup):
+    with pytest.RaisesGroup(ValueError, ValueError):
         fn()
 
     assert len(seen) == 1

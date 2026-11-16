@@ -62,10 +62,8 @@ async def test_all_fail() -> None:
     async def fn() -> NoReturn:
         raise ValueError
 
-    with pytest.raises(ExceptionGroup) as exc_info:
+    with pytest.RaisesGroup(ValueError, ValueError):
         await fn()
-
-    assert len(exc_info.value.exceptions) == 2
 
 
 async def test_unwrap_single_exception() -> None:
@@ -87,10 +85,8 @@ async def test_unwrap_single_exception_multiple_failures() -> None:
     async def fn() -> NoReturn:
         raise ValueError
 
-    with pytest.raises(ExceptionGroup) as exc_info:
+    with pytest.RaisesGroup(ValueError, ValueError):
         await fn()
-
-    assert len(exc_info.value.exceptions) == 2
 
 
 async def test_return_default_value() -> None:
@@ -121,7 +117,7 @@ async def test_retry_on_variants(
         calls.append(1)
         raise ValueError
 
-    with pytest.raises(ExceptionGroup):
+    with pytest.RaisesGroup(*([ValueError] * expected_calls)):
         await fn()
 
     assert len(calls) == expected_calls
@@ -134,7 +130,7 @@ async def test_delay_applied() -> None:
     async def fn() -> NoReturn:
         raise ValueError
 
-    with pytest.raises(ExceptionGroup):
+    with pytest.RaisesGroup(ValueError, ValueError):
         await fn()
 
     elapsed = time.monotonic() - start
@@ -186,10 +182,8 @@ async def test_context_isolation_between_tasks() -> None:
             async def fn() -> NoReturn:
                 raise ValueError
 
-            with pytest.raises(ExceptionGroup) as eg:
+            with pytest.RaisesGroup(*([ValueError] * attempts_expected)):
                 await fn()
-
-            assert len(eg.value.exceptions) == attempts_expected
 
     _ = await asyncio.gather(task(3), task(5))
 
@@ -252,10 +246,8 @@ async def test_retry_async_all_fail() -> None:
     def fn() -> NoReturn:
         raise ValueError
 
-    with pytest.raises(ExceptionGroup) as eg:
+    with pytest.RaisesGroup(ValueError, ValueError):
         await fn()
-
-    assert len(eg.value.exceptions) == 2
 
 
 async def test_retry_async_with_custom_executor() -> None:

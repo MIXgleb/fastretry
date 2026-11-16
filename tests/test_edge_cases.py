@@ -37,12 +37,8 @@ def test_exception_group_from_single_exc() -> None:
         msg = "x"
         raise ValueError(msg)
 
-    with pytest.raises(ExceptionGroup) as eg:
+    with pytest.RaisesGroup(ValueError):
         fn()
-    assert len(eg.value.exceptions) == 1
-
-    # BaseExceptionGroup resolves to ExceptionGroup
-    assert isinstance(eg.value, ExceptionGroup)
 
 
 def test_keyboard_interrupt_not_retried() -> None:
@@ -53,7 +49,7 @@ def test_keyboard_interrupt_not_retried() -> None:
         calls.append(1)
         raise KeyboardInterrupt
 
-    with pytest.raises(BaseExceptionGroup):
+    with pytest.RaisesGroup(KeyboardInterrupt):
         fn()
 
     assert len(calls) == 1
@@ -67,7 +63,7 @@ async def test_cancelled_error_not_retried() -> None:
         calls.append(1)
         raise asyncio.CancelledError
 
-    with pytest.raises(BaseExceptionGroup):
+    with pytest.RaisesGroup(asyncio.CancelledError):
         await fn()
 
     assert len(calls) == 1

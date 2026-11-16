@@ -160,11 +160,11 @@ def test_derive_jitter_from_fixed_default() -> None:
 def test_prepare_retry_aborted_no_retry_on() -> None:
     captured = []
 
-    @retry(attempts=5, delay=0, no_retry_on=ValueError, callbacks={"on_failure": captured.append})
+    @retry(attempts=3, delay=0, no_retry_on=ValueError, callbacks={"on_failure": captured.append})
     def fn() -> NoReturn:
         raise ValueError
 
-    with pytest.raises(ExceptionGroup):
+    with pytest.RaisesGroup(ValueError):
         fn()
 
     assert captured[0].attempt.retry_aborted is True
@@ -173,11 +173,11 @@ def test_prepare_retry_aborted_no_retry_on() -> None:
 def test_prepare_retry_aborted_not_in_retry_on() -> None:
     captured = []
 
-    @retry(attempts=5, delay=0, retry_on=ValueError, callbacks={"on_failure": captured.append})
+    @retry(attempts=3, delay=0, retry_on=ValueError, callbacks={"on_failure": captured.append})
     def fn() -> NoReturn:
         raise TypeError
 
-    with pytest.raises(ExceptionGroup):
+    with pytest.RaisesGroup(TypeError):
         fn()
 
     assert captured[0].attempt.retry_aborted is True
@@ -190,7 +190,7 @@ def test_prepare_retry_exhausted() -> None:
     def fn() -> NoReturn:
         raise ValueError
 
-    with pytest.raises(ExceptionGroup):
+    with pytest.RaisesGroup(ValueError, ValueError):
         fn()
 
     assert captured[0].attempt.retry_aborted is False
