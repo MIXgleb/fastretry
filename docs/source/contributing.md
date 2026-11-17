@@ -41,6 +41,10 @@ just docs           # build with -W: warnings fail the build
 just docs-no-warn   # build without failing, for debugging
 ```
 
+CI builds the documentation with the same `-W --keep-going` flags in a separate
+`docs` job, so a broken cross-reference or a docstring that Sphinx cannot parse
+fails the pull request instead of the release.
+
 ```bash
 uv run sphinx-build -W --keep-going -b html docs/source docs/build/html
 ```
