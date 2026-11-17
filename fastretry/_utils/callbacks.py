@@ -38,8 +38,15 @@ _PRIMITIVE_TYPES: Final[tuple[type, ...]] = (
     bytearray,
     type(None),
 )
+"""Types whose value is logged as is; other results are logged by type name."""
 
 type CallbackType = Callable[[RetryStats], CoroType[None] | None]
+"""
+Retry lifecycle callback.
+
+Receives the current :class:`~fastretry._utils.stats.RetryStats` and returns
+either nothing or a coroutine, in which case it is awaited.
+"""
 
 
 class RetryCallbacks(TypedDict, total=False):

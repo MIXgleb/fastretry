@@ -34,6 +34,7 @@ from fastretry._utils.stats import (
 )
 
 type _STATS_FACTORY_TYPE = Callable[..., RetryStats]
+"""Type of the ``stats_factory`` fixture: a ``RetryStats`` builder with keyword defaults."""
 
 
 @pytest.fixture

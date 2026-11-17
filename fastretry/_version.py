@@ -8,7 +8,10 @@ from typing import (
 )
 
 _PACKAGE_NAME: Final[str] = "fastretry"
+"""Distribution name used to look up the installed version."""
+
 _FALLBACK_VERSION: Final[str] = "0.0.0"
+"""Version reported when the package metadata is not available."""
 
 
 @cache

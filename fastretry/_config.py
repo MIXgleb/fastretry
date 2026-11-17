@@ -237,3 +237,4 @@ class _ConfigNamespace:
 
 
 config = _ConfigNamespace()
+"""Global configuration entry point: ``config.retry``, ``config.logging``, ``config.context``."""

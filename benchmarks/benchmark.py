@@ -43,7 +43,8 @@ _EXECUTOR_ITERATIONS: Final[int] = 1_000
 _ATTEMPTS: Final[int] = 3
 """Attempts configured for every library, so the wrappers are comparable."""
 
-_fastretry_calls = [0]
+_fastretry_calls: list[int] = [0]
+"""Call counter for ``fastretry_one_retry``: odd calls raise, so every other one is retried."""
 
 
 def measure(

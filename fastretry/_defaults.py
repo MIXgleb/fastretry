@@ -95,10 +95,13 @@ class _Defaults:
 
 
 global_defaults: Final[_Defaults] = _Defaults()
+"""Process-wide defaults, set by ``config.retry`` and ``config.logging``."""
+
 context_defaults: contextvars.ContextVar[_Defaults | None] = contextvars.ContextVar(
     "retry_defaults",
     default=None,
 )
+"""Per-context defaults set by ``config.context``; ``None`` outside of the block."""
 
 
 def get_defaults() -> _Defaults:

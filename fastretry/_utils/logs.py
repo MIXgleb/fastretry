@@ -21,14 +21,28 @@ from typing import (
 )
 
 type _LogKind = Literal["success", "retry", "failure", "sleep"]
+"""
+Kind of log message; every kind has its own configured level.
+
+- ``"success"`` — emitted after a successful attempt.
+- ``"retry"`` — emitted after a failed attempt, before sleeping.
+- ``"failure"`` — emitted after all attempts have failed.
+- ``"sleep"`` — emitted before sleeping between attempts.
+"""
 
 _LOGGER_NAME: Final[str] = "retry"
+"""Name of the logger that all retry decorators write to."""
+
 _DEFAULT_LOGGER: Final[logging.Logger] = logging.getLogger(_LOGGER_NAME)
+"""Logger resolved once at import; the built-in handler is attached lazily."""
+
 _DEFAULT_LOG_FORMAT: Final[str] = (
     "{asctime} [{levelname:^9}] {fname} "
     "[{retry_index}/{attempts} in {attempt_duration:.2f}s] "
     "({total_elapsed:.2f}s) [{exception_type}]: {message}"
 )
+"""Format of the messages written by the built-in console handler."""
+
 _FORMAT_DEFAULTS: Final[dict[str, object]] = {
     "fname": "<unknown>",
     "retry_index": "?",
@@ -37,6 +51,7 @@ _FORMAT_DEFAULTS: Final[dict[str, object]] = {
     "total_elapsed": 0.0,
     "exception_type": "-",
 }
+"""Values used for format fields that are missing from ``log_extra``."""
 
 
 class _StderrHandler(logging.StreamHandler[TextIO]):

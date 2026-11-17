@@ -16,6 +16,8 @@ from sphinx.application import (
 
 # -- Path setup --------------------------------------------------------------
 _ROOT: Final[pathlib.Path] = pathlib.Path(__file__).resolve().parent.parent.parent
+"""Repository root: ``fastretry`` is imported from it and ``pyproject.toml`` is read from it."""
+
 sys.path.insert(0, str(_ROOT))
 
 

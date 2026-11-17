@@ -8,7 +8,18 @@ from typing import (
 )
 
 type Delay = float | ExponentialDelay
+"""Delay between attempts: fixed seconds or an :class:`ExponentialDelay`."""
+
 type JitterStrategy = Literal["full", "equal", "decorrelated", "none"]
+"""
+Randomization applied to the computed delay.
+
+- ``"none"`` — the computed delay is used as is.
+- ``"full"`` — ``random(0, computed)``.
+- ``"equal"`` — ``computed / 2 + random(0, computed / 2)``.
+- ``"decorrelated"`` — ``random(base, previous * 3)``, which spreads retries of
+  concurrent callers; falls back to ``"full"`` when there is no previous delay.
+"""
 
 
 class ExponentialDelay(NamedTuple):

@@ -355,3 +355,4 @@ shared_loop: Final[SharedLoop] = SharedLoop()
 """Process-wide shared loop used when ``async_callback_mode`` asks for it."""
 
 _ = atexit.register(shared_loop.shutdown)
+"""Stop the loop thread on interpreter exit, so it is not left running."""
