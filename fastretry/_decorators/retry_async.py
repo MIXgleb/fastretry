@@ -4,6 +4,10 @@ Async retry decorator.
 Exposes :func:`retry_async`, which always returns a coroutine function: sync
 callables are run in an executor, coroutine functions are awaited directly.
 
+Use :func:`~fastretry.retry` for ordinary coroutine functions: it awaits them
+without a thread hop. ``retry_async`` is meant mainly for sync callables that
+must not block the event loop.
+
 ``retry_async`` can be used in two forms::
 
     @retry_async
@@ -144,6 +148,14 @@ def retry_async[**P, R](
     - a coroutine function, which is awaited directly;
     - a sync function, which is run in an executor so the event loop is
       not blocked.
+
+    For ordinary coroutine functions prefer :func:`~fastretry.retry`: it
+    awaits them directly and also returns a coroutine function.
+    ``retry_async`` is meant mainly for **sync** callables that must not
+    block the event loop. When one decorator is wanted for both kinds of
+    callables, import it under the usual name::
+
+        from fastretry import retry_async as retry
 
     For sync functions, this is equivalent to writing::
 

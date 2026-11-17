@@ -43,6 +43,10 @@ test:
 test-fast:
     uv run pytest --no-cov
 
+# Run the micro-benchmarks (add tenacity/backoff to compare).
+benchmark:
+    uv run python benchmarks/benchmark.py
+
 # Build documentation locally.
 docs:
     uv run sphinx-build -W --keep-going -b html docs/source docs/build/html

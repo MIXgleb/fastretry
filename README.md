@@ -15,6 +15,8 @@ Retry decorator for synchronous and asynchronous functions.
 - Run sync functions in an executor from async code.
 - 100% test coverage.
 
+**Documentation:** <https://fastretry.readthedocs.io/>
+
 ## Installation
 
 ```bash
@@ -37,6 +39,9 @@ def fetch() -> bytes: ...
 
 ### Async function
 
+Use the regular `retry` for coroutine functions: it awaits them directly
+and returns a coroutine function.
+
 ```python
 from fastretry import retry
 
@@ -48,7 +53,8 @@ async def fetch() -> bytes: ...
 ### Sync function, called asynchronously
 
 Use `retry_async` to run a sync function in an executor so the event
-loop is not blocked. The decorator always returns a coroutine function.
+loop is not blocked. The decorator always returns a coroutine function,
+so callers must `await` it.
 
 ```python
 from fastretry import retry_async
@@ -60,6 +66,14 @@ def blocking_io() -> bytes: ...
 
 async def main() -> None:
     data = await blocking_io()
+```
+
+`retry_async` is meant for sync callables like this one. When a code base
+wants one decorator that always returns a coroutine — for sync and async
+callables alike — import it under the usual name:
+
+```python
+from fastretry import retry_async as retry
 ```
 
 ## Options
@@ -337,6 +351,7 @@ just mypy           # type check with mypy
 just pyrefly        # type check with pyrefly
 just test           # run tests with coverage
 just test-fast      # run tests without coverage (fast)
+just benchmark      # run the micro-benchmarks
 just docs           # build documentation locally
 just docs-no-warn   # build documentation locally without failing on warnings
 just build          # build wheel and sdist
