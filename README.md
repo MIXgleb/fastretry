@@ -13,6 +13,9 @@ Retry decorator for synchronous and asynchronous functions.
 - Lifecycle callbacks for success, retry, and failure.
 - Configurable per decorator or globally.
 - Run sync functions in an executor from async code.
+- Runtime introspection of the retry in progress: `is_retrying()`,
+  `get_current_stats()` and lookups of other runs (`get_stats_for()`,
+  `get_active_runs()`).
 - 100% test coverage.
 
 **Documentation:** <https://fastretry.readthedocs.io/>

@@ -243,6 +243,13 @@ class RetryStats:
     wrapper derives a fresh copy per call via :meth:`for_call`
     and mutates it as attempts progress.
 
+    The wrapper owns the per-call instance, so treat every
+    :class:`RetryStats` received by a callback or returned by
+    introspection as read-only: its fields describe the live run, and
+    writing to them corrupts retry bookkeeping. Call :meth:`snapshot`
+    before passing the state to another thread, task or storage that
+    outlives the call.
+
     Attributes
     ----------
     log : Log
@@ -297,6 +304,34 @@ class RetryStats:
             ),
             "retry_aborted": attempt.retry_aborted,
         }
+
+    def snapshot(self) -> "RetryStats":
+        """
+        Return a detached copy of the current state.
+
+        The retry loop keeps mutating the live instance while attempts
+        progress, so a caller that reports several fields together should
+        read a snapshot: afterwards its fields no longer change. The copy
+        shares the immutable call context (logger, decorator options, call
+        arguments) and owns its own :class:`AttemptState` with copies of
+        its mutable lists. Fields are read without pausing the loop, so
+        they describe the state around the moment of the call.
+
+        Returns
+        -------
+        RetryStats
+            Copy of the current state, detached from the retry loop.
+
+        """
+        attempt = self.attempt
+        return dc.replace(
+            self,
+            attempt=dc.replace(
+                attempt,
+                attempt_durations=list(attempt.attempt_durations),
+                exceptions=list(attempt.exceptions),
+            ),
+        )
 
     def for_call(
         self,

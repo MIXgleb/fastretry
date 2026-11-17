@@ -259,6 +259,75 @@ A decorator reads the defaults when it is created, so create the decorated
 function inside the `with` block (as above) or pass the options to
 `@retry(...)` directly.
 
+## Inspecting retries at runtime
+
+Introspection answers three questions without threading state through the call
+chain: whether a retry is running, what it has already tried, and which runs are
+active elsewhere in the process.
+
+```python
+import logging
+
+from fastretry import RetryStats, get_current_stats, is_retrying, retry
+
+logger = logging.getLogger(__name__)
+
+
+def on_retry(stats: RetryStats) -> None:
+    if is_retrying():
+        logger.warning(
+            "attempt %d of %d failed",
+            stats.attempt.retry_index,
+            stats.decorator.attempts,
+        )
+
+
+@retry(attempts=3, callbacks={"on_retry": on_retry})
+def fetch(url: str) -> bytes:
+    stats = get_current_stats()
+    assert stats is not None  # the call is inside a retry loop
+    ...
+```
+
+`is_retrying()` without arguments reports the current context: it is true
+inside the wrapped callable, in its callbacks and during delays.
+`get_current_stats()` returns the same live object callbacks receive, so
+`attempt.retry_index`, `attempt.attempt_duration` and `attempt.last_exception`
+reflect the attempt in progress. Treat it as read-only.
+
+`get_current_run_id()` returns an id that is unique in the process and is never
+reused. Combined with `get_stats_by_run_id()`, another thread or task can look
+at a run it did not start:
+
+```python
+from fastretry import get_current_run_id, get_stats_by_run_id
+
+run_id = get_current_run_id()  # captured inside the retried callable
+stats = get_stats_by_run_id(run_id)  # from a watchdog, health check, etc.
+```
+
+To inspect runs by function instead of by id, pass the decorated callable, its
+qualified name, an `asyncio.Task` or a `functools.partial`: `is_retrying(fetch)`
+and `get_stats_for(fetch)` report the runs of that callable that are active
+right now. Several threads may run the same function concurrently, so
+`get_stats_for` maps run id to `RetryStats`. The mapping is a snapshot, but the
+values are live objects that keep updating. Call `RetryStats.snapshot()` when
+you need a detached copy that no longer changes, for example to report several
+fields that belong to the same moment. `get_active_runs()` does the same for
+every function in the process, which is what a diagnostics endpoint usually
+wants:
+
+```python
+from fastretry import get_active_runs
+
+for run_id, stats in get_active_runs().items():
+    logger.info("%s: attempt %d", stats.attempt.fname, stats.attempt.retry_index)
+```
+
+The registry is cleaned up when the call finishes, including on failure, and
+the context view is per task and per thread, so concurrent `asyncio` tasks do
+not see each other's stats.
+
 ## Tests
 
 Two knobs keep tests fast and quiet: `config.reset()` after each test and

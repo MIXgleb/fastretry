@@ -25,6 +25,9 @@ from fastretry._compat.sentinels import (
 from fastretry._utils.callbacks import (
     CallbackType,
 )
+from fastretry._utils.introspection import (
+    RetryContext,
+)
 from fastretry._utils.stats import (
     RetryStats,
 )
@@ -85,32 +88,33 @@ class AsyncRetrying[**P, R](
             )
             stats_attempt = stats.attempt
 
-            for retry_index in range(1, self.attempts + 1):
-                stats_attempt.retry_index = retry_index
-                stats_attempt.attempt_started_at = time.monotonic()
+            with RetryContext(stats):
+                for retry_index in range(1, self.attempts + 1):
+                    stats_attempt.retry_index = retry_index
+                    stats_attempt.attempt_started_at = time.monotonic()
 
-                try:
-                    result = await invoke(*args, **kwargs)
-                except BaseException as exc:  # ruff: ignore[blind-except]
-                    self._prepare_retry(
-                        stats_attempt=stats_attempt,
-                        exc=exc,
-                    )
+                    try:
+                        result = await invoke(*args, **kwargs)
+                    except BaseException as exc:  # ruff: ignore[blind-except]
+                        self._prepare_retry(
+                            stats_attempt=stats_attempt,
+                            exc=exc,
+                        )
 
-                    if stats_attempt.retry_aborted:
-                        break
+                        if stats_attempt.retry_aborted:
+                            break
 
-                    await self._safe_call_callback(callback=on_retry, stats=stats)
-                    await self._sleep(stats=stats)
-                else:
-                    self._prepare_success(stats_attempt=stats_attempt, result=result)
-                    await self._safe_call_callback(callback=on_success, stats=stats)
-                    return result
+                        await self._safe_call_callback(callback=on_retry, stats=stats)
+                        await self._sleep(stats=stats)
+                    else:
+                        self._prepare_success(stats_attempt=stats_attempt, result=result)
+                        await self._safe_call_callback(callback=on_success, stats=stats)
+                        return result
 
-            self._prepare_failure(stats_attempt=stats_attempt)
-            await self._safe_call_callback(callback=on_failure, stats=stats)
-            self._raise_if_needed(stats_attempt=stats_attempt)
-            return self.return_default_value
+                self._prepare_failure(stats_attempt=stats_attempt)
+                await self._safe_call_callback(callback=on_failure, stats=stats)
+                self._raise_if_needed(stats_attempt=stats_attempt)
+                return self.return_default_value
 
         return async_wrapper
 
