@@ -468,7 +468,7 @@ wheels = [
 
 [[package]]
 name = "fastretry"
-version = "0.6.1"
+version = "0.7.0"
 source = { editable = "." }
 dependencies = [
     { name = "typing-extensions", marker = "python_full_version < '3.15'" },

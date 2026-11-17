@@ -35,7 +35,7 @@ wrapper cost.
 ## Results
 
 Measured on Windows 11 (build 26100, Intel i5-1135G7), CPython 3.13.16,
-`fastretry` 0.6.1, `tenacity` 9.2.1 and `backoff` 2.2.1. The values below are
+`fastretry` 0.7.0, `tenacity` 9.2.1 and `backoff` 2.2.1. The values below are
 the median of several runs; a single run on a busy machine can be twice as slow,
 so treat the numbers as an order of magnitude and re-measure on your hardware
 rather than comparing absolute values.

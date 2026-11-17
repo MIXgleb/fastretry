@@ -7,13 +7,71 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-17
+
 ### Added
+
+- `Documentation` entry in `[project.urls]`, so the PyPI project page links to
+  the Read the Docs site instead of the source repository.
+- `config.logging(install_default_handler=...)` option to disable the built-in
+  console handler and keep the package silent until the application configures
+  `logging`.
+- Global option `config.retry(unwrap_single_exception=True)` to re-raise a
+  single collected exception as is instead of wrapping it in an exception
+  group. Two or more collected exceptions are still raised as a group.
+- Global option `config.retry(async_callback_mode=...)` selecting how async
+  callbacks of sync functions are dispatched: `"thread_per_call"` (default,
+  a thread with its own event loop per callback invocation), and
+  `"shared_loop_when_running"` / `"shared_loop_always"` (a process-wide shared
+  loop, about 30x less overhead per callback).
+- Async callbacks executed in a per-call thread now receive the caller's
+  `contextvars`.
+- `RetryStats.attempt` now exposes `attempt_started_at`, `attempt_duration`
+  (duration of the current attempt, callbacks and delays excluded) and
+  `attempt_durations` (durations of every finished attempt).
+- `fastretry.__version__` with the installed version. It is resolved lazily
+  from the package metadata, so `import fastretry` does not pay for
+  `importlib.metadata`.
+- Documentation: cookbook, migration guide from tenacity/backoff/retry,
+  benchmarks page with `benchmarks/benchmark.py`, contributing guide and the
+  changelog page in Sphinx.
 
 ### Changed
 
+- **Breaking:** `RetryStats.attempt.elapsed` is renamed to `total_elapsed`; the
+  built-in log format and `log_extra` use `total_elapsed` as well.
+- **Breaking:** the `sync_sleep_call` and `async_sleep_call` global options are
+  removed from `config.retry(...)`.
+- **Breaking:** the `sleep_call` argument is removed from the `SyncRetrying` and
+  `AsyncRetrying` classes. Delays are now always slept with `time.sleep` in
+  synchronous retries and `asyncio.sleep` in asynchronous ones, so a custom
+  sleep function can no longer be passed.
+- **Breaking:** `attempts` and `delay` of the `SyncRetrying` and `AsyncRetrying`
+  classes are now read-only properties instead of attributes. They expose the
+  effective values after validation (an `attempts` below 1 becomes 1, a
+  negative fixed `delay` becomes 0) and can no longer be assigned after
+  construction.
+- Logging no longer touches global `logging` state at import time. The built-in
+  console handler is created lazily on the first log message, writes to
+  `sys.stderr`, and is installed only when the application has not configured
+  `logging`.
+- `return_default_value` is now typed statically: the decorated callable's
+  return type is widened with the type of the default value (`R | D`). The
+  runtime `UserWarning` for a type mismatch was removed together with the
+  internal `TypeChecker` helper.
+
 ### Fixed
 
+- `retry_async` no longer wraps an already asynchronous function into a second
+  coroutine.
+- Decorating an async function with options no longer collapses the signature to
+  `Never`.
+
 ### Tests
+
+- Documentation is built in CI with `-W --keep-going` in a separate `docs` job,
+  so a broken cross-reference or a docstring that Sphinx cannot parse fails the
+  pull request instead of the release.
 
 ## [0.6.1] - 2026-10-20
 
