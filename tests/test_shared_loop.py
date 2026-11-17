@@ -126,7 +126,7 @@ def test_ensure_loop_reuses_healthy_loop(loop: SharedLoop) -> None:
 
 
 def test_ensure_loop_starts_new_loop_after_fork(loop: SharedLoop) -> None:
-    loop._pid = os.getpid() + 1  # pretend the state belongs to a parent process
+    loop._pid = os.getpid() + 1
 
     created = loop._ensure_loop()
 

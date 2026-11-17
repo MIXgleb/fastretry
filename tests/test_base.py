@@ -258,6 +258,4 @@ def test_return_default_value_is_not_checked_at_runtime() -> None:
     def fn() -> int:
         raise ValueError
 
-    # A mismatch between return_default_value and the declared return type
-    # is reported by type checkers, not at runtime.
     assert fn() is None

@@ -217,6 +217,8 @@ class BaseRetrying[
             passed=executor,
             default=None,
         )
+
+        # --- global options ---
         self._install_default_handler: Final[bool] = (
             self._effective_defaults.install_default_handler
         )

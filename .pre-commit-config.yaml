@@ -47,7 +47,6 @@ repos:
     hooks:
       - id: mypy
         additional_dependencies: []
-          # - typing_extensions
         args: [--config-file=pyproject.toml]
         exclude: ^tests/
 
