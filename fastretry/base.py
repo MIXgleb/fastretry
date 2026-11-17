@@ -7,7 +7,6 @@ from abc import (
     abstractmethod,
 )
 from collections.abc import (
-    Awaitable,
     Callable,
     Mapping,
 )
@@ -25,10 +24,8 @@ from typing import (
 )
 
 from fastretry._compat.aliases import (
+    Coro,
     RetryOnExceptionType,
-)
-from fastretry._compat.functions import (
-    TypeChecker,
 )
 from fastretry._compat.sentinels import (
     UNSET,
@@ -68,6 +65,9 @@ if TYPE_CHECKING:
     from fastretry._utils.logs import (
         LogLevel,
     )
+    from fastretry._utils.shared_loop import (
+        AsyncCallbackMode,
+    )
 
 
 class BaseRetrying[
@@ -78,8 +78,12 @@ class BaseRetrying[
     """Base class for retry strategy implementations."""
 
     __slots__ = (
+        "_async_callback_mode",
+        "_attempts",
+        "_delay",
         "_delay_calculator",
         "_effective_defaults",
+        "_install_default_handler",
         "_level_failure",
         "_level_retry",
         "_level_sleep",
@@ -88,10 +92,9 @@ class BaseRetrying[
         "_re_raise_exception",
         "_stats",
         "_traceback_min_level",
+        "_unwrap_single_exception",
         "_warnings",
-        "attempts",
         "callbacks",
-        "delay",
         "disable_logging",
         "disable_warnings",
         "executor",
@@ -140,13 +143,17 @@ class BaseRetrying[
         Parameters
         ----------
         attempts : int, ``optional``
-            Number of attempts
+            Number of attempts. Values below 1 are replaced with 1 and
+            reported with a :exc:`UserWarning`.
         return_default_value : Any, ``optional``
             Default value returned if the function fails after all attempts,
         delay : Delay, ``optional``
             Delay between attempts in seconds. May be a plain ``float`` for a
             fixed delay or an :class:`~fastretry._utils.delay.ExponentialDelay` for
-            exponential backoff.
+            exponential backoff. A negative fixed delay is replaced with 0 and
+            reported with a :exc:`UserWarning`; invalid
+            :class:`~fastretry._utils.delay.ExponentialDelay` parameters raise
+            :exc:`ValueError`.
         jitter : JitterStrategy, ``optional``
             Jitter strategy overriding the default for the given delay type.
             When omitted, ``jitter_for_exponential`` or ``jitter_for_fixed``
@@ -175,12 +182,12 @@ class BaseRetrying[
         self._effective_defaults: Final = get_defaults()
 
         # --- per-decorator options ---
-        # --- mutable ---
-        self.attempts: int = self._resolve(
+        # --- mutable while validating, exposed as read-only properties ---
+        self._attempts: int = self._resolve(
             passed=attempts,
             default=self._effective_defaults.attempts,
         )
-        self.delay: Delay = self._resolve(
+        self._delay: Delay = self._resolve(
             passed=delay,
             default=self._effective_defaults.delay,
         )
@@ -209,6 +216,15 @@ class BaseRetrying[
         self.executor: Final[Executor | None] = self._resolve(
             passed=executor,
             default=None,
+        )
+        self._install_default_handler: Final[bool] = (
+            self._effective_defaults.install_default_handler
+        )
+        self._async_callback_mode: Final[AsyncCallbackMode] = (
+            self._effective_defaults.async_callback_mode
+        )
+        self._unwrap_single_exception: Final[bool] = (
+            self._effective_defaults.unwrap_single_exception
         )
 
         # --- logger configuration ---
@@ -249,9 +265,10 @@ class BaseRetrying[
             global_options=GlobalOptions(
                 jitter_for_exponential=self._effective_defaults.jitter_for_exponential,
                 jitter_for_fixed=self._effective_defaults.jitter_for_fixed,
-                sync_sleep_call=self._effective_defaults.sync_sleep_call,
-                async_sleep_call=self._effective_defaults.async_sleep_call,
                 traceback_min_level=self._traceback_min_level,
+                install_default_handler=self._install_default_handler,
+                async_callback_mode=self._async_callback_mode,
+                unwrap_single_exception=self._unwrap_single_exception,
             ),
             call=CallOptions(),
             attempt=AttemptState(),
@@ -275,21 +292,53 @@ class BaseRetrying[
             f"return_default_value={self.return_default_value!r},\n\t"
             f"delay={self.delay!r},\n\t"
             f"jitter={self.jitter!r},\n\t"
-            f"sleep_call={getattr(self, 'sleep_call', None)!r},\n\t"
             f"re_raise_exception={self._re_raise_exception!r},\n\t"
             f"disable_logging={self.disable_logging!r},\n\t"
             f"disable_warnings={self.disable_warnings!r},\n\t"
             f"retry_on={self.retry_on!r},\n\t"
             f"no_retry_on={self.no_retry_on!r},\n\t"
+            f"unwrap_single_exception={self._unwrap_single_exception!r},\n\t"
             f"level_success={self._level_success!r},\n\t"
             f"level_retry={self._level_retry!r},\n\t"
             f"level_failure={self._level_failure!r},\n\t"
             f"level_sleep={self._level_sleep!r},\n\t"
             f"traceback_min_level={self._traceback_min_level!r},\n\t"
+            f"install_default_handler={self._install_default_handler!r},\n\t"
+            f"async_callback_mode={self._async_callback_mode!r},\n\t"
             f"callbacks={self.callbacks!r},\n\t"
             f"executor={self.executor!r},\n\t"
             f")"
         )
+
+    @final
+    @property
+    def attempts(self) -> int:
+        """
+        Effective number of attempts.
+
+        Returns
+        -------
+        int
+            Number of attempts after validation: a value below 1 is replaced
+            with 1 during initialization. The property is read-only.
+
+        """
+        return self._attempts
+
+    @final
+    @property
+    def delay(self) -> Delay:
+        """
+        Effective delay between attempts.
+
+        Returns
+        -------
+        Delay
+            Delay configuration after validation: a negative fixed delay is
+            replaced with 0 during initialization. The property is read-only.
+
+        """
+        return self._delay
 
     @final
     @property
@@ -310,7 +359,7 @@ class BaseRetrying[
             level_sleep=self._level_sleep,
             traceback_min_level=self._traceback_min_level,
             disable_logging=self.disable_logging,
-            disable_warnings=self.disable_warnings,
+            install_default_handler=self._install_default_handler,
         )
 
     @final
@@ -345,22 +394,6 @@ class BaseRetrying[
             Wrapped function with the same signature
 
         """
-        if not isinstance(self.return_default_value, UnsetType):
-            type_checker = TypeChecker(func)
-
-            if type_checker.matches_return_hint(self.return_default_value) is False:
-                self._warnings.warn(
-                    f"Type mismatch for '{getattr(func, '__qualname__', '<anonymous>')}'.\n\t"
-                    f"The declared return type is {type_checker.return_hint!r}, but you passed "
-                    f"return_default_value={self.return_default_value!r}.\n\t"
-                    f"If all attempts fail, the wrapper will return {self.return_default_value!r} "
-                    f"instead of raising, which may break callers expecting "
-                    f"{type_checker.return_hint!r}.\n\t"
-                    f"Either pass a value of the correct type or remove return_default_value "
-                    f"to re-raise the exception.",
-                    stacklevel=4,
-                )
-
         return self._wrap(func)
 
     @abstractmethod
@@ -391,7 +424,7 @@ class BaseRetrying[
         self,
         *,
         stats: RetryStats,
-    ) -> Awaitable[None] | None:
+    ) -> Coro[None] | None:
         """
         Sleep between attempts.
 
@@ -409,7 +442,7 @@ class BaseRetrying[
         *,
         callback: CallbackType,
         stats: RetryStats,
-    ) -> Awaitable[None] | None:
+    ) -> Coro[None] | None:
         """
         Invoke a retry callback.
 
@@ -430,11 +463,6 @@ class BaseRetrying[
         stats : RetryStats
             Current retry statistics.
 
-        Returns
-        -------
-        Awaitable[None] | None
-            Awaitable when the callback is async, ``None`` otherwise.
-
         """
         raise NotImplementedError
 
@@ -444,7 +472,7 @@ class BaseRetrying[
         *,
         callback: CallbackType,
         stats: RetryStats,
-    ) -> Awaitable[None] | None:
+    ) -> Coro[None] | None:
         """
         Invoke a retry callback, swallowing and logging any exception.
 
@@ -476,36 +504,38 @@ class BaseRetrying[
             ``max_delay``, or with ``max_delay`` less than ``delay``.
 
         """
-        if self.attempts < 1:
+        if self._attempts < 1:
             self._warnings.warn(
-                f"\n\tNumber of attempts must be >= 1, got {self.attempts!r}. Falling back to 1.",
+                f"\n\tNumber of attempts must be >= 1, got {self._attempts!r}. Falling back to 1.",
                 stacklevel=7,
             )
-            self.attempts = 1
+            self._attempts = 1
 
-        if isinstance(self.delay, ExponentialDelay):
-            if self.delay.delay <= 0:
-                msg = f"delay must be > 0, got {self.delay.delay!r}"
+        delay = self._delay
+
+        if isinstance(delay, ExponentialDelay):
+            if delay.delay <= 0:
+                msg = f"delay must be > 0, got {delay.delay!r}"
                 raise ValueError(msg)
-            if self.delay.backoff_factor <= 0:
-                msg = f"backoff factor must be > 0, got {self.delay.backoff_factor!r}"
+            if delay.backoff_factor <= 0:
+                msg = f"backoff factor must be > 0, got {delay.backoff_factor!r}"
                 raise ValueError(msg)
-            if self.delay.max_delay is not None:
-                if self.delay.max_delay <= 0:
-                    msg = f"maximum delay must be > 0, got {self.delay.max_delay!r}"
+            if delay.max_delay is not None:
+                if delay.max_delay <= 0:
+                    msg = f"maximum delay must be > 0, got {delay.max_delay!r}"
                     raise ValueError(msg)
-                if self.delay.max_delay < self.delay.delay:
+                if delay.max_delay < delay.delay:
                     msg = (
-                        f"maximum delay ({self.delay.max_delay!r}) must be >= "
-                        f"base delay ({self.delay.delay!r})"
+                        f"maximum delay ({delay.max_delay!r}) must be >= "
+                        f"base delay ({delay.delay!r})"
                     )
                     raise ValueError(msg)
-        elif self.delay < 0:
+        elif delay < 0:
             self._warnings.warn(
-                f"\n\tDelay must be >= 0, got {self.delay!r}. Falling back to 0.",
+                f"\n\tDelay must be >= 0, got {delay!r}. Falling back to 0.",
                 stacklevel=7,
             )
-            self.delay = 0
+            self._delay = 0
 
     @final
     def _log_swallowed(
@@ -572,8 +602,11 @@ class BaseRetrying[
             Result returned by the wrapped function.
 
         """
+        now = time.monotonic()
         stats_attempt.result = result
-        stats_attempt.elapsed = time.monotonic() - stats_attempt.started_at
+        stats_attempt.attempt_duration = now - stats_attempt.attempt_started_at
+        stats_attempt.attempt_durations.append(stats_attempt.attempt_duration)
+        stats_attempt.total_elapsed = now - stats_attempt.started_at
 
     @final
     def _prepare_retry(
@@ -593,9 +626,12 @@ class BaseRetrying[
             Exception raised by the wrapped function.
 
         """
+        now = time.monotonic()
         stats_attempt.last_exception = exc
         stats_attempt.exceptions.append(exc)
-        stats_attempt.elapsed = time.monotonic() - stats_attempt.started_at
+        stats_attempt.attempt_duration = now - stats_attempt.attempt_started_at
+        stats_attempt.attempt_durations.append(stats_attempt.attempt_duration)
+        stats_attempt.total_elapsed = now - stats_attempt.started_at
         stats_attempt.previous_delay = (
             None
             if isinstance(stats_attempt.computed_delay, UnsetType)
@@ -628,7 +664,7 @@ class BaseRetrying[
             Per-attempt state.
 
         """
-        stats_attempt.elapsed = time.monotonic() - stats_attempt.started_at
+        stats_attempt.total_elapsed = time.monotonic() - stats_attempt.started_at
 
         if not self._re_raise_exception or stats_attempt.last_exception is None:
             stats_attempt.result = self.return_default_value
@@ -640,7 +676,12 @@ class BaseRetrying[
         stats_attempt: AttemptState,
     ) -> None:
         """
-        Raise a single exception group if re-raising is enabled.
+        Re-raise the failure if re-raising is enabled.
+
+        When exactly one exception was collected and
+        :attr:`~fastretry._utils.stats.GlobalOptions.unwrap_single_exception`
+        is enabled, that exception is raised as is. Otherwise all collected
+        exceptions are raised together, in the order they were raised.
 
         Parameters
         ----------
@@ -656,16 +697,21 @@ class BaseRetrying[
             exceptions are subclasses of :exc:`Exception`.
 
         """
-        if self._re_raise_exception and stats_attempt.exceptions:
-            if stats_attempt.retry_aborted:
-                msg = (
-                    f"Retry aborted after {stats_attempt.retry_index} attempt(s): "
-                    f"exception is not retryable"
-                )
-            else:
-                msg = f"All {stats_attempt.retry_index} attempts failed"
+        if not self._re_raise_exception or not stats_attempt.exceptions:
+            return
 
-            raise BaseExceptionGroup(msg, stats_attempt.exceptions)
+        if len(stats_attempt.exceptions) == 1 and self._unwrap_single_exception:
+            raise stats_attempt.exceptions[0]
+
+        if stats_attempt.retry_aborted:
+            msg = (
+                f"Retry aborted after {stats_attempt.retry_index} attempt(s): "
+                f"exception is not retryable"
+            )
+        else:
+            msg = f"All {stats_attempt.retry_index} attempts failed"
+
+        raise BaseExceptionGroup(msg, stats_attempt.exceptions)
 
     @final
     def _derive_jitter(

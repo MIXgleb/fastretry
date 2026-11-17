@@ -16,15 +16,14 @@ from unittest.mock import (
 )
 
 import pytest
-from pytest_mock import (
-    MockerFixture,
-)
 
 from fastretry._config import (
     config,
 )
-from fastretry._retry import (
+from fastretry._decorators.retry import (
     retry,
+)
+from fastretry._decorators.retry_async import (
     retry_async,
 )
 from fastretry._utils.stats import (
@@ -63,18 +62,37 @@ async def test_all_fail() -> None:
     async def fn() -> NoReturn:
         raise ValueError
 
-    with pytest.raises(ExceptionGroup) as exc_info:
+    with pytest.RaisesGroup(ValueError, ValueError):
         await fn()
 
-    assert len(exc_info.value.exceptions) == 2
+
+async def test_unwrap_single_exception() -> None:
+    config.retry(unwrap_single_exception=True)
+
+    @retry(attempts=1, delay=0)
+    async def fn() -> NoReturn:
+        msg = "boom"
+        raise ValueError(msg)
+
+    with pytest.raises(ValueError, match="boom"):
+        await fn()
+
+
+async def test_unwrap_single_exception_multiple_failures() -> None:
+    config.retry(unwrap_single_exception=True)
+
+    @retry(attempts=2, delay=0)
+    async def fn() -> NoReturn:
+        raise ValueError
+
+    with pytest.RaisesGroup(ValueError, ValueError):
+        await fn()
 
 
 async def test_return_default_value() -> None:
-    with pytest.warns(expected_warning=UserWarning, match="Type mismatch for"):
-
-        @retry(attempts=1, delay=0, return_default_value=99)
-        async def fn() -> NoReturn:
-            raise ValueError
+    @retry(attempts=1, delay=0, return_default_value=99)
+    async def fn() -> NoReturn:
+        raise ValueError
 
     assert await fn() == 99
 
@@ -99,7 +117,7 @@ async def test_retry_on_variants(
         calls.append(1)
         raise ValueError
 
-    with pytest.raises(ExceptionGroup):
+    with pytest.RaisesGroup(*([ValueError] * expected_calls)):
         await fn()
 
     assert len(calls) == expected_calls
@@ -112,7 +130,7 @@ async def test_delay_applied() -> None:
     async def fn() -> NoReturn:
         raise ValueError
 
-    with pytest.raises(ExceptionGroup):
+    with pytest.RaisesGroup(ValueError, ValueError):
         await fn()
 
     elapsed = time.monotonic() - start
@@ -164,31 +182,10 @@ async def test_context_isolation_between_tasks() -> None:
             async def fn() -> NoReturn:
                 raise ValueError
 
-            with pytest.raises(ExceptionGroup) as eg:
+            with pytest.RaisesGroup(*([ValueError] * attempts_expected)):
                 await fn()
 
-            assert len(eg.value.exceptions) == attempts_expected
-
     _ = await asyncio.gather(task(3), task(5))
-
-
-async def test_sleep_callable_raises(mocker: MockerFixture) -> None:
-    async def bad_sleep(_: float) -> None:
-        msg = "sleep error"
-        raise RuntimeError(msg)
-
-    mock_log_swallowed = mocker.patch("fastretry.base.BaseRetrying._log_swallowed")
-    config.retry(async_sleep_call=bad_sleep)
-
-    @retry(attempts=2, delay=1)
-    async def fn() -> Literal[1]:
-        raise ValueError
-
-    with pytest.raises(ExceptionGroup):
-        await fn()
-
-    mock_log_swallowed.assert_called_once()
-    assert mock_log_swallowed.call_args.kwargs["operation"] == "sleep callable"
 
 
 async def test_retry_async_sync_function() -> None:
@@ -249,10 +246,8 @@ async def test_retry_async_all_fail() -> None:
     def fn() -> NoReturn:
         raise ValueError
 
-    with pytest.raises(ExceptionGroup) as eg:
+    with pytest.RaisesGroup(ValueError, ValueError):
         await fn()
-
-    assert len(eg.value.exceptions) == 2
 
 
 async def test_retry_async_with_custom_executor() -> None:
@@ -293,3 +288,20 @@ async def test_retry_async_contextvars_propagated_custom_executor() -> None:
             assert await fn() == "hello"
         finally:
             var.reset(token)
+
+
+async def test_attempt_durations_are_recorded() -> None:
+    seen: list[tuple[int, float]] = []
+
+    def on_success(stats: RetryStats) -> None:
+        attempt = stats.attempt
+        seen.append((len(attempt.attempt_durations), attempt.attempt_duration))
+
+    @retry(attempts=1, delay=0, callbacks={"on_success": on_success})
+    async def fn() -> Literal[1]:
+        return 1
+
+    assert await fn() == 1
+
+    assert seen[0][0] == 1
+    assert seen[0][1] >= 0

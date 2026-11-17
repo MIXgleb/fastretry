@@ -1,13 +1,7 @@
 """Global configuration for retry defaults and logging."""
 
-import asyncio
 import contextvars
 import dataclasses as dc
-import time
-from collections.abc import (
-    Awaitable,
-    Callable,
-)
 from typing import (
     Final,
     Unpack,
@@ -33,6 +27,9 @@ from fastretry._utils.delay import (
 from fastretry._utils.logs import (
     LogLevel,
 )
+from fastretry._utils.shared_loop import (
+    AsyncCallbackMode,
+)
 
 
 @dc.dataclass(slots=True)
@@ -53,9 +50,8 @@ class _Defaults:
     # --- global options (application-wide) ---
     jitter_for_exponential: JitterStrategy = "none"
     jitter_for_fixed: JitterStrategy = "none"
-
-    sync_sleep_call: Callable[[float], None] = time.sleep
-    async_sleep_call: Callable[[float], Awaitable[None]] = asyncio.sleep
+    async_callback_mode: AsyncCallbackMode = "thread_per_call"
+    unwrap_single_exception: bool = False
 
     # --- logging ---
     level_success: LogLevel = LogLevel.OFF
@@ -64,6 +60,7 @@ class _Defaults:
     level_sleep: LogLevel = LogLevel.OFF
 
     traceback_min_level: LogLevel = LogLevel.ERROR
+    install_default_handler: bool = True
 
     @final
     def set(

@@ -15,11 +15,15 @@ Retry decorator for synchronous and asynchronous functions.
 - Run sync functions in an executor from async code.
 - 100% test coverage.
 
+**Documentation:** <https://fastretry.readthedocs.io/>
+
 ## Installation
 
 ```bash
 pip install fastretry
 ```
+
+Requires Python 3.13 or newer.
 
 ## Usage
 
@@ -35,6 +39,9 @@ def fetch() -> bytes: ...
 
 ### Async function
 
+Use the regular `retry` for coroutine functions: it awaits them directly
+and returns a coroutine function.
+
 ```python
 from fastretry import retry
 
@@ -46,7 +53,8 @@ async def fetch() -> bytes: ...
 ### Sync function, called asynchronously
 
 Use `retry_async` to run a sync function in an executor so the event
-loop is not blocked. The decorator always returns a coroutine function.
+loop is not blocked. The decorator always returns a coroutine function,
+so callers must `await` it.
 
 ```python
 from fastretry import retry_async
@@ -58,6 +66,14 @@ def blocking_io() -> bytes: ...
 
 async def main() -> None:
     data = await blocking_io()
+```
+
+`retry_async` is meant for sync callables like this one. When a code base
+wants one decorator that always returns a coroutine — for sync and async
+callables alike — import it under the usual name:
+
+```python
+from fastretry import retry_async as retry
 ```
 
 ## Options
@@ -100,11 +116,13 @@ Strategies: `"none"`, `"full"`, `"equal"`, `"decorrelated"`.
 
 ```python
 @retry(attempts=3, return_default_value=None)
-def fetch() -> bytes | None: ...
+def fetch() -> bytes: ...
 ```
 
 When all attempts fail, the wrapper returns `return_default_value`
-instead of raising.
+instead of raising. The return type is widened statically with the type of
+the default value, so type checkers see `fetch` above as
+`Callable[[], bytes | None]` — no changes are needed on your side.
 
 ### Retry on specific exceptions
 
@@ -137,6 +155,40 @@ def fetch() -> bytes: ...
 Available keys: `on_success`, `on_retry`, `on_failure`. Callbacks may be
 sync or async. Pass `None` for a key to disable that callback, or pass
 `callbacks=None` to disable all of them.
+
+#### Async callbacks on sync functions
+
+Async callbacks are awaited in the same loop when the wrapped function is a
+coroutine, so they are cheap. On a **sync** function the callback has to be
+run in a loop of its own:
+
+- when no event loop is running in the calling thread, `asyncio.run()` is
+  used — cheap;
+- when an event loop **is** already running, a new thread with a fresh event
+  loop is used for every callback, and the caller blocks until it completes.
+  This is the safest and most isolated behavior, but it costs roughly **3 ms
+  per callback** (the callback still sees the caller's `contextvars`).
+
+If callbacks are a hot path for sync functions, the dispatch can be switched
+to a process-wide shared loop:
+
+```python
+from fastretry import config
+
+config.retry(async_callback_mode="shared_loop_when_running")
+```
+
+| `async_callback_mode` | Behavior |
+|---|---|
+| `"thread_per_call"` (default) | `asyncio.run()` without a running loop; a new thread with its own loop per callback otherwise |
+| `"shared_loop_when_running"` | a process-wide loop instead of the per-call thread (≈0.1 ms per callback); `asyncio.run()` when no loop is running |
+| `"shared_loop_always"` | the process-wide loop in every case |
+
+The shared modes trade isolation for speed: callbacks are serialized in one
+daemon thread, one slow callback delays the others, and the loop is created
+lazily and recreated in a `fork()`ed child. Configure them only if you
+understand these trade-offs; sync callbacks are the simplest way to avoid
+the cost entirely.
 
 ## Configuration
 
@@ -176,8 +228,34 @@ Restores all defaults to their factory values. Useful in tests.
 ## Logging
 
 Logging is handled by the standard `logging` module through a logger
-named `"retry"`, which writes to stdout (falling back to stderr) by
-default.
+named `"retry"`.
+
+A console handler writing to `sys.stderr` is installed automatically on
+the first log message, so retry warnings and failures are visible
+without any setup:
+
+```python
+from fastretry import retry
+
+
+@retry(attempts=3)
+def fetch() -> bytes: ...
+```
+
+To take full control, configure `logging` in your application
+(`logging.basicConfig()`, `logging.dictConfig()`, or a handler on the
+`"retry"` logger). Once the `"retry"` logger or any of its ancestors has
+handlers, the built-in handler is **not** installed and your
+configuration is used as is. The decision is taken on the first log
+message, so configure `logging` during application startup.
+
+To keep the package completely silent until you configure `logging`.
+
+```python
+from fastretry import config
+
+config.logging(install_default_handler=False)
+```
 
 Each log kind has its own level:
 
@@ -210,6 +288,33 @@ except* ValueError as eg:
     for exc in eg.exceptions:
         ...
 ```
+
+### Re-raise the single exception as is
+
+Migration helper for code coming from `tenacity` or `backoff`, where
+callers expect the original exception. Enable it globally:
+
+```python
+from fastretry import config
+
+config.retry(unwrap_single_exception=True)
+```
+
+Now a failure with exactly one collected exception is re-raised
+directly, so regular `except` blocks work:
+
+```python
+@retry(attempts=1)
+def fetch() -> bytes: ...
+
+
+try:
+    fetch()
+except ValueError:
+    ...
+```
+
+Two or more collected exceptions still produce an exception group.
 
 Exceptions that do **not** match `retry_on` (or match `no_retry_on`)
 are not retried and propagate immediately. With the default
@@ -246,6 +351,7 @@ just mypy           # type check with mypy
 just pyrefly        # type check with pyrefly
 just test           # run tests with coverage
 just test-fast      # run tests without coverage (fast)
+just benchmark      # run the micro-benchmarks
 just docs           # build documentation locally
 just docs-no-warn   # build documentation locally without failing on warnings
 just build          # build wheel and sdist

@@ -2,6 +2,7 @@
 
 import asyncio
 import concurrent.futures
+import contextvars
 import functools
 import inspect
 import time
@@ -9,19 +10,17 @@ from collections.abc import (
     Callable,
 )
 from typing import (
-    Final,
-    Unpack,
     override,
 )
 
 from fastretry._compat.sentinels import (
     UnsetType,
 )
-from fastretry._types import (
-    RetryKwargs,
-)
 from fastretry._utils.callbacks import (
     CallbackType,
+)
+from fastretry._utils.shared_loop import (
+    shared_loop,
 )
 from fastretry._utils.stats import (
     RetryStats,
@@ -45,27 +44,18 @@ class SyncRetrying[**P, R](
 
     """
 
-    __slots__ = ("sleep_call",)
-
     wrapper_kind = "sync"
-
-    @override
-    def __init__(
-        self,
-        **kwargs: Unpack[RetryKwargs[R]],
-    ) -> None:
-        super().__init__(**kwargs)
-        self.sleep_call: Final[Callable[[float], None]] = self._effective_defaults.sync_sleep_call
 
     @override
     def _wrap(
         self,
         func: Callable[P, R],
     ) -> Callable[P, R | UnsetType]:
-        fname = getattr(func, "__qualname__", "<anonymous>")
         on_success = self.callbacks.on_success
         on_retry = self.callbacks.on_retry
         on_failure = self.callbacks.on_failure
+
+        fname = getattr(func, "__qualname__", "<anonymous>")
 
         @functools.wraps(func)
         def wrapper(*args: P.args, **kwargs: P.kwargs) -> R | UnsetType:
@@ -79,6 +69,7 @@ class SyncRetrying[**P, R](
 
             for retry_index in range(1, self.attempts + 1):
                 stats_attempt.retry_index = retry_index
+                stats_attempt.attempt_started_at = time.monotonic()
 
                 try:
                     result = func(*args, **kwargs)
@@ -116,14 +107,7 @@ class SyncRetrying[**P, R](
         if isinstance(stats_attempt.computed_delay, UnsetType) or stats_attempt.computed_delay <= 0:
             return
 
-        try:
-            self.sleep_call(stats_attempt.computed_delay)
-        except Exception as exc:  # ruff: ignore[blind-except]
-            self._log_swallowed(
-                operation="sleep callable",
-                exc=exc,
-                extra=stats.log_extra,
-            )
+        time.sleep(stats_attempt.computed_delay)
 
     @override
     def _call_callback(
@@ -139,12 +123,36 @@ class SyncRetrying[**P, R](
 
         try:
             _ = asyncio.get_running_loop()
+            loop_is_running = True
         except RuntimeError:
-            asyncio.run(result)
-        else:
+            loop_is_running = False
+
+        if self._uses_shared_loop(loop_is_running=loop_is_running):
+            shared_loop.run_callback(result)
+            return
+
+        if loop_is_running:
+            context = contextvars.copy_context()
             with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-                future = pool.submit(asyncio.run, result)
-                future.result()
+                pool.submit(context.run, asyncio.run, result).result()
+            return
+
+        asyncio.run(result)
+
+    def _uses_shared_loop(
+        self,
+        *,
+        loop_is_running: bool,
+    ) -> bool:
+        mode = self._async_callback_mode
+
+        if mode == "thread_per_call":
+            return False
+
+        if mode == "shared_loop_when_running" and not loop_is_running:
+            return False
+
+        return not shared_loop.is_owner_thread()
 
     @override
     def _safe_call_callback(

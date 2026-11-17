@@ -16,8 +16,10 @@ __all__ = (
 from fastretry._config import (
     config,
 )
-from fastretry._retry import (
+from fastretry._decorators.retry import (
     retry,
+)
+from fastretry._decorators.retry_async import (
     retry_async,
 )
 from fastretry._utils.callbacks import (
@@ -34,4 +36,7 @@ from fastretry._utils.logs import (
 )
 from fastretry._utils.stats import (
     RetryStats,
+)
+from fastretry._version import (
+    __getattr__ as __getattr__,
 )

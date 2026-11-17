@@ -3,8 +3,6 @@
 import dataclasses as dc
 import traceback
 from collections.abc import (
-    Awaitable,
-    Callable,
     Mapping,
 )
 from concurrent.futures import (
@@ -25,6 +23,9 @@ from fastretry._utils.delay import (
 from fastretry._utils.logs import (
     Log,
     LogLevel,
+)
+from fastretry._utils.shared_loop import (
+    AsyncCallbackMode,
 )
 
 
@@ -83,23 +84,29 @@ class GlobalOptions:
         Default jitter strategy for exponential delay.
     jitter_for_fixed : JitterStrategy
         Default jitter strategy for fixed delay.
-    sync_sleep_call : Callable[[float], None]
-        Sync callable used to sleep between attempts.
-    async_sleep_call : Callable[[float], Awaitable[None]]
-        Async callable used to sleep between attempts.
     traceback_min_level : LogLevel
         Minimum level at which a traceback is attached to the log record.
         Messages below this level are logged without traceback.
+    install_default_handler : bool
+        Whether to install the built-in console handler on the
+        ``"retry"`` logger.
+    async_callback_mode : AsyncCallbackMode
+        How async callbacks of synchronous functions are dispatched.
+    unwrap_single_exception : bool
+        If ``True``, a failure with exactly one collected exception
+        re-raises that exception as is instead of wrapping it in an
+        exception group.
 
     """
 
     jitter_for_exponential: JitterStrategy
     jitter_for_fixed: JitterStrategy
 
-    sync_sleep_call: Callable[[float], None]
-    async_sleep_call: Callable[[float], Awaitable[None]]
-
     traceback_min_level: LogLevel
+    install_default_handler: bool
+
+    async_callback_mode: AsyncCallbackMode
+    unwrap_single_exception: bool
 
 
 @dc.dataclass(frozen=True, slots=True, repr=False)
@@ -133,8 +140,17 @@ class AttemptState:
         1-based index of the current attempt.
     started_at : float
         Monotonic timestamp captured at the start of the call.
-    elapsed : float
-        Seconds elapsed since ``started_at``.
+    total_elapsed : float
+        Seconds elapsed since ``started_at``: every finished attempt plus
+        every delay between them.
+    attempt_started_at : float
+        Monotonic timestamp captured at the start of the current attempt.
+    attempt_duration : float
+        Seconds the current (the most recently finished) attempt took,
+        excluding callbacks and delays. ``0.0`` until an attempt finishes.
+    attempt_durations : list[float]
+        Durations of all finished attempts, in order. The last item equals
+        :attr:`attempt_duration`.
     previous_delay : float | None
         Delay used on the previous attempt, or ``None`` on the first retry.
         Used by the ``"decorrelated"`` jitter strategy.
@@ -160,7 +176,10 @@ class AttemptState:
     fname: str = ""
     retry_index: int = 0
     started_at: float = 0.0
-    elapsed: float = 0.0
+    total_elapsed: float = 0.0
+    attempt_started_at: float = 0.0
+    attempt_duration: float = 0.0
+    attempt_durations: list[float] = dc.field(default_factory=list[float])
     previous_delay: float | None = None
     computed_delay: float | UnsetType = UNSET
     result: object | UnsetType = UNSET
@@ -266,7 +285,9 @@ class RetryStats:
             "retry_index": attempt.retry_index,
             "attempts": self.decorator.attempts,
             "started_at": attempt.started_at,
-            "elapsed": attempt.elapsed,
+            "total_elapsed": attempt.total_elapsed,
+            "attempt_started_at": attempt.attempt_started_at,
+            "attempt_duration": attempt.attempt_duration,
             "previous_delay": attempt.previous_delay,
             "computed_delay": attempt.computed_delay,
             "exception_type": (

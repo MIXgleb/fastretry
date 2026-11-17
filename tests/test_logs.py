@@ -1,6 +1,7 @@
 """Tests for Log and LoggerConfig."""
 
 import dataclasses as dc
+import io
 import logging
 import sys
 from collections.abc import (
@@ -14,25 +15,56 @@ from pytest_mock import (
 
 from fastretry._utils.logs import (
     _DEFAULT_LOGGER,
+    _LOGGER_NAME,
     Log,
     LoggerConfig,
     LogLevel,
-    _make_default_logger,
+    _StderrHandler,
 )
 
 
 @pytest.fixture
-def _restore_retry_logger() -> Generator[None]:
-    logger = logging.getLogger("retry")
+def _isolate_retry_logger() -> Generator[None]:
+    """Isolate the shared logger and the lazy default handler state."""
+    logger = logging.getLogger(_LOGGER_NAME)
     handlers = list(logger.handlers)
     level = logger.level
-    propagate = logger.propagate
+
+    logger.handlers = []
+    logger.setLevel(logging.NOTSET)
+    Log._installed_handler = False
 
     yield
 
     logger.handlers = handlers
     logger.setLevel(level)
-    logger.propagate = propagate
+    Log._installed_handler = False
+
+
+def _make_record(message: str = "hello") -> logging.LogRecord:
+    """
+    Build a log record belonging to the package logger.
+
+    Parameters
+    ----------
+    message : str, ``optional``
+        Message of the record, by default ``"hello"``.
+
+    Returns
+    -------
+    logging.LogRecord
+        Record belonging to the ``"retry"`` logger.
+
+    """
+    return logging.LogRecord(
+        _LOGGER_NAME,
+        logging.WARNING,
+        __file__,
+        1,
+        message,
+        (),
+        None,
+    )
 
 
 def test_values() -> None:
@@ -52,7 +84,7 @@ def test_frozen() -> None:
         level_sleep=LogLevel.OFF,
         traceback_min_level=LogLevel.ERROR,
         disable_logging=False,
-        disable_warnings=False,
+        install_default_handler=True,
     )
 
     with pytest.raises(dc.FrozenInstanceError):
@@ -69,7 +101,7 @@ def log() -> Log:
             level_sleep=LogLevel.OFF,
             traceback_min_level=LogLevel.ERROR,
             disable_logging=False,
-            disable_warnings=False,
+            install_default_handler=True,
         )
     )
 
@@ -128,7 +160,7 @@ def test_record_below_traceback_level(mocker: MockerFixture) -> None:
         level_sleep=LogLevel.OFF,
         traceback_min_level=LogLevel.CRITICAL,
         disable_logging=False,
-        disable_warnings=False,
+        install_default_handler=True,
     )
     log = Log(cfg)
     mock_log = mocker.patch.object(_DEFAULT_LOGGER, "log")
@@ -159,7 +191,7 @@ def test_disable_logging(mocker: MockerFixture) -> None:
         level_sleep=LogLevel.OFF,
         traceback_min_level=LogLevel.ERROR,
         disable_logging=True,
-        disable_warnings=False,
+        install_default_handler=True,
     )
     log = Log(cfg)
     mock_log = mocker.patch.object(_DEFAULT_LOGGER, "log")
@@ -188,52 +220,143 @@ def test_bound_failure_with_exc(log: Log, mocker: MockerFixture) -> None:
     assert kwargs["exc_info"] is exc
 
 
-@pytest.mark.usefixtures("_restore_retry_logger")
-def test_make_retry_logger_falls_back_to_stderr(mocker: MockerFixture) -> None:
-    _ = mocker.patch.object(sys, "stdout", None)
-    logger = logging.getLogger("retry")
-    logger.handlers.clear()
+@pytest.mark.usefixtures("_isolate_retry_logger")
+def test_default_handler_installed_on_first_record(
+    log: Log,
+    mocker: MockerFixture,
+) -> None:
+    _ = mocker.patch.object(_DEFAULT_LOGGER, "hasHandlers", return_value=False)
+    mock_log = mocker.patch.object(_DEFAULT_LOGGER, "log")
 
-    result = _make_default_logger()
+    result = log.record(log_kind="retry", message="m", args=())
 
-    assert result.handlers
-    assert isinstance(result.handlers[0], logging.StreamHandler)
+    assert result is True
+    mock_log.assert_called_once()
+    handlers = _DEFAULT_LOGGER.handlers
+    assert len(handlers) == 1
+    assert isinstance(handlers[0], _StderrHandler)
+    assert _DEFAULT_LOGGER.level == logging.DEBUG
+    assert log._installed_handler is True
 
 
-@pytest.mark.usefixtures("_restore_retry_logger")
-def test_make_retry_logger_no_stream(mocker: MockerFixture) -> None:
-    _ = mocker.patch.object(sys, "stdout", None)
+@pytest.mark.usefixtures("_isolate_retry_logger")
+def test_default_handler_installed_once(
+    log: Log,
+    mocker: MockerFixture,
+) -> None:
+    _ = mocker.patch.object(_DEFAULT_LOGGER, "hasHandlers", return_value=False)
+    _ = mocker.patch.object(_DEFAULT_LOGGER, "log")
+
+    _ = log.record(log_kind="retry", message="m", args=())
+    _ = log.record(log_kind="retry", message="m", args=())
+
+    assert len(_DEFAULT_LOGGER.handlers) == 1
+
+
+@pytest.mark.usefixtures("_isolate_retry_logger")
+def test_default_handler_not_installed_when_logger_configured(
+    log: Log,
+    mocker: MockerFixture,
+) -> None:
+    _ = mocker.patch.object(_DEFAULT_LOGGER, "log")
+    user_handler = logging.NullHandler()
+    _DEFAULT_LOGGER.addHandler(user_handler)
+
+    _ = log.record(log_kind="retry", message="m", args=())
+
+    assert _DEFAULT_LOGGER.handlers == [user_handler]
+    assert log._installed_handler is True
+
+
+@pytest.mark.usefixtures("_isolate_retry_logger")
+def test_default_handler_not_installed_when_ancestor_configured(
+    log: Log,
+    mocker: MockerFixture,
+) -> None:
+    _ = mocker.patch.object(_DEFAULT_LOGGER, "log")
+    _ = mocker.patch.object(_DEFAULT_LOGGER, "hasHandlers", return_value=True)
+
+    _ = log.record(log_kind="retry", message="m", args=())
+
+    assert _DEFAULT_LOGGER.handlers == []
+    assert log._installed_handler is True
+
+
+@pytest.mark.usefixtures("_isolate_retry_logger")
+def test_default_handler_disabled(mocker: MockerFixture) -> None:
+    log = Log(
+        LoggerConfig(
+            level_success=LogLevel.OFF,
+            level_retry=LogLevel.WARNING,
+            level_failure=LogLevel.ERROR,
+            level_sleep=LogLevel.OFF,
+            traceback_min_level=LogLevel.ERROR,
+            disable_logging=False,
+            install_default_handler=False,
+        )
+    )
+    mock_log = mocker.patch.object(_DEFAULT_LOGGER, "log")
+
+    result = log.record(log_kind="retry", message="m", args=())
+
+    assert result is True
+    mock_log.assert_called_once()
+    handlers = _DEFAULT_LOGGER.handlers
+    assert len(handlers) == 1
+    assert isinstance(handlers[0], logging.NullHandler)
+    assert log._installed_handler is True
+
+
+def test_stderr_handler_follows_current_stream(mocker: MockerFixture) -> None:
+    handler = _StderrHandler()
+    handler.setFormatter(logging.Formatter("%(message)s"))
+    stream = io.StringIO()
+    _ = mocker.patch.object(sys, "stderr", stream)
+
+    handler.emit(_make_record("hello"))
+
+    assert stream.getvalue() == "hello\n"
+
+
+def test_stderr_handler_without_any_stream(mocker: MockerFixture) -> None:
+    handler = _StderrHandler()
+    handler.stream = None
     _ = mocker.patch.object(sys, "stderr", None)
-    logger = logging.getLogger("retry")
-    logger.handlers.clear()
-    _ = mocker.patch.object(logger, "addHandler")
+    _ = mocker.patch.object(sys, "__stderr__", None)
 
-    _ = _make_default_logger()
+    handler.emit(_make_record())
 
-    logger.addHandler.assert_not_called()
+    assert handler.stream is None
 
 
-@pytest.mark.usefixtures("_restore_retry_logger")
-def test_make_retry_logger_existing_handlers(mocker: MockerFixture) -> None:
-    logger = logging.getLogger("retry")
-    logger.handlers.clear()
-    logger.addHandler(logging.NullHandler())
-    _ = mocker.patch.object(logger, "addHandler")
+def test_build_default_handler_formats_record() -> None:
+    handler = Log._build_default_handler()
+    formatter = handler.formatter
+    assert formatter is not None
 
-    _ = _make_default_logger()
+    record = _make_record("boom")
+    record.__dict__.update({
+        "fname": "fn",
+        "retry_index": 1,
+        "attempts": 3,
+        "attempt_duration": 0.054321,
+        "total_elapsed": 0.5,
+        "exception_type": "ValueError",
+    })
 
-    logger.addHandler.assert_not_called()
+    formatted = formatter.format(record)
+
+    assert "fn [1/3 in 0.05s] (0.50s) [ValueError]: boom" in formatted
 
 
-@pytest.mark.usefixtures("_restore_retry_logger")
-def test_make_retry_logger_creates_handler(mocker: MockerFixture) -> None:
-    fake_logger = mocker.MagicMock(spec=logging.Logger)
-    fake_logger.handlers = []
-    _ = mocker.patch.object(logging, "getLogger", return_value=fake_logger)
+def test_build_default_handler_uses_defaults() -> None:
+    handler = Log._build_default_handler()
+    formatter = handler.formatter
+    assert formatter is not None
 
-    _ = _make_default_logger()
+    formatted = formatter.format(_make_record("boom"))
 
-    fake_logger.addHandler.assert_called_once()
+    assert "<unknown> [?/? in 0.00s] (0.00s) [-]: boom" in formatted
 
 
 def test_incorrect_log_kind() -> None:
@@ -244,7 +367,7 @@ def test_incorrect_log_kind() -> None:
         level_sleep=LogLevel.OFF,
         traceback_min_level=LogLevel.OFF,
         disable_logging=True,
-        disable_warnings=True,
+        install_default_handler=True,
     )
     log = Log(cfg)
 

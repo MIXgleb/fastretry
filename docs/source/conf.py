@@ -84,8 +84,12 @@ html_title = "fastretry"
 nitpicky = True
 nitpick_ignore = [
     ("py:meth", "asyncio.AbstractEventLoop.run_in_executor"),
+    ("py:type", "fastretry.async_retry.CallbackType"),
+    ("py:class", "fastretry._decorators.retry._RetryDecorator"),
+    ("py:class", "fastretry._decorators.retry._RetryDecoratorWithDefault"),
+    ("py:class", "fastretry._decorators.retry_async._RetryAsyncDecorator"),
+    ("py:class", "fastretry._decorators.retry_async._RetryAsyncDecoratorWithDefault"),
     ("py:class", "fastretry._compat.sentinels.UnsetType"),
-    ("py:class", "fastretry.async_retry.CallbackType"),
     ("py:class", "fastretry._utils.logs.Log"),
     ("py:class", "fastretry._utils.stats.DecoratorOptions"),
     ("py:class", "fastretry._utils.stats.GlobalOptions"),

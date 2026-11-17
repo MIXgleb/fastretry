@@ -12,7 +12,7 @@ from fastretry._compat.sentinels import (
 from fastretry._config import (
     config,
 )
-from fastretry._retry import (
+from fastretry._decorators.retry import (
     retry,
 )
 from fastretry._utils.callbacks import (
@@ -103,6 +103,24 @@ def test_validate_delay_negative() -> None:
     assert r.delay == 0
 
 
+def test_attempts_is_read_only() -> None:
+    r = SyncRetrying(attempts=3)
+
+    with pytest.raises(AttributeError):
+        r.attempts = 5
+
+    assert r.attempts == 3
+
+
+def test_delay_is_read_only() -> None:
+    r = SyncRetrying(delay=5)
+
+    with pytest.raises(AttributeError):
+        r.delay = 2
+
+    assert r.delay == 5
+
+
 @pytest.mark.parametrize(
     ("delay", "match"),
     [
@@ -142,11 +160,11 @@ def test_derive_jitter_from_fixed_default() -> None:
 def test_prepare_retry_aborted_no_retry_on() -> None:
     captured = []
 
-    @retry(attempts=5, delay=0, no_retry_on=ValueError, callbacks={"on_failure": captured.append})
+    @retry(attempts=3, delay=0, no_retry_on=ValueError, callbacks={"on_failure": captured.append})
     def fn() -> NoReturn:
         raise ValueError
 
-    with pytest.raises(ExceptionGroup):
+    with pytest.RaisesGroup(ValueError):
         fn()
 
     assert captured[0].attempt.retry_aborted is True
@@ -155,11 +173,11 @@ def test_prepare_retry_aborted_no_retry_on() -> None:
 def test_prepare_retry_aborted_not_in_retry_on() -> None:
     captured = []
 
-    @retry(attempts=5, delay=0, retry_on=ValueError, callbacks={"on_failure": captured.append})
+    @retry(attempts=3, delay=0, retry_on=ValueError, callbacks={"on_failure": captured.append})
     def fn() -> NoReturn:
         raise TypeError
 
-    with pytest.raises(ExceptionGroup):
+    with pytest.RaisesGroup(TypeError):
         fn()
 
     assert captured[0].attempt.retry_aborted is True
@@ -172,7 +190,7 @@ def test_prepare_retry_exhausted() -> None:
     def fn() -> NoReturn:
         raise ValueError
 
-    with pytest.raises(ExceptionGroup):
+    with pytest.RaisesGroup(ValueError, ValueError):
         fn()
 
     assert captured[0].attempt.retry_aborted is False
@@ -235,31 +253,11 @@ def test_log_swallowed_falls_back_to_warning() -> None:
         r._log_swallowed(operation="test", exc=ValueError("x"), extra={})
 
 
-def test_validate_return_type_is_false() -> None:
-
-    with pytest.warns(expected_warning=UserWarning, match="Type mismatch for"):
-
-        @retry(return_default_value=None)
-        def fn() -> int:
-            return 1
-
-    r = fn()
-    assert r == 1
-
-
-def test_validate_return_type_is_true() -> None:
-    @retry(return_default_value=123)
+def test_return_default_value_is_not_checked_at_runtime() -> None:
+    @retry(attempts=1, return_default_value=None)
     def fn() -> int:
-        return 1
+        raise ValueError
 
-    r = fn()
-    assert r == 1
-
-
-def test_validate_return_type_is_none() -> None:
-    @retry(return_default_value="result")
-    def fn() -> object:
-        return 1
-
-    r = fn()
-    assert r == 1
+    # A mismatch between return_default_value and the declared return type
+    # is reported by type checkers, not at runtime.
+    assert fn() is None

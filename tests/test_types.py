@@ -77,13 +77,13 @@ def test_retry_defaults_kwargs_keys() -> None:
     assert "disable_warnings" in d
     assert "retry_on" in d
     assert "no_retry_on" in d
+    assert "unwrap_single_exception" in d
     assert "on_success" in d
     assert "on_retry" in d
     assert "on_failure" in d
     assert "jitter_for_exponential" in d
     assert "jitter_for_fixed" in d
-    assert "sync_sleep_call" in d
-    assert "async_sleep_call" in d
+    assert "async_callback_mode" in d
 
 
 def test_logging_kwargs_keys() -> None:
@@ -105,18 +105,19 @@ def test_defaults_kwargs_combines() -> None:
     assert "disable_warnings" in d
     assert "retry_on" in d
     assert "no_retry_on" in d
+    assert "unwrap_single_exception" in d
     assert "on_success" in d
     assert "on_retry" in d
     assert "on_failure" in d
     assert "jitter_for_exponential" in d
     assert "jitter_for_fixed" in d
-    assert "sync_sleep_call" in d
-    assert "async_sleep_call" in d
+    assert "async_callback_mode" in d
     assert "level_success" in d
     assert "level_retry" in d
     assert "level_failure" in d
     assert "level_sleep" in d
     assert "traceback_min_level" in d
+    assert "install_default_handler" in d
 
 
 def test_retry_options_all_keys_readonly() -> None:
@@ -142,13 +143,13 @@ def test_retry_default_options_all_keys_readonly() -> None:
         "disable_warnings",
         "retry_on",
         "no_retry_on",
+        "unwrap_single_exception",
         "on_success",
         "on_retry",
         "on_failure",
         "jitter_for_exponential",
         "jitter_for_fixed",
-        "sync_sleep_call",
-        "async_sleep_call",
+        "async_callback_mode",
     })
     assert _RetryDefaultOptions.__mutable_keys__ == frozenset()
 
@@ -160,5 +161,6 @@ def test_logging_default_options_all_keys_readonly() -> None:
         "level_failure",
         "level_sleep",
         "traceback_min_level",
+        "install_default_handler",
     })
     assert _LoggingDefaultOptions.__mutable_keys__ == frozenset()

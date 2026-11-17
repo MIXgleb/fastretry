@@ -1,9 +1,5 @@
 """Shared type definitions for the retry package."""
 
-from collections.abc import (
-    Awaitable,
-    Callable,
-)
 from concurrent.futures import (
     Executor,
 )
@@ -31,6 +27,9 @@ from fastretry._utils.delay import (
 from fastretry._utils.logs import (
     LogLevel,
 )
+from fastretry._utils.shared_loop import (
+    AsyncCallbackMode,
+)
 
 
 class _RetryOptions[R](TypedDict, total=False):
@@ -52,13 +51,13 @@ class _RetryDefaultOptions(TypedDict, total=False):
     disable_warnings: ReadOnly[bool]
     retry_on: ReadOnly[RetryOnExceptionType]
     no_retry_on: ReadOnly[RetryOnExceptionType]
+    unwrap_single_exception: ReadOnly[bool]
     on_success: ReadOnly[CallbackType | None]
     on_retry: ReadOnly[CallbackType | None]
     on_failure: ReadOnly[CallbackType | None]
     jitter_for_exponential: ReadOnly[JitterStrategy]
     jitter_for_fixed: ReadOnly[JitterStrategy]
-    sync_sleep_call: ReadOnly[Callable[[float], None]]
-    async_sleep_call: ReadOnly[Callable[[float], Awaitable[None]]]
+    async_callback_mode: ReadOnly[AsyncCallbackMode]
 
 
 class _LoggingDefaultOptions(TypedDict, total=False):
@@ -67,6 +66,7 @@ class _LoggingDefaultOptions(TypedDict, total=False):
     level_failure: ReadOnly[LogLevel]
     level_sleep: ReadOnly[LogLevel]
     traceback_min_level: ReadOnly[LogLevel]
+    install_default_handler: ReadOnly[bool]
 
 
 class RetryKwargs[R](
@@ -74,7 +74,7 @@ class RetryKwargs[R](
     total=False,
     closed=True,
 ):
-    """Keyword arguments accepted by :func:`~fastretry._retry.retry`."""
+    """Keyword arguments accepted by :func:`~fastretry._decorators.retry.retry`."""
 
 
 class RetryWithExecutorKwargs[R](
@@ -82,7 +82,7 @@ class RetryWithExecutorKwargs[R](
     total=False,
     closed=True,
 ):
-    """Keyword arguments accepted by :func:`~fastretry._retry.retry_async`."""
+    """Keyword arguments accepted by :func:`~fastretry._decorators.retry_async.retry_async`."""
 
     executor: Executor | UnsetType
 

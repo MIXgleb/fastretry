@@ -32,6 +32,13 @@ class ExponentialDelay(NamedTuple):
         Upper bound for the computed delay, by default None (no cap).
         Must be positive when set.
 
+    Notes
+    -----
+    Values are validated when a retry decorator using this delay is created,
+    not on construction. A non-positive ``delay``, ``backoff_factor``, or
+    ``max_delay``, or a ``max_delay`` smaller than ``delay``, raises
+    :exc:`ValueError`.
+
     """
 
     delay: float

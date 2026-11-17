@@ -37,9 +37,10 @@ def _make_stats(attempt: AttemptState, attempts: int = 3) -> RetryStats:
         global_options=GlobalOptions(
             jitter_for_exponential="none",
             jitter_for_fixed="none",
-            sync_sleep_call=lambda _: None,
-            async_sleep_call=lambda _: None,
             traceback_min_level=LogLevel.ERROR,
+            install_default_handler=True,
+            async_callback_mode="thread_per_call",
+            unwrap_single_exception=False,
         ),
         call=CallOptions(),
         attempt=attempt,
@@ -86,11 +87,17 @@ def test_global_fields() -> None:
     opts = GlobalOptions(
         jitter_for_exponential="none",
         jitter_for_fixed="none",
-        sync_sleep_call=lambda _: None,
-        async_sleep_call=lambda _: None,
         traceback_min_level=LogLevel.ERROR,
+        install_default_handler=True,
+        async_callback_mode="thread_per_call",
+        unwrap_single_exception=False,
     )
+    assert opts.jitter_for_exponential == "none"
+    assert opts.jitter_for_fixed == "none"
     assert opts.traceback_min_level == LogLevel.ERROR
+    assert opts.install_default_handler is True
+    assert opts.async_callback_mode == "thread_per_call"
+    assert opts.unwrap_single_exception is False
 
 
 def test_call_defaults() -> None:
@@ -156,7 +163,9 @@ def test_log_extra() -> None:
         fname="test_func",
         retry_index=2,
         started_at=100.0,
-        elapsed=1.5,
+        total_elapsed=1.5,
+        attempt_started_at=101.0,
+        attempt_duration=0.25,
         computed_delay=0.5,
         last_exception=ValueError("x"),
         retry_aborted=False,
@@ -167,6 +176,9 @@ def test_log_extra() -> None:
     assert extra["fname"] == "test_func"
     assert extra["retry_index"] == 2
     assert extra["attempts"] == 3
+    assert extra["total_elapsed"] == pytest.approx(1.5)
+    assert extra["attempt_started_at"] == pytest.approx(101.0)
+    assert extra["attempt_duration"] == pytest.approx(0.25)
     assert extra["computed_delay"] == pytest.approx(0.5)
     assert extra["previous_delay"] is None
     assert extra["exception_type"] == "ValueError"

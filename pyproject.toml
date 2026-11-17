@@ -109,13 +109,19 @@ ignore = [
     "implicit-namespace-package",
     "builtin-variable-shadowing",
 ]
+"benchmarks/**.py" = [
+    "implicit-namespace-package",
+    "print",
+    "unused-async",
+    "undocumented-public-function",
+]
 
 
 # Mypy: https://mypy.readthedocs.io/en/stable/index.html
 [tool.mypy]
 python_version = "3.13"
 strict = true
-files = ["fastretry"]
+files = ["fastretry", "benchmarks"]
 exclude = ["tests/"]
 
 warn_unreachable = true
@@ -138,13 +144,11 @@ enable_error_code = [
     "truthy-bool",
     "mutable-override",
     "unimported-reveal",
-    "truthy-bool",
     "truthy-iterable",
     "redundant-expr",
     "possibly-undefined",
     "redundant-self",
     "explicit-override",
-    "unimported-reveal",
     "deprecated",
 ]
 
@@ -155,7 +159,7 @@ python-version = "3.13"
 
 
 [tool.ty.src]
-include = ["fastretry"]
+include = ["fastretry", "benchmarks"]
 
 
 [tool.ty.rules]
@@ -166,7 +170,7 @@ all = "error"
 [tool.pyrefly]
 python-version = "3.13"
 preset = "strict"
-project-includes = ["fastretry"]
+project-includes = ["fastretry", "benchmarks"]
 project-excludes = ["tests/"]
 
 # Pytest: http://doc.pytest.org/en/latest/customize.html

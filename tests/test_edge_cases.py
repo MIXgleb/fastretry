@@ -8,7 +8,7 @@ from typing import (
 
 import pytest
 
-from fastretry._retry import (
+from fastretry._decorators.retry import (
     retry,
 )
 
@@ -24,11 +24,9 @@ def test_zero_attempts() -> None:
 
 
 def test_return_none_as_default() -> None:
-    with pytest.warns(expected_warning=UserWarning, match="Type mismatch for"):
-
-        @retry(attempts=1, delay=0, return_default_value=None)
-        def fn() -> NoReturn:
-            raise ValueError
+    @retry(attempts=1, delay=0, return_default_value=None)
+    def fn() -> NoReturn:
+        raise ValueError
 
     assert fn() is None
 
@@ -39,12 +37,8 @@ def test_exception_group_from_single_exc() -> None:
         msg = "x"
         raise ValueError(msg)
 
-    with pytest.raises(ExceptionGroup) as eg:
+    with pytest.RaisesGroup(ValueError):
         fn()
-    assert len(eg.value.exceptions) == 1
-
-    # BaseExceptionGroup resolves to ExceptionGroup
-    assert isinstance(eg.value, ExceptionGroup)
 
 
 def test_keyboard_interrupt_not_retried() -> None:
@@ -55,7 +49,7 @@ def test_keyboard_interrupt_not_retried() -> None:
         calls.append(1)
         raise KeyboardInterrupt
 
-    with pytest.raises(BaseExceptionGroup):
+    with pytest.RaisesGroup(KeyboardInterrupt):
         fn()
 
     assert len(calls) == 1
@@ -69,7 +63,7 @@ async def test_cancelled_error_not_retried() -> None:
         calls.append(1)
         raise asyncio.CancelledError
 
-    with pytest.raises(BaseExceptionGroup):
+    with pytest.RaisesGroup(asyncio.CancelledError):
         await fn()
 
     assert len(calls) == 1

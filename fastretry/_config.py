@@ -50,9 +50,15 @@ class _RetryNamespace:
         Parameters
         ----------
         attempts : int, ``optional``
-            Default number of attempts, by default 1.
+            Default number of attempts, by default 1. A value below 1 is
+            replaced with 1 and reported with a :exc:`UserWarning` when a
+            decorator using these defaults is created.
         delay : Delay, ``optional``
-            Default delay between attempts, in seconds, by default 0.
+            Default delay between attempts, in seconds, by default 0. A
+            negative fixed delay is replaced with 0 and reported with a
+            :exc:`UserWarning` when a decorator using these defaults is
+            created; invalid :class:`~fastretry._utils.delay.ExponentialDelay`
+            parameters raise :exc:`ValueError` at that point.
         disable_logging : bool, ``optional``
             Disable all logging by default, by default False.
         disable_warnings : bool, ``optional``
@@ -62,6 +68,12 @@ class _RetryNamespace:
         no_retry_on : type[BaseException] | tuple[type[BaseException], ...], ``optional``
             Exception types that are never retried, even if they match
             ``retry_on``. Takes precedence. Defaults to ``()``.
+        unwrap_single_exception : bool, ``optional``
+            Re-raise the single collected exception as is instead of
+            wrapping it in an exception group. When two or more exceptions
+            were collected, an exception group is still raised. Useful when
+            migrating from libraries that re-raise the original exception,
+            by default False.
         on_success : CallbackType | None, ``optional``
             Default callback invoked after a successful attempt,
             by default :func:`~fastretry._utils.callbacks.default_on_success`.
@@ -77,10 +89,18 @@ class _RetryNamespace:
         jitter_for_fixed : JitterStrategy, ``optional``
             Default jitter strategy for fixed delay,
             by default ``"none"``.
-        sync_sleep_call : Callable[[float], None], ``optional``
-            Default sync sleep callable, by default :func:`time.sleep`.
-        async_sleep_call : Callable[[float], Awaitable[None]], ``optional``
-            Default async sleep callable, by default :func:`asyncio.sleep`.
+        async_callback_mode : AsyncCallbackMode, ``optional``
+            How async callbacks of synchronous functions are dispatched.
+
+            - ``"thread_per_call"`` (default) starts a thread with its own
+              event loop for every callback invocation when an event loop is
+              already running (about 3 ms per callback). This is the safest
+              and most isolated mode.
+            - ``"shared_loop_when_running"`` submits the callback to a process-wide
+              shared loop in that case (about 0.1 ms), and keeps
+              :func:`asyncio.run` when no loop is running.
+            - ``"shared_loop_always"`` submits the callback to the shared loop in
+              every case.
 
         """
         get_defaults().set(**kwargs)
@@ -100,6 +120,19 @@ class _LoggingNamespace:
 
         Logging is handled by the standard :mod:`logging` module
         through a single logger named ``"retry"``.
+
+        By default, a console handler writing to :data:`sys.stderr` is
+        installed on the first log record, so messages are visible in the
+        console without any setup. The handler is used only when neither
+        the ``"retry"`` logger nor any of its ancestors has handlers, and
+        the decision is taken once per process. Once the application
+        configures :mod:`logging` (:func:`logging.basicConfig`,
+        :func:`logging.config.dictConfig`, or a handler attached to the
+        ``"retry"`` logger), the built-in handler is not installed and the
+        application configuration is used as is.
+
+        To keep the package silent until :mod:`logging` is configured,
+        pass ``install_default_handler=False``.
 
         Each log kind has its own level. Set a level to
         :attr:`~fastretry._utils.logs.LogLevel.OFF` to disable that kind.
@@ -121,6 +154,14 @@ class _LoggingNamespace:
         traceback_min_level : LogLevel, ``optional``
             Minimum level at which a traceback is attached to the log
             record, by default :attr:`~fastretry._utils.logs.LogLevel.ERROR`.
+        install_default_handler : bool, ``optional``
+            Whether to install the built-in console handler on the
+            ``"retry"`` logger. When ``True``, a handler writing to
+            :data:`sys.stderr` is attached on the first log record, unless
+            :mod:`logging` is already configured. When ``False``, a
+            :class:`logging.NullHandler` is attached instead, so the package
+            emits nothing until :mod:`logging` is configured by the
+            application. By default True.
 
         """
         get_defaults().set(**kwargs)
