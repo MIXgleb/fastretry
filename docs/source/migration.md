@@ -181,8 +181,9 @@ config.retry(attempts=3, delay=1.0)
 ### Only attempts and delay
 
 There is no deadline, no total time budget, no result predicate and no custom
-wait callable yet; retries stop when `attempts` is exhausted. The plan for
-those features is tracked in the project TODO.
+wait callable yet; retries stop when `attempts` is exhausted. These features are
+planned, but not implemented: the current release has no equivalent of `stop`,
+`wait`, `retry_if_result` or `before_sleep` from `tenacity`.
 
 ### Callbacks instead of hooks
 
