@@ -163,7 +163,10 @@ def retry[**P, R](
         and reported with a :exc:`UserWarning`. An
         :class:`~fastretry.delays.ExponentialDelay` enables exponential
         backoff with ``backoff_factor=2.0`` and no upper bound; invalid
-        parameters raise :exc:`ValueError` when the decorator is applied.
+        parameters raise :exc:`ValueError` when the decorator is applied. A
+        :data:`~fastretry.delays.WaitCallable` receives the attempt index and
+        the delay used after the previous attempt, and returns the delay for
+        that attempt.
     jitter : JitterStrategy, ``optional``
         Jitter strategy for the delay. When omitted, the default for
         the configured delay type is used (``"none"`` for exponential,

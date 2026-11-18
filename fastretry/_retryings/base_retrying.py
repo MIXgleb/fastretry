@@ -19,6 +19,7 @@ from typing import (
     ClassVar,
     Final,
     Self,
+    assert_never,
     final,
     override,
 )
@@ -149,9 +150,10 @@ class BaseRetrying[
             Default value returned if the function fails after all attempts,
         delay : Delay, ``optional``
             Delay between attempts in seconds. May be a plain ``float`` for a
-            fixed delay or an :class:`~fastretry.delays.ExponentialDelay` for
-            exponential backoff. A negative fixed delay is replaced with 0 and
-            reported with a :exc:`UserWarning`; invalid
+            fixed delay, an :class:`~fastretry.delays.ExponentialDelay` for
+            exponential backoff, or a :data:`~fastretry.delays.WaitCallable`
+            computing the delay for an attempt. A negative fixed delay is
+            replaced with 0 and reported with a :exc:`UserWarning`; invalid
             :class:`~fastretry.delays.ExponentialDelay` parameters raise
             :exc:`ValueError`.
         jitter : JitterStrategy, ``optional``
@@ -495,17 +497,12 @@ class BaseRetrying[
 
     @final
     def _validate_options(self) -> None:
-        """
-        Validate resolved options, warning or raising on invalid values.
+        """Validate resolved options, warning or raising on invalid values."""
+        self._validate_attempts()
+        self._validate_delay()
 
-        Raises
-        ------
-        ValueError
-            If ``delay`` is an :class:`~fastretry.delays.ExponentialDelay`
-            with a non-positive ``delay``, ``backoff_factor``, or
-            ``max_delay``, or with ``max_delay`` less than ``delay``.
-
-        """
+    @final
+    def _validate_attempts(self) -> None:
         if self._attempts < 1:
             self._warnings.warn(
                 f"\n\tNumber of attempts must be >= 1, got {self._attempts!r}. Falling back to 1.",
@@ -513,16 +510,20 @@ class BaseRetrying[
             )
             self._attempts = 1
 
+    @final
+    def _validate_delay(self) -> None:
         delay = self._delay
 
-        if isinstance(delay, ExponentialDelay):
-            if delay.delay <= 0:
-                msg = f"delay must be > 0, got {delay.delay!r}"
-                raise ValueError(msg)
-            if delay.backoff_factor <= 0:
-                msg = f"backoff factor must be > 0, got {delay.backoff_factor!r}"
-                raise ValueError(msg)
-            if delay.max_delay is not None:
+        match delay:
+            case ExponentialDelay():
+                if delay.delay <= 0:
+                    msg = f"delay must be > 0, got {delay.delay!r}"
+                    raise ValueError(msg)
+                if delay.backoff_factor <= 0:
+                    msg = f"backoff factor must be > 0, got {delay.backoff_factor!r}"
+                    raise ValueError(msg)
+                if delay.max_delay is None:
+                    return
                 if delay.max_delay <= 0:
                     msg = f"maximum delay must be > 0, got {delay.max_delay!r}"
                     raise ValueError(msg)
@@ -532,12 +533,17 @@ class BaseRetrying[
                         f"base delay ({delay.delay!r})"
                     )
                     raise ValueError(msg)
-        elif delay < 0:
-            self._warnings.warn(
-                f"\n\tDelay must be >= 0, got {delay!r}. Falling back to 0.",
-                stacklevel=7,
-            )
-            self._delay = 0
+            case int() | float():
+                if delay < 0:
+                    self._warnings.warn(
+                        f"\n\tDelay must be >= 0, got {delay!r}. Falling back to 0.",
+                        stacklevel=8,
+                    )
+                    self._delay = 0
+            case Callable():
+                ...
+            case _:
+                assert_never(delay)
 
     @final
     def _log_swallowed(
@@ -727,7 +733,8 @@ class BaseRetrying[
         If ``jitter`` is not provided, the strategy is chosen based on the
         delay type: ``jitter_for_exponential`` for
         :class:`~fastretry.delays.ExponentialDelay`, or
-        ``jitter_for_fixed`` for a plain ``float`` delay.
+        ``jitter_for_fixed`` for a plain ``float`` delay or a
+        :data:`~fastretry.delays.WaitCallable`.
 
         Parameters
         ----------

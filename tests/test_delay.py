@@ -1,5 +1,8 @@
 """Tests for delay computation."""
 
+from typing import (
+    NoReturn,
+)
 from unittest.mock import (
     MagicMock,
     patch,
@@ -7,6 +10,9 @@ from unittest.mock import (
 
 import pytest
 
+from fastretry._decorators.retry import (
+    retry,
+)
 from fastretry._utils.delays import (
     DelayCalculator,
     ExponentialDelay,
@@ -94,6 +100,16 @@ def test_decorrelated_jitter_subsequent(mock_uniform: MagicMock) -> None:
 
 
 @patch("fastretry._utils.delays.random.uniform")
+def test_decorrelated_jitter_exponential_without_max(mock_uniform: MagicMock) -> None:
+    mock_uniform.return_value = 4
+    calc = DelayCalculator(delay=ExponentialDelay(delay=2), jitter="decorrelated")
+
+    assert calc.compute(retry_index=1) == 4
+    # base = 2, previous = 2 (fallback to computed), upper = max(2, 6) = 6
+    mock_uniform.assert_called_once_with(2, 6)
+
+
+@patch("fastretry._utils.delays.random.uniform")
 def test_decorrelated_jitter_upper_leq_base(mock_uniform: MagicMock) -> None:
     mock_uniform.return_value = 1
     calc = DelayCalculator(delay=10, jitter="decorrelated")
@@ -121,3 +137,102 @@ def test_incorrect_jitter() -> None:
 
     with pytest.raises(AssertionError):
         _ = calc.compute(retry_index=1)
+
+
+def test_custom_wait_callable_no_jitter() -> None:
+    def wait(retry_index: int, _previous_delay: float | None) -> float:
+        return 0.5 * retry_index
+
+    calc = DelayCalculator(delay=wait, jitter="none")
+
+    assert calc.compute(retry_index=1) == pytest.approx(0.5)
+    assert calc.compute(retry_index=4) == pytest.approx(2.0)
+
+
+def test_custom_wait_callable_receives_arguments() -> None:
+    calls: list[tuple[int, float | None]] = []
+
+    def wait(retry_index: int, previous_delay: float | None) -> float:
+        calls.append((retry_index, previous_delay))
+        return 1.0
+
+    calc = DelayCalculator(delay=wait, jitter="none")
+    _ = calc.compute(retry_index=2, previous_delay=3.5)
+
+    assert calls == [(2, 3.5)]
+
+
+def test_custom_wait_callable_result_is_float() -> None:
+    calc = DelayCalculator(delay=lambda retry_index, _previous_delay: retry_index, jitter="none")
+
+    assert isinstance(calc.compute(retry_index=3), float)
+
+
+@patch("fastretry._utils.delays.random.uniform")
+def test_custom_wait_callable_zero_skips_jitter(mock_uniform: MagicMock) -> None:
+    calc = DelayCalculator(delay=lambda _retry_index, _previous_delay: 0.0, jitter="full")
+
+    assert calc.compute(retry_index=1) == 0
+    mock_uniform.assert_not_called()
+
+
+@patch("fastretry._utils.delays.random.uniform")
+def test_custom_wait_callable_full_jitter(mock_uniform: MagicMock) -> None:
+    mock_uniform.return_value = 1.5
+    calc = DelayCalculator(delay=lambda _retry_index, _previous_delay: 4.0, jitter="full")
+
+    assert calc.compute(retry_index=1) == pytest.approx(1.5)
+    mock_uniform.assert_called_once_with(0, 4.0)
+
+
+@patch("fastretry._utils.delays.random.uniform")
+def test_custom_wait_callable_equal_jitter(mock_uniform: MagicMock) -> None:
+    mock_uniform.return_value = 0.5
+    calc = DelayCalculator(delay=lambda _retry_index, _previous_delay: 4.0, jitter="equal")
+
+    assert calc.compute(retry_index=1) == pytest.approx(2.5)
+    mock_uniform.assert_called_once_with(0, 2.0)
+
+
+@patch("fastretry._utils.delays.random.uniform")
+def test_custom_wait_callable_decorrelated_jitter(mock_uniform: MagicMock) -> None:
+    mock_uniform.return_value = 2.5
+    calc = DelayCalculator(delay=lambda _retry_index, _previous_delay: 2.0, jitter="decorrelated")
+
+    assert calc.compute(retry_index=2, previous_delay=1.0) == pytest.approx(2.5)
+    # base = 2.0, previous = 1.0 → upper = max(2.0, 3.0) = 3.0
+    mock_uniform.assert_called_once_with(2.0, 3.0)
+
+
+@pytest.mark.parametrize("return_value", [-1.0, float("inf"), float("nan")])
+def test_custom_wait_callable_invalid_result(return_value: float) -> None:
+    calc = DelayCalculator(
+        delay=lambda _retry_index, _previous_delay: return_value,
+        jitter="none",
+    )
+
+    with pytest.raises(ValueError, match="finite non-negative"):
+        _ = calc.compute(retry_index=1)
+
+
+def test_custom_wait_callable_drives_retries() -> None:
+    calls: list[tuple[int, float | None]] = []
+    computed: list[float] = []
+
+    def wait(retry_index: int, previous_delay: float | None) -> float:
+        calls.append((retry_index, previous_delay))
+        return 0.0
+
+    @retry(
+        attempts=3,
+        delay=wait,
+        callbacks={"on_retry": lambda stats: computed.append(stats.attempt.computed_delay)},
+    )
+    def fn() -> NoReturn:
+        raise ValueError
+
+    with pytest.RaisesGroup(ValueError, ValueError, ValueError):
+        fn()
+
+    assert calls == [(1, None), (2, 0.0)]
+    assert computed[:2] == [0.0, 0.0]

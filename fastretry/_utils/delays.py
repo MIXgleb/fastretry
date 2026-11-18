@@ -1,14 +1,34 @@
 """Delay computation for retry attempts."""
 
+import math
 import random
+from collections.abc import (
+    Callable,
+)
 from typing import (
     Literal,
     NamedTuple,
     assert_never,
 )
 
-type Delay = float | ExponentialDelay
-"""Delay between attempts: fixed seconds or an :class:`ExponentialDelay`."""
+type WaitCallable = Callable[[int, float | None], float]
+"""
+Custom delay function.
+
+Called with the 1-based index of the failed attempt that is about to be
+retried and with the delay used after the previous failed attempt
+(``None`` on the first retry, already including jitter). The returned value
+is the base delay in seconds; jitter is applied on top of it.
+
+The result must be a finite non-negative number, otherwise
+:exc:`ValueError` is raised.
+"""
+
+type Delay = float | ExponentialDelay | WaitCallable
+"""
+Delay between attempts: seconds, an :class:`ExponentialDelay` or a
+:data:`WaitCallable`.
+"""
 
 type JitterStrategy = Literal["full", "equal", "decorrelated", "none"]
 """
@@ -64,7 +84,8 @@ class DelayCalculator:
     Parameters
     ----------
     delay : Delay
-        Base delay configuration.
+        Base delay: seconds, an :class:`ExponentialDelay` or a
+        :data:`WaitCallable`.
     jitter : JitterStrategy
         Jitter strategy to apply.
 
@@ -96,7 +117,8 @@ class DelayCalculator:
         For a plain ``float`` delay, the base value is used as-is. For an
         :class:`~fastretry.delays.ExponentialDelay`, the base grows
         by ``backoff_factor`` on each subsequent attempt and is capped
-        at ``max_delay``.
+        at ``max_delay``. For a :data:`~fastretry.delays.WaitCallable`, the
+        base is whatever the callable returns for this attempt.
 
         Jitter is then applied according to the configured strategy:
 
@@ -122,33 +144,45 @@ class DelayCalculator:
             Effective delay in seconds.
 
         """
-        if (
-            isinstance(self._delay, ExponentialDelay) and self._delay.delay == 0
-        ) or self._delay == 0:
+        computed = self._apply_backoff(retry_index, previous_delay)
+
+        if computed == 0:
             return 0
 
-        computed = self._apply_backoff(retry_index)
         return self._apply_jitter(computed, previous_delay)
 
     def _apply_backoff(
         self,
         retry_index: int,
+        previous_delay: float | None,
     ) -> float:
-        if not isinstance(self._delay, ExponentialDelay):
-            return self._delay
+        delay = self._delay
 
-        computed = self._delay.delay * (self._delay.backoff_factor ** (retry_index - 1))
+        if isinstance(delay, ExponentialDelay):
+            computed = delay.delay * (delay.backoff_factor ** (retry_index - 1))
 
-        if self._delay.max_delay is not None:
-            computed = min(computed, self._delay.max_delay)
-        return computed
+            if delay.max_delay is not None:
+                computed = min(computed, delay.max_delay)
+            return computed
+
+        if callable(delay):
+            computed = float(delay(retry_index, previous_delay))
+
+            if not math.isfinite(computed) or computed < 0:
+                msg = f"custom delay must return a finite non-negative number, got {computed!r}"
+                raise ValueError(msg)
+            return computed
+
+        return float(delay)
 
     def _apply_jitter(
         self,
         computed: float,
         previous_delay: float | None,
     ) -> float:
-        match self._jitter:
+        jitter = self._jitter
+
+        match jitter:
             case "none":
                 return computed
             case "full":
@@ -158,20 +192,26 @@ class DelayCalculator:
             case "decorrelated":
                 return self.__calculate_decorrelated_jitter(computed, previous_delay)
             case _:
-                assert_never(self._jitter)
+                assert_never(jitter)
 
     def __calculate_decorrelated_jitter(
         self,
         computed: float,
         previous_delay: float | None,
     ) -> float:
-        base = self._delay.delay if isinstance(self._delay, ExponentialDelay) else self._delay
+        delay = self._delay
         previous = previous_delay if previous_delay is not None else computed
-        upper = max(base, previous * 3)
 
-        if isinstance(self._delay, ExponentialDelay) and self._delay.max_delay is not None:
-            upper = min(upper, self._delay.max_delay)
-            base = min(base, self._delay.max_delay)
+        if isinstance(delay, ExponentialDelay):
+            base = delay.delay
+            upper = max(base, previous * 3)
+
+            if delay.max_delay is not None:
+                upper = min(upper, delay.max_delay)
+                base = min(base, delay.max_delay)
+        else:
+            base = computed
+            upper = max(base, previous * 3)
 
         return random.uniform(base, upper)  # ruff: ignore[suspicious-non-cryptographic-random-usage]
 

@@ -3,6 +3,9 @@
 from typing import (
     NoReturn,
 )
+from unittest.mock import (
+    MagicMock,
+)
 
 import pytest
 
@@ -138,6 +141,27 @@ def test_validate_exponential_delay(delay: ExponentialDelay, match: str) -> None
 def test_validate_exponential_max_delay_valid() -> None:
     r = SyncRetrying(delay=ExponentialDelay(delay=1, max_delay=5))
     assert r.delay.max_delay == 5
+
+
+def test_validate_custom_delay() -> None:
+    wait = MagicMock(return_value=1.0)
+
+    r = SyncRetrying(delay=wait)
+
+    assert r.delay is wait
+
+
+def test_validate_delay_invalid_type() -> None:
+    with pytest.raises(AssertionError, match="Expected code to be unreachable"):
+        _ = SyncRetrying(delay="1")
+
+
+def test_derive_jitter_from_fixed_default_for_custom_delay() -> None:
+    config.retry(jitter_for_fixed="equal")
+
+    r = SyncRetrying(delay=MagicMock(return_value=1.0))
+
+    assert r.jitter == "equal"
 
 
 def test_derive_jitter_explicit() -> None:

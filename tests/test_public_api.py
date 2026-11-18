@@ -32,7 +32,11 @@ RE_EXPORTS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
     (
         "fastretry.delays",
         "fastretry._utils.delays",
-        ("ExponentialDelay",),
+        (
+            "Delay",
+            "ExponentialDelay",
+            "WaitCallable",
+        ),
     ),
     (
         "fastretry.introspection",

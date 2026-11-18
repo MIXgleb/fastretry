@@ -183,6 +183,39 @@ if flag is None:
 Prefer an explicit "degraded mode" value over a bare `None` when the caller
 would have to guess what `None` means.
 
+## Custom delay
+
+`delay` also accepts a callable, so a schedule that is neither fixed nor
+exponential needs no extra library. The callable receives the 1-based index of
+the failed attempt that is about to be retried and the delay used after the
+previous attempt (`None` on the first retry), and returns the base delay:
+
+```python
+from fastretry import retry
+
+
+def batch_wait(retry_index: int, previous_delay: float | None) -> float:
+    """Retry a batch job after 10 s, then 30 s, then 60 s, then every 120 s."""
+    schedule = (10.0, 30.0, 60.0)
+    return schedule[retry_index - 1] if retry_index <= len(schedule) else 120.0
+
+
+@retry(attempts=6, delay=batch_wait)
+def upload(batch: list[str]) -> None: ...
+```
+
+Notes:
+
+- the returned value is the base delay; `jitter` is applied on top of it
+  (`jitter_for_fixed` is the default when `jitter` is omitted);
+- the value must be finite and non-negative — anything else raises
+  `ValueError` instead of silently sleeping or hanging;
+- `previous_delay` already includes jitter, so a callable can adapt to the
+  delays that were actually slept.
+
+The `WaitCallable` and `Delay` aliases from `fastretry.delays` describe the
+signature, if you want to annotate the callable.
+
 ## Metrics and structured logs
 
 Callbacks receive a `RetryStats` object with everything known about the

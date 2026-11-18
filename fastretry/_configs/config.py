@@ -58,7 +58,9 @@ class _RetryNamespace:
             negative fixed delay is replaced with 0 and reported with a
             :exc:`UserWarning` when a decorator using these defaults is
             created; invalid :class:`~fastretry.delays.ExponentialDelay`
-            parameters raise :exc:`ValueError` at that point.
+            parameters raise :exc:`ValueError` at that point. A
+            :data:`~fastretry.delays.WaitCallable` computes the delay for each
+            attempt.
         disable_logging : bool, ``optional``
             Disable all logging by default, by default False.
         disable_warnings : bool, ``optional``

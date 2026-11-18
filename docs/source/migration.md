@@ -42,6 +42,7 @@ def fetch() -> bytes: ...
 | `wait_exponential(multiplier=m, max=x)` | `delay=ExponentialDelay(delay=m, max_delay=x)` |
 | `wait_random(min, max)` | `delay=...` + `jitter="full"` |
 | `wait_exponential_jitter(...)` | `delay=ExponentialDelay(...)` + `jitter="equal"` |
+| `wait=<custom callable>` | `delay=<custom callable>` (different signature, see below) |
 | `retry_if_exception_type(E)` | `retry_on=E` |
 | `retry_if_not_exception_type(E)` | `no_retry_on=E` |
 | `retry=retry_if_result(...)` | not supported yet |
@@ -54,6 +55,10 @@ def fetch() -> bytes: ...
 `jitter` is a strategy name, not a number: `"none"` (default), `"full"`
 (`random(0, delay)`), `"equal"` (half of the delay is fixed, half is random)
 and `"decorrelated"`.
+
+A custom `wait` in tenacity receives a `RetryCallState`; in fastretry the
+callable receives `(retry_index, previous_delay)` and returns the base delay
+for that attempt, with jitter applied on top.
 
 There is no need for a separate decorator for coroutine functions: `retry`
 handles both kinds of callables and awaits coroutine functions directly.
@@ -85,7 +90,7 @@ def fetch() -> bytes: ...
 |---|---|
 | `max_tries=n` | `attempts=n` |
 | `backoff.constant` | `delay=<float>` |
-| `backoff.expo` / `backoff.fibo` | `delay=ExponentialDelay(...)` (exponential only) |
+| `backoff.expo` / `backoff.fibo` | `delay=ExponentialDelay(...)` (exponential only; use a custom callable for Fibonacci) |
 | `max_value=x` | `delay=ExponentialDelay(delay=s, max_delay=x)` |
 | `jitter=backoff.full_jitter` | `jitter="full"` |
 | `backoff.on_predicate(...)` | not supported yet |

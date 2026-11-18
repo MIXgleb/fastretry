@@ -116,6 +116,28 @@ def fetch() -> bytes: ...
 
 Strategies: `"none"`, `"full"`, `"equal"`, `"decorrelated"`.
 
+### Custom delay
+
+Pass a callable to compute the delay for every retry. It receives the 1-based
+attempt index and the delay used after the previous attempt (`None` on the
+first retry), and returns the base delay in seconds:
+
+```python
+from fastretry import retry
+
+
+def linear(retry_index: int, previous_delay: float | None) -> float:
+    return 0.5 * retry_index
+
+
+@retry(attempts=5, delay=linear)
+def fetch() -> bytes: ...
+```
+
+Jitter is applied on top of the returned value. The callable must return a
+finite non-negative number; `WaitCallable` and `Delay` are exported from
+`fastretry.delays` for annotations.
+
 ### Return a default value instead of raising
 
 ```python

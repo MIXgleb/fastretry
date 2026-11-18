@@ -41,7 +41,7 @@ class DecoratorOptions:
     return_default_value : Any
         Value returned on failure, or ``UNSET`` if the wrapper re-raises.
     delay : Delay
-        Delay configuration (fixed or exponential).
+        Delay configuration: fixed seconds, exponential or custom.
     jitter : JitterStrategy
         Jitter strategy applied to the computed delay.
     disable_logging : bool
