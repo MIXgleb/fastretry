@@ -89,7 +89,7 @@ class GlobalOptions:
         Messages below this level are logged without traceback.
     install_default_handler : bool
         Whether to install the built-in console handler on the
-        ``"retry"`` logger.
+        ``"fastretry"`` logger.
     async_callback_mode : AsyncCallbackMode
         How async callbacks of synchronous functions are dispatched.
     unwrap_single_exception : bool

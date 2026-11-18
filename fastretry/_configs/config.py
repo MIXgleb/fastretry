@@ -121,16 +121,16 @@ class _LoggingNamespace:
         Configure logging for the retry decorators.
 
         Logging is handled by the standard :mod:`logging` module
-        through a single logger named ``"retry"``.
+        through a single logger named ``"fastretry"``.
 
         By default, a console handler writing to :data:`sys.stderr` is
         installed on the first log record, so messages are visible in the
         console without any setup. The handler is used only when neither
-        the ``"retry"`` logger nor any of its ancestors has handlers, and
+        the ``"fastretry"`` logger nor any of its ancestors has handlers, and
         the decision is taken once per process. Once the application
         configures :mod:`logging` (:func:`logging.basicConfig`,
         :func:`logging.config.dictConfig`, or a handler attached to the
-        ``"retry"`` logger), the built-in handler is not installed and the
+        ``"fastretry"`` logger), the built-in handler is not installed and the
         application configuration is used as is.
 
         To keep the package silent until :mod:`logging` is configured,
@@ -158,7 +158,7 @@ class _LoggingNamespace:
             record, by default :attr:`~fastretry.logging.LogLevel.ERROR`.
         install_default_handler : bool, ``optional``
             Whether to install the built-in console handler on the
-            ``"retry"`` logger. When ``True``, a handler writing to
+            ``"fastretry"`` logger. When ``True``, a handler writing to
             :data:`sys.stderr` is attached on the first log record, unless
             :mod:`logging` is already configured. When ``False``, a
             :class:`logging.NullHandler` is attached instead, so the package
