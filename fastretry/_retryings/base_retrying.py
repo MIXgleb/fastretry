@@ -31,7 +31,7 @@ from fastretry._compat.sentinels import (
     UNSET,
     UnsetType,
 )
-from fastretry._defaults import (
+from fastretry._configs.defaults import (
     get_defaults,
 )
 from fastretry._utils.callbacks import (
@@ -40,7 +40,7 @@ from fastretry._utils.callbacks import (
     RetryCallbacks,
     noop_callback,
 )
-from fastretry._utils.delay import (
+from fastretry._utils.delays import (
     Delay,
     DelayCalculator,
     ExponentialDelay,
@@ -149,10 +149,10 @@ class BaseRetrying[
             Default value returned if the function fails after all attempts,
         delay : Delay, ``optional``
             Delay between attempts in seconds. May be a plain ``float`` for a
-            fixed delay or an :class:`~fastretry._utils.delay.ExponentialDelay` for
+            fixed delay or an :class:`~fastretry.delays.ExponentialDelay` for
             exponential backoff. A negative fixed delay is replaced with 0 and
             reported with a :exc:`UserWarning`; invalid
-            :class:`~fastretry._utils.delay.ExponentialDelay` parameters raise
+            :class:`~fastretry.delays.ExponentialDelay` parameters raise
             :exc:`ValueError`.
         jitter : JitterStrategy, ``optional``
             Jitter strategy overriding the default for the given delay type.
@@ -175,7 +175,7 @@ class BaseRetrying[
             is used (``()``).
         executor : Executor | UnsetType, ``optional``
             Executor used to run sync functions in an async context.
-            Only relevant for :class:`~fastretry.async_retry.AsyncRetrying`.
+            Only relevant for :class:`~fastretry._retryings.async_retrying.AsyncRetrying`.
 
         """
         # --- effective defaults ---
@@ -450,8 +450,8 @@ class BaseRetrying[
 
         Subclasses decide how to handle an awaitable result:
 
-        - :class:`~fastretry.async_retry.AsyncRetrying` always awaits it.
-        - :class:`~fastretry.sync_retry.SyncRetrying` runs it synchronously.
+        - :class:`~fastretry._retryings.async_retrying.AsyncRetrying` always awaits it.
+        - :class:`~fastretry._retryings.sync_retrying.SyncRetrying` runs it synchronously.
         When no event loop is running, :func:`asyncio.run` is used;
         when a loop is already running, the coroutine is executed
         in a separate thread with its own loop.
@@ -501,7 +501,7 @@ class BaseRetrying[
         Raises
         ------
         ValueError
-            If ``delay`` is an :class:`~fastretry._utils.delay.ExponentialDelay`
+            If ``delay`` is an :class:`~fastretry.delays.ExponentialDelay`
             with a non-positive ``delay``, ``backoff_factor``, or
             ``max_delay``, or with ``max_delay`` less than ``delay``.
 
@@ -553,7 +553,7 @@ class BaseRetrying[
         Used when a user-provided callback or sleep callable raises: the
         error must not abort the retry cycle, but should still be visible.
 
-        If the failure level is disabled (:attr:`~fastretry._utils.logs.LogLevel.OFF`)
+        If the failure level is disabled (:attr:`~fastretry.logging.LogLevel.OFF`)
         or logging is globally disabled, a warning is emitted instead
         so the swallowed exception is not lost silently.
 
@@ -566,7 +566,7 @@ class BaseRetrying[
         extra : Mapping[str, object]
             Structured fields attached to the log record via the ``logging``
             ``extra`` argument. Typically
-            :attr:`~fastretry._utils.stats.RetryStats.log_extra`.
+            :attr:`~fastretry.callbacks.RetryStats.log_extra`.
 
         """
         if not self._log.record(
@@ -726,7 +726,7 @@ class BaseRetrying[
 
         If ``jitter`` is not provided, the strategy is chosen based on the
         delay type: ``jitter_for_exponential`` for
-        :class:`~fastretry._utils.delay.ExponentialDelay`, or
+        :class:`~fastretry.delays.ExponentialDelay`, or
         ``jitter_for_fixed`` for a plain ``float`` delay.
 
         Parameters

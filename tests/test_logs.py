@@ -15,7 +15,7 @@ from pytest_mock import (
 
 from fastretry._utils.logs import (
     _DEFAULT_LOGGER,
-    _LOGGER_NAME,
+    FASTRETRY_LOGGER_NAME,
     Log,
     LoggerConfig,
     LogLevel,
@@ -26,7 +26,7 @@ from fastretry._utils.logs import (
 @pytest.fixture
 def _isolate_retry_logger() -> Generator[None]:
     """Isolate the shared logger and the lazy default handler state."""
-    logger = logging.getLogger(_LOGGER_NAME)
+    logger = logging.getLogger(FASTRETRY_LOGGER_NAME)
     handlers = list(logger.handlers)
     level = logger.level
 
@@ -57,7 +57,7 @@ def _make_record(message: str = "hello") -> logging.LogRecord:
 
     """
     return logging.LogRecord(
-        _LOGGER_NAME,
+        FASTRETRY_LOGGER_NAME,
         logging.WARNING,
         __file__,
         1,

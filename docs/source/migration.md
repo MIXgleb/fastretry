@@ -23,7 +23,8 @@ def fetch() -> bytes: ...
 
 ```python
 # fastretry
-from fastretry import ExponentialDelay, retry
+from fastretry import retry
+from fastretry.delays import ExponentialDelay
 
 
 @retry(
@@ -72,7 +73,8 @@ def fetch() -> bytes: ...
 
 ```python
 # fastretry
-from fastretry import ExponentialDelay, retry
+from fastretry import retry
+from fastretry.delays import ExponentialDelay
 
 
 @retry(attempts=4, delay=ExponentialDelay(delay=1.0, max_delay=8.0), retry_on=IOError)
@@ -105,7 +107,8 @@ def fetch() -> bytes: ...
 
 ```python
 # fastretry
-from fastretry import ExponentialDelay, retry
+from fastretry import retry
+from fastretry.delays import ExponentialDelay
 
 
 @retry(

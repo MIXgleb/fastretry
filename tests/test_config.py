@@ -2,10 +2,10 @@
 
 import pytest
 
-from fastretry._config import (
+from fastretry._configs.config import (
     config,
 )
-from fastretry._defaults import (
+from fastretry._configs.defaults import (
     get_defaults,
     global_defaults,
 )

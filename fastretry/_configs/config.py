@@ -9,15 +9,15 @@ from typing import (
     Unpack,
 )
 
-from fastretry._defaults import (
-    context_defaults,
-    get_defaults,
-    global_defaults,
-)
-from fastretry._types import (
+from fastretry._compat.types import (
     DefaultsKwargs,
     LoggingDefaultsKwargs,
     RetryDefaultsKwargs,
+)
+from fastretry._configs.defaults import (
+    context_defaults,
+    get_defaults,
+    global_defaults,
 )
 
 
@@ -57,7 +57,7 @@ class _RetryNamespace:
             Default delay between attempts, in seconds, by default 0. A
             negative fixed delay is replaced with 0 and reported with a
             :exc:`UserWarning` when a decorator using these defaults is
-            created; invalid :class:`~fastretry._utils.delay.ExponentialDelay`
+            created; invalid :class:`~fastretry.delays.ExponentialDelay`
             parameters raise :exc:`ValueError` at that point.
         disable_logging : bool, ``optional``
             Disable all logging by default, by default False.
@@ -76,13 +76,13 @@ class _RetryNamespace:
             by default False.
         on_success : CallbackType | None, ``optional``
             Default callback invoked after a successful attempt,
-            by default :func:`~fastretry._utils.callbacks.default_on_success`.
+            by default :func:`~fastretry.callbacks.default_on_success`.
         on_retry : CallbackType | None, ``optional``
             Default callback invoked after a failed attempt,
-            by default :func:`~fastretry._utils.callbacks.default_on_retry`.
+            by default :func:`~fastretry.callbacks.default_on_retry`.
         on_failure : CallbackType | None, ``optional``
             Default callback invoked after all attempts have failed,
-            by default :func:`~fastretry._utils.callbacks.default_on_failure`.
+            by default :func:`~fastretry.callbacks.default_on_failure`.
         jitter_for_exponential : JitterStrategy, ``optional``
             Default jitter strategy for exponential delay,
             by default ``"none"``.
@@ -135,25 +135,25 @@ class _LoggingNamespace:
         pass ``install_default_handler=False``.
 
         Each log kind has its own level. Set a level to
-        :attr:`~fastretry._utils.logs.LogLevel.OFF` to disable that kind.
+        :attr:`~fastretry.logging.LogLevel.OFF` to disable that kind.
 
         Parameters
         ----------
         level_success : LogLevel, ``optional``
             Level for messages emitted after a successful attempt,
-            by default :attr:`~fastretry._utils.logs.LogLevel.OFF`.
+            by default :attr:`~fastretry.logging.LogLevel.OFF`.
         level_retry : LogLevel, ``optional``
             Level for messages emitted after a failed attempt,
-            by default :attr:`~fastretry._utils.logs.LogLevel.WARNING`.
+            by default :attr:`~fastretry.logging.LogLevel.WARNING`.
         level_failure : LogLevel, ``optional``
             Level for messages emitted after all attempts have failed,
-            by default :attr:`~fastretry._utils.logs.LogLevel.ERROR`.
+            by default :attr:`~fastretry.logging.LogLevel.ERROR`.
         level_sleep : LogLevel, ``optional``
             Level for messages emitted before sleeping between attempts,
-            by default :attr:`~fastretry._utils.logs.LogLevel.OFF`.
+            by default :attr:`~fastretry.logging.LogLevel.OFF`.
         traceback_min_level : LogLevel, ``optional``
             Minimum level at which a traceback is attached to the log
-            record, by default :attr:`~fastretry._utils.logs.LogLevel.ERROR`.
+            record, by default :attr:`~fastretry.logging.LogLevel.ERROR`.
         install_default_handler : bool, ``optional``
             Whether to install the built-in console handler on the
             ``"retry"`` logger. When ``True``, a handler writing to

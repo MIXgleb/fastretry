@@ -20,7 +20,7 @@ from fastretry._utils.callbacks import (
     CallbackType,
     RetryCallbacks,
 )
-from fastretry._utils.delay import (
+from fastretry._utils.delays import (
     Delay,
     JitterStrategy,
 )
@@ -92,7 +92,7 @@ class RetryDefaultsKwargs(
     total=False,
     closed=True,
 ):
-    """Options accepted by :attr:`~fastretry._config.config.retry`."""
+    """Options accepted by :attr:`~fastretry.config.retry`."""
 
 
 class LoggingDefaultsKwargs(
@@ -100,7 +100,7 @@ class LoggingDefaultsKwargs(
     total=False,
     closed=True,
 ):
-    """Options related to logging, configured via :attr:`~fastretry._config.config.logging`."""
+    """Options related to logging, configured via :attr:`~fastretry.config.logging`."""
 
 
 class DefaultsKwargs(
@@ -109,4 +109,4 @@ class DefaultsKwargs(
     total=False,
     closed=True,
 ):
-    """All keyword arguments accepted by :data:`~fastretry._config.config`."""
+    """All keyword arguments accepted by :data:`~fastretry.config`."""

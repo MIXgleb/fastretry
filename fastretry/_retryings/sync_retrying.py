@@ -1,6 +1,7 @@
-"""Asynchronous retry decorator."""
+"""Synchronous retry decorator."""
 
 import asyncio
+import concurrent.futures
 import contextvars
 import functools
 import inspect
@@ -12,15 +13,11 @@ from typing import (
     override,
 )
 
-from fastretry._compat.aliases import (
-    Coro,
-    WrappedCoro,
-)
-from fastretry._compat.functions import (
-    is_coroutine_function,
-)
 from fastretry._compat.sentinels import (
     UnsetType,
+)
+from fastretry._retryings.base_retrying import (
+    BaseRetrying,
 )
 from fastretry._utils.callbacks import (
     CallbackType,
@@ -28,58 +25,43 @@ from fastretry._utils.callbacks import (
 from fastretry._utils.introspection import (
     RetryContext,
 )
+from fastretry._utils.shared_loop import (
+    shared_loop,
+)
 from fastretry._utils.stats import (
     RetryStats,
 )
-from fastretry.base import (
-    BaseRetrying,
-)
 
 
-class AsyncRetrying[**P, R](
+class SyncRetrying[**P, R](
     BaseRetrying[
         R,
-        Callable[P, R] | Callable[P, Coro[R]],
-        Callable[P, WrappedCoro[R]],
+        Callable[P, R],
+        Callable[P, R | UnsetType],
     ],
 ):
     """
-    Async retrying decorator for multiple attempts to execute a function in case of an error.
+    Sync retrying decorator for multiple attempts to execute a function in case of an error.
 
-    Supports two kinds of wrapped callables:
-
-    - coroutine functions, which are awaited directly;
-    - plain sync functions, which are run in an executor so the event
-      loop is not blocked. The executor is chosen by the ``executor``
-      option: ``None`` (default) uses the running loop's thread pool;
-      an :class:`~concurrent.futures.Executor` instance is passed to
-      :meth:`asyncio.AbstractEventLoop.run_in_executor`.
+    Wraps plain sync callables and runs them directly in the calling thread.
 
     """
 
-    wrapper_kind = "async"
+    wrapper_kind = "sync"
 
     @override
     def _wrap(
         self,
-        func: Callable[P, R] | Callable[P, Coro[R]],
-    ) -> Callable[P, WrappedCoro[R]]:
+        func: Callable[P, R],
+    ) -> Callable[P, R | UnsetType]:
         on_success = self.callbacks.on_success
         on_retry = self.callbacks.on_retry
         on_failure = self.callbacks.on_failure
 
         fname = getattr(func, "__qualname__", "<anonymous>")
-        invoke = (
-            func
-            if is_coroutine_function(func)
-            else functools.partial(
-                self._run_sync_in_executor,
-                func,  # pyright: ignore[reportArgumentType]
-            )
-        )
 
         @functools.wraps(func)
-        async def async_wrapper(*args: P.args, **kwargs: P.kwargs) -> R | UnsetType:
+        def wrapper(*args: P.args, **kwargs: P.kwargs) -> R | UnsetType:
             stats = self._stats.for_call(
                 args=args,
                 kwargs=kwargs,
@@ -94,7 +76,7 @@ class AsyncRetrying[**P, R](
                     stats_attempt.attempt_started_at = time.monotonic()
 
                     try:
-                        result = await invoke(*args, **kwargs)
+                        result = func(*args, **kwargs)
                     except BaseException as exc:  # ruff: ignore[blind-except]
                         self._prepare_retry(
                             stats_attempt=stats_attempt,
@@ -104,22 +86,22 @@ class AsyncRetrying[**P, R](
                         if stats_attempt.retry_aborted:
                             break
 
-                        await self._safe_call_callback(callback=on_retry, stats=stats)
-                        await self._sleep(stats=stats)
+                        self._safe_call_callback(callback=on_retry, stats=stats)
+                        self._sleep(stats=stats)
                     else:
                         self._prepare_success(stats_attempt=stats_attempt, result=result)
-                        await self._safe_call_callback(callback=on_success, stats=stats)
+                        self._safe_call_callback(callback=on_success, stats=stats)
                         return result
 
                 self._prepare_failure(stats_attempt=stats_attempt)
-                await self._safe_call_callback(callback=on_failure, stats=stats)
+                self._safe_call_callback(callback=on_failure, stats=stats)
                 self._raise_if_needed(stats_attempt=stats_attempt)
                 return self.return_default_value
 
-        return async_wrapper
+        return wrapper
 
     @override
-    async def _sleep(
+    def _sleep(
         self,
         *,
         stats: RetryStats,
@@ -129,10 +111,10 @@ class AsyncRetrying[**P, R](
         if isinstance(stats_attempt.computed_delay, UnsetType) or stats_attempt.computed_delay <= 0:
             return
 
-        await asyncio.sleep(stats_attempt.computed_delay)
+        time.sleep(stats_attempt.computed_delay)
 
     @override
-    async def _call_callback(
+    def _call_callback(
         self,
         *,
         callback: CallbackType,
@@ -140,18 +122,51 @@ class AsyncRetrying[**P, R](
     ) -> None:
         result = callback(stats)
 
-        if inspect.isawaitable(result):
-            await result
+        if not inspect.iscoroutine(result):
+            return
+
+        try:
+            _ = asyncio.get_running_loop()
+            loop_is_running = True
+        except RuntimeError:
+            loop_is_running = False
+
+        if self._uses_shared_loop(loop_is_running=loop_is_running):
+            shared_loop.run_callback(result)
+            return
+
+        if loop_is_running:
+            context = contextvars.copy_context()
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                pool.submit(context.run, asyncio.run, result).result()
+            return
+
+        asyncio.run(result)
+
+    def _uses_shared_loop(
+        self,
+        *,
+        loop_is_running: bool,
+    ) -> bool:
+        mode = self._async_callback_mode
+
+        if mode == "thread_per_call":
+            return False
+
+        if mode == "shared_loop_when_running" and not loop_is_running:
+            return False
+
+        return not shared_loop.is_owner_thread()
 
     @override
-    async def _safe_call_callback(
+    def _safe_call_callback(
         self,
         *,
         callback: CallbackType,
         stats: RetryStats,
     ) -> None:
         try:
-            await self._call_callback(callback=callback, stats=stats)
+            self._call_callback(callback=callback, stats=stats)
         except Exception as exc:  # ruff: ignore[blind-except]
             name = getattr(callback, "__name__", "<anonymous>")
             self._log_swallowed(
@@ -159,16 +174,3 @@ class AsyncRetrying[**P, R](
                 exc=exc,
                 extra=stats.log_extra,
             )
-
-    async def _run_sync_in_executor(
-        self,
-        func: Callable[P, R],
-        /,
-        *args: P.args,
-        **kwargs: P.kwargs,
-    ) -> R:
-        executor = self.executor
-        loop = asyncio.get_running_loop()
-        context = contextvars.copy_context()
-        partial = functools.partial(context.run, func, *args, **kwargs)
-        return await loop.run_in_executor(executor, partial)

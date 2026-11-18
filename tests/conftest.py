@@ -6,7 +6,7 @@ from collections.abc import (
 
 import pytest
 
-from fastretry._defaults import (
+from fastretry._configs.defaults import (
     context_defaults,
     global_defaults,
 )

@@ -44,7 +44,7 @@ type CallbackType = Callable[[RetryStats], CoroType[None] | None]
 """
 Retry lifecycle callback.
 
-Receives the current :class:`~fastretry._utils.stats.RetryStats` and returns
+Receives the current :class:`~fastretry.callbacks.RetryStats` and returns
 either nothing or a coroutine, in which case it is awaited.
 """
 

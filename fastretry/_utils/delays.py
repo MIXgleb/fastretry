@@ -94,7 +94,7 @@ class DelayCalculator:
         Compute the effective delay for a retry attempt.
 
         For a plain ``float`` delay, the base value is used as-is. For an
-        :class:`~fastretry._utils.delay.ExponentialDelay`, the base grows
+        :class:`~fastretry.delays.ExponentialDelay`, the base grows
         by ``backoff_factor`` on each subsequent attempt and is capped
         at ``max_delay``.
 

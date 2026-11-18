@@ -13,9 +13,9 @@ Retry decorator for synchronous and asynchronous functions.
 - Lifecycle callbacks for success, retry, and failure.
 - Configurable per decorator or globally.
 - Run sync functions in an executor from async code.
-- Runtime introspection of the retry in progress: `is_retrying()`,
-  `get_current_stats()` and lookups of other runs (`get_stats_for()`,
-  `get_active_runs()`).
+- Runtime introspection of the retry in progress (`fastretry.introspection`):
+  `is_retrying()`, `get_current_stats()` and lookups of other runs
+  (`get_stats_for()`, `get_active_runs()`).
 - 100% test coverage.
 
 **Documentation:** <https://fastretry.readthedocs.io/>
@@ -99,7 +99,8 @@ All options are optional and fall back to global defaults.
 ### Exponential backoff
 
 ```python
-from fastretry import retry, ExponentialDelay
+from fastretry import retry
+from fastretry.delays import ExponentialDelay
 
 
 @retry(attempts=5, delay=ExponentialDelay(delay=1.0, backoff_factor=2.0, max_delay=30.0))
@@ -144,7 +145,8 @@ def fetch() -> bytes: ...
 ### Callbacks
 
 ```python
-from fastretry import RetryStats, retry
+from fastretry import retry
+from fastretry.callbacks import RetryStats
 
 
 def on_retry(stats: RetryStats) -> None:
@@ -198,7 +200,8 @@ the cost entirely.
 Global defaults apply to all subsequently created decorators.
 
 ```python
-from fastretry import LogLevel, config
+from fastretry import config
+from fastretry.logging import LogLevel
 
 config.retry(attempts=3, delay=1.0)
 config.logging(level_success=LogLevel.INFO)
@@ -231,7 +234,7 @@ Restores all defaults to their factory values. Useful in tests.
 ## Logging
 
 Logging is handled by the standard `logging` module through a logger
-named `"retry"`.
+named `"fastretry"`.
 
 A console handler writing to `sys.stderr` is installed automatically on
 the first log message, so retry warnings and failures are visible
@@ -247,7 +250,7 @@ def fetch() -> bytes: ...
 
 To take full control, configure `logging` in your application
 (`logging.basicConfig()`, `logging.dictConfig()`, or a handler on the
-`"retry"` logger). Once the `"retry"` logger or any of its ancestors has
+`"fastretry"` logger). Once the `"fastretry"` logger or any of its ancestors has
 handlers, the built-in handler is **not** installed and your
 configuration is used as is. The decision is taken on the first log
 message, so configure `logging` during application startup.
@@ -263,7 +266,8 @@ config.logging(install_default_handler=False)
 Each log kind has its own level:
 
 ```python
-from fastretry import LogLevel, config
+from fastretry import config
+from fastretry.logging import LogLevel
 
 config.logging(
     level_success=LogLevel.OFF,

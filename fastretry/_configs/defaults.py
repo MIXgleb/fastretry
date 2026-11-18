@@ -11,7 +11,7 @@ from typing import (
 from fastretry._compat.aliases import (
     RetryOnExceptionType,
 )
-from fastretry._types import (
+from fastretry._compat.types import (
     DefaultsKwargs,
 )
 from fastretry._utils.callbacks import (
@@ -20,7 +20,7 @@ from fastretry._utils.callbacks import (
     default_on_retry,
     default_on_success,
 )
-from fastretry._utils.delay import (
+from fastretry._utils.delays import (
     Delay,
     JitterStrategy,
 )

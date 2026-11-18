@@ -9,11 +9,17 @@ import pytest
 from fastretry._compat.sentinels import (
     UNSET,
 )
-from fastretry._config import (
+from fastretry._configs.config import (
     config,
 )
 from fastretry._decorators.retry import (
     retry,
+)
+from fastretry._retryings.base_retrying import (
+    BaseRetrying,
+)
+from fastretry._retryings.sync_retrying import (
+    SyncRetrying,
 )
 from fastretry._utils.callbacks import (
     default_on_failure,
@@ -21,7 +27,7 @@ from fastretry._utils.callbacks import (
     default_on_success,
     noop_callback,
 )
-from fastretry._utils.delay import (
+from fastretry._utils.delays import (
     ExponentialDelay,
 )
 from fastretry._utils.logs import (
@@ -29,12 +35,6 @@ from fastretry._utils.logs import (
 )
 from fastretry._utils.stats import (
     RetryStats,
-)
-from fastretry.base import (
-    BaseRetrying,
-)
-from fastretry.sync_retry import (
-    SyncRetrying,
 )
 
 

@@ -13,7 +13,8 @@ retry; a `4xx` response is not. With `httpx` the first group raises
 ```python
 import httpx
 
-from fastretry import ExponentialDelay, retry
+from fastretry import retry
+from fastretry.delays import ExponentialDelay
 
 
 @retry(
@@ -37,7 +38,8 @@ With `requests` the equivalents are `requests.ConnectionError` and
 ```python
 import requests
 
-from fastretry import ExponentialDelay, retry
+from fastretry import retry
+from fastretry.delays import ExponentialDelay
 
 
 @retry(
@@ -59,7 +61,8 @@ returns a coroutine function, so no extra plumbing is needed:
 ```python
 import httpx
 
-from fastretry import ExponentialDelay, retry
+from fastretry import retry
+from fastretry.delays import ExponentialDelay
 
 client = httpx.AsyncClient(timeout=5.0)
 
@@ -122,7 +125,8 @@ retrying with a short exponential backoff:
 ```python
 import sqlite3
 
-from fastretry import ExponentialDelay, retry
+from fastretry import retry
+from fastretry.delays import ExponentialDelay
 
 
 @retry(
@@ -189,7 +193,8 @@ collected exceptions. `RetryStats.log_extra` is a ready-to-use mapping for the
 ```python
 import logging
 
-from fastretry import RetryStats, retry
+from fastretry import retry
+from fastretry.callbacks import RetryStats
 
 logger = logging.getLogger(__name__)
 
@@ -222,7 +227,7 @@ Notes:
 
 - passing `on_retry` **replaces** the built-in callback, so the default log
   line for retries disappears — log it yourself (as above) or call
-  `fastretry.default_on_retry(stats)` first to keep it;
+  `fastretry.callbacks.default_on_retry(stats)` first to keep it;
 - `on_retry` runs after **every** failed attempt, including the last one, where
   no further attempt follows; `on_failure` runs once after it. Do not count
   `on_retry` calls as "retries that will still happen";
@@ -238,7 +243,8 @@ block, isolated to the current asyncio task or thread. This is the place for
 "this endpoint needs more attempts" without touching the global defaults:
 
 ```python
-from fastretry import ExponentialDelay, config, retry
+from fastretry import config, retry
+from fastretry.delays import ExponentialDelay
 
 
 async def handle_webhook(payload: dict[str, str]) -> bytes:
@@ -268,7 +274,9 @@ active elsewhere in the process.
 ```python
 import logging
 
-from fastretry import RetryStats, get_current_stats, is_retrying, retry
+from fastretry import retry
+from fastretry.callbacks import RetryStats
+from fastretry.introspection import get_current_stats, is_retrying
 
 logger = logging.getLogger(__name__)
 
@@ -300,7 +308,7 @@ reused. Combined with `get_stats_by_run_id()`, another thread or task can look
 at a run it did not start:
 
 ```python
-from fastretry import get_current_run_id, get_stats_by_run_id
+from fastretry.introspection import get_current_run_id, get_stats_by_run_id
 
 run_id = get_current_run_id()  # captured inside the retried callable
 stats = get_stats_by_run_id(run_id)  # from a watchdog, health check, etc.
@@ -318,7 +326,7 @@ every function in the process, which is what a diagnostics endpoint usually
 wants:
 
 ```python
-from fastretry import get_active_runs
+from fastretry.introspection import get_active_runs
 
 for run_id, stats in get_active_runs().items():
     logger.info("%s: attempt %d", stats.attempt.fname, stats.attempt.retry_index)

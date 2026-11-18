@@ -15,19 +15,21 @@ from unittest.mock import (
 
 import pytest
 
-from fastretry import (
+from fastretry._decorators.retry import (
+    retry,
+)
+from fastretry._decorators.retry_async import (
+    retry_async,
+)
+from fastretry._utils.introspection import (
+    RetryContext,
+    _active_runs,
     get_active_runs,
     get_current_run_id,
     get_current_stats,
     get_stats_by_run_id,
     get_stats_for,
     is_retrying,
-    retry,
-    retry_async,
-)
-from fastretry._utils.introspection import (
-    RetryContext,
-    _active_runs,
 )
 from fastretry._utils.logs import (
     Log,

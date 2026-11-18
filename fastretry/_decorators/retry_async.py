@@ -41,18 +41,18 @@ from fastretry._compat.sentinels import (
     UNSET,
     UnsetType,
 )
-from fastretry._types import (
+from fastretry._compat.types import (
     RetryWithExecutorKwargs,
+)
+from fastretry._retryings.async_retrying import (
+    AsyncRetrying,
 )
 from fastretry._utils.callbacks import (
     RetryCallbacks,
 )
-from fastretry._utils.delay import (
+from fastretry._utils.delays import (
     Delay,
     JitterStrategy,
-)
-from fastretry.async_retry import (
-    AsyncRetrying,
 )
 
 
@@ -189,7 +189,7 @@ def retry_async[**P, R](
         Delay between attempts in seconds. A plain ``float`` gives a
         fixed delay (factory default: 0); a negative value is replaced with 0
         and reported with a :exc:`UserWarning`. An
-        :class:`~fastretry._utils.delay.ExponentialDelay` enables exponential
+        :class:`~fastretry.delays.ExponentialDelay` enables exponential
         backoff with ``backoff_factor=2.0`` and no upper bound; invalid
         parameters raise :exc:`ValueError` when the decorator is applied.
     jitter : JitterStrategy, ``optional``

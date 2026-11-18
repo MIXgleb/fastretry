@@ -7,7 +7,7 @@ from typing import (
 from fastretry._compat.nodes import (
     is_typeddict,
 )
-from fastretry._types import (
+from fastretry._compat.types import (
     DefaultsKwargs,
     LoggingDefaultsKwargs,
     RetryDefaultsKwargs,

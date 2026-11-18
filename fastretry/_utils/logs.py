@@ -30,10 +30,10 @@ Kind of log message; every kind has its own configured level.
 - ``"sleep"`` — emitted before sleeping between attempts.
 """
 
-_LOGGER_NAME: Final[str] = "retry"
+FASTRETRY_LOGGER_NAME: Final[str] = "fastretry"
 """Name of the logger that all retry decorators write to."""
 
-_DEFAULT_LOGGER: Final[logging.Logger] = logging.getLogger(_LOGGER_NAME)
+_DEFAULT_LOGGER: Final[logging.Logger] = logging.getLogger(FASTRETRY_LOGGER_NAME)
 """Logger resolved once at import; the built-in handler is attached lazily."""
 
 _DEFAULT_LOG_FORMAT: Final[str] = (

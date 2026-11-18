@@ -16,7 +16,7 @@ from fastretry._compat.sentinels import (
     UNSET,
     UnsetType,
 )
-from fastretry._utils.delay import (
+from fastretry._utils.delays import (
     Delay,
     JitterStrategy,
 )
@@ -57,7 +57,7 @@ class DecoratorOptions:
         ``retry_on``. Takes precedence.
     executor : Executor | None
         Executor used to run sync functions in an async context.
-        Only relevant for :class:`~fastretry.async_retry.AsyncRetrying`.
+        Only relevant for :class:`~fastretry._retryings.async_retrying.AsyncRetrying`.
 
     """
 

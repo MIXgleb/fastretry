@@ -15,7 +15,7 @@ from unittest.mock import (
 
 import pytest
 
-from fastretry._config import (
+from fastretry._configs.config import (
     config,
 )
 from fastretry._decorators.retry import (

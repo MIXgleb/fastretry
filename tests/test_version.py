@@ -12,19 +12,19 @@ from pytest_mock import (
 )
 
 import fastretry
-from fastretry import (
-    _version,
+from fastretry._metadata import (
+    version,
 )
 
 
 @pytest.fixture(autouse=True)  # ruff: ignore[pytest-fixture-autouse]
 def _reset_version_cache() -> Generator[None]:
     """Drop the cached version, so that every test resolves it on its own."""
-    _version._resolve_version.cache_clear()
+    version._resolve_version.cache_clear()
 
     yield
 
-    _version._resolve_version.cache_clear()
+    version._resolve_version.cache_clear()
 
 
 def test_version_matches_installed_metadata() -> None:

@@ -2,8 +2,8 @@
 Retry decorator for synchronous and asynchronous functions.
 
 Exposes :func:`retry`, which dispatches to
-:class:`~fastretry.sync_retry.SyncRetrying` or
-:class:`~fastretry.async_retry.AsyncRetrying` depending on whether the
+:class:`~fastretry._retryings.sync_retrying.SyncRetrying` or
+:class:`~fastretry._retryings.async_retrying.AsyncRetrying` depending on whether the
 decorated function is a coroutine function.
 
 ``retry`` can be used in two forms::
@@ -39,21 +39,21 @@ from fastretry._compat.sentinels import (
     UNSET,
     UnsetType,
 )
-from fastretry._types import (
+from fastretry._compat.types import (
     RetryKwargs,
+)
+from fastretry._retryings.async_retrying import (
+    AsyncRetrying,
+)
+from fastretry._retryings.sync_retrying import (
+    SyncRetrying,
 )
 from fastretry._utils.callbacks import (
     RetryCallbacks,
 )
-from fastretry._utils.delay import (
+from fastretry._utils.delays import (
     Delay,
     JitterStrategy,
-)
-from fastretry.async_retry import (
-    AsyncRetrying,
-)
-from fastretry.sync_retry import (
-    SyncRetrying,
 )
 
 
@@ -161,7 +161,7 @@ def retry[**P, R](
         Delay between attempts in seconds. A plain ``float`` gives a
         fixed delay (factory default: 0); a negative value is replaced with 0
         and reported with a :exc:`UserWarning`. An
-        :class:`~fastretry._utils.delay.ExponentialDelay` enables exponential
+        :class:`~fastretry.delays.ExponentialDelay` enables exponential
         backoff with ``backoff_factor=2.0`` and no upper bound; invalid
         parameters raise :exc:`ValueError` when the decorator is applied.
     jitter : JitterStrategy, ``optional``
@@ -184,7 +184,7 @@ def retry[**P, R](
         Callbacks may be synchronous or asynchronous.
 
         You may pass a plain ``dict`` with any subset of these keys, or
-        build a :class:`~fastretry._utils.callbacks.RetryCallbacks` instance
+        build a :class:`~fastretry.callbacks.RetryCallbacks` instance
         directly. Pass ``None`` for the whole mapping to disable every
         callback.
 
