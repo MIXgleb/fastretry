@@ -86,7 +86,7 @@ html_title = "fastretry"
 nitpicky = True
 nitpick_ignore = [
     ("py:meth", "asyncio.AbstractEventLoop.run_in_executor"),
-    ("py:type", "fastretry.async_retry.CallbackType"),
+    ("py:type", "fastretry._utils.callbacks.CallbackType"),
     ("py:class", "fastretry._decorators.retry._RetryDecorator"),
     ("py:class", "fastretry._decorators.retry._RetryDecoratorWithDefault"),
     ("py:class", "fastretry._decorators.retry_async._RetryAsyncDecorator"),
@@ -108,14 +108,20 @@ nitpick_ignore = [
 def setup(_: Sphinx) -> None:
     """Register the documentation build hooks."""
     exclude_warnings = (
-        "duplicate object description of fastretry.RetryCallbacks.on_success",
-        "duplicate object description of fastretry.RetryCallbacks.on_retry",
-        "duplicate object description of fastretry.RetryCallbacks.on_failure",
-        "duplicate object description of fastretry.RetryStats.log",
-        "duplicate object description of fastretry.RetryStats.decorator",
-        "duplicate object description of fastretry.RetryStats.global_options",
-        "duplicate object description of fastretry.RetryStats.call",
-        "duplicate object description of fastretry.RetryStats.attempt",
+        "duplicate object description of fastretry.callbacks.RetryCallbacks.on_success",
+        "duplicate object description of fastretry.callbacks.RetryCallbacks.on_retry",
+        "duplicate object description of fastretry.callbacks.RetryCallbacks.on_failure",
+        "duplicate object description of fastretry.callbacks.RetryStats.log",
+        "duplicate object description of fastretry.callbacks.RetryStats.decorator",
+        "duplicate object description of fastretry.callbacks.RetryStats.global_options",
+        "duplicate object description of fastretry.callbacks.RetryStats.call",
+        "duplicate object description of fastretry.callbacks.RetryStats.attempt",
+        "duplicate object description of fastretry.introspection.RetryStats.log",
+        "duplicate object description of fastretry.introspection.RetryStats.decorator",
+        "duplicate object description of fastretry.introspection.RetryStats.global_options",
+        "duplicate object description of fastretry.introspection.RetryStats.call",
+        "duplicate object description of fastretry.introspection.RetryStats.attempt",
+        "duplicate object description of fastretry._utils.stats.RetryStats",
     )
 
     class _DupFilter(logging.Filter):
