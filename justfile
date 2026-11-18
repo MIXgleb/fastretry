@@ -37,6 +37,7 @@ pyrefly:
 
 # Run tests with coverage.
 test:
+    Remove-Item .coverage -Force -ErrorAction SilentlyContinue; exit 0
     uv run pytest
 
 # Run tests without coverage (fast).
