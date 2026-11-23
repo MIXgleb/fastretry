@@ -127,16 +127,19 @@ class Defaults:
         Raises
         ------
         AttributeError
-            Unknown default key
+            Unknown default key. Nothing is applied in that case: the whole
+            batch is checked before the first value is written, so a rejected
+            call leaves the defaults untouched.
 
         """
         all_keys = {f.name for f in dc.fields(self)}
+        unknown = [key for key in kwargs if key not in all_keys]
+
+        if unknown:
+            msg = f"Unknown default: {unknown[0]!r}"
+            raise AttributeError(msg)
 
         for key, value in kwargs.items():
-            if key not in all_keys:
-                msg = f"Unknown default: {key!r}"
-                raise AttributeError(msg)
-
             setattr(self, key, value)
 
     @final

@@ -99,6 +99,12 @@ GLOBAL_LOGGING_OPTIONS: Final[frozenset[str]] = frozenset(
 )
 """Logging options that are configurable only through :attr:`~fastretry.config.logging`."""
 
+RETRY_DEFAULTS_NAMES: Final[frozenset[str]] = (RETRY_OPTIONS - {"callbacks"}) | GLOBAL_RETRY_OPTIONS
+"""Defaults accepted by :attr:`~fastretry.config.retry`."""
+
+LOGGING_DEFAULTS_NAMES: Final[frozenset[str]] = GLOBAL_LOGGING_OPTIONS
+"""Defaults accepted by :attr:`~fastretry.config.logging`."""
+
 _GLOBAL_SCOPES: Final[dict[str, str]] = {
     **dict.fromkeys(sorted(GLOBAL_RETRY_OPTIONS), "config.retry(...)"),
     **dict.fromkeys(sorted(GLOBAL_LOGGING_OPTIONS), "config.logging(...)"),

@@ -4,9 +4,11 @@ import contextlib
 import dataclasses as dc
 from collections.abc import (
     Generator,
+    Mapping,
 )
 from typing import (
     Unpack,
+    cast,
 )
 
 from fastretry._compat.types import (
@@ -19,6 +21,49 @@ from fastretry._configs.defaults import (
     get_defaults,
     global_defaults,
 )
+from fastretry._utils.validations import (
+    LOGGING_DEFAULTS_NAMES,
+    RETRY_DEFAULTS_NAMES,
+)
+
+
+def _reject_foreign_options(
+    *,
+    kwargs: Mapping[str, object],
+    allowed: frozenset[str],
+    namespace: str,
+) -> None:
+    """
+    Reject options that belong to the other configuration entry point.
+
+    ``config.retry`` and ``config.logging`` write into one :class:`Defaults`
+    instance, so without this check ``config.logging(attempts=5)`` would
+    silently reconfigure retrying for the whole process.
+
+    Parameters
+    ----------
+    kwargs : Mapping[str, object]
+        Options passed to the entry point.
+    allowed : frozenset[str]
+        Names this entry point accepts.
+    namespace : str
+        Entry point name used in the error message, e.g. ``"logging"``.
+
+    Raises
+    ------
+    TypeError
+        If an option belongs to the other entry point.
+
+    """
+    for name in kwargs:
+        if name in allowed:
+            continue
+
+        other = "logging" if namespace == "retry" else "retry"
+
+        if name in RETRY_DEFAULTS_NAMES or name in LOGGING_DEFAULTS_NAMES:
+            msg = f"`{name}` is configured via `config.{other}(...)`, not `config.{namespace}(...)`"
+            raise TypeError(msg)
 
 
 class _ResetNamespace:
@@ -113,6 +158,11 @@ class _RetryNamespace:
         caught before the first retry.
 
         """
+        _reject_foreign_options(
+            kwargs=cast("Mapping[str, object]", kwargs),
+            allowed=RETRY_DEFAULTS_NAMES,
+            namespace="retry",
+        )
         get_defaults().set(**kwargs)
 
 
@@ -180,6 +230,11 @@ class _LoggingNamespace:
         configured with.
 
         """
+        _reject_foreign_options(
+            kwargs=cast("Mapping[str, object]", kwargs),
+            allowed=LOGGING_DEFAULTS_NAMES,
+            namespace="logging",
+        )
         get_defaults().set(**kwargs)
 
 
