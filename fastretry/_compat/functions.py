@@ -17,7 +17,12 @@ def is_coroutine_function[**P, R](
     func: Callable[P, R] | Callable[P, Coro[R]],
 ) -> TypeIs[Callable[P, Coro[R]]]:
     """
-    Check whether ``func`` is a coroutine function.
+    Check whether ``func`` returns a coroutine when called.
+
+    A plain ``async def`` function, a coroutine function wrapped in
+    :class:`functools.partial` and an instance of a class whose ``__call__``
+    is async are all recognised. A class object is not: calling a class
+    builds an instance, whatever its instances do when called.
 
     Parameters
     ----------
@@ -27,7 +32,15 @@ def is_coroutine_function[**P, R](
     Returns
     -------
     TypeIs[Callable[..., Coroutine]]
-        ``True`` if ``func`` is a coroutine function.
+        ``True`` if calling ``func`` produces a coroutine.
 
     """
-    return inspect.iscoroutinefunction(func)
+    if inspect.iscoroutinefunction(func):
+        return True
+
+    if isinstance(func, type):
+        return False
+
+    call = getattr(func, "__call__", None)  # noqa: B004  # not every callable is a function
+
+    return inspect.iscoroutinefunction(call)
