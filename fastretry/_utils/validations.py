@@ -13,6 +13,7 @@ decorator options, and replaces recoverable mistakes with their fallbacks.
 
 import dataclasses as dc
 import difflib
+import math
 from collections.abc import (
     Mapping,
 )
@@ -345,10 +346,12 @@ class OptionsValidator:
         Raises
         ------
         TypeError
-            If ``attempts`` is not an :class:`int`.
+            If ``attempts`` is not an :class:`int`. A :class:`bool` is
+            rejected even though it is an :class:`int` subclass, because
+            ``attempts=True`` says nothing about the number of attempts.
 
         """
-        if not isinstance(attempts, int):
+        if isinstance(attempts, bool) or not isinstance(attempts, int):
             msg = f"attempts must be an int, got {type(attempts).__name__}"
             raise TypeError(msg)
 
@@ -388,6 +391,8 @@ class OptionsValidator:
         TypeError
             If ``delay`` is neither a number, an
             :class:`~fastretry.delays.ExponentialDelay` nor a callable.
+        ValueError
+            If a fixed delay is not a finite number of seconds.
 
         Notes
         -----
@@ -400,7 +405,18 @@ class OptionsValidator:
             self._validate_exponential_delay(delay=delay)
             return delay
 
+        if isinstance(delay, bool):
+            msg = (
+                "delay must be a number of seconds, an ExponentialDelay or a callable, "
+                "got bool"
+            )
+            raise TypeError(msg)
+
         if isinstance(delay, (int, float)):
+            if not math.isfinite(delay):
+                msg = f"delay must be a finite number of seconds, got {delay!r}"
+                raise ValueError(msg)
+
             if delay < 0:
                 self._warnings.warn(
                     f"\n\tDelay must be >= 0, got {delay!r}. Falling back to 0.",
@@ -434,10 +450,28 @@ class OptionsValidator:
 
         Raises
         ------
+        TypeError
+            If a parameter is not a number.
         ValueError
-            If a parameter is out of range.
+            If a parameter is out of range or not finite.
 
         """
+        for name, value in (
+            ("delay", delay.delay),
+            ("backoff factor", delay.backoff_factor),
+            ("maximum delay", delay.max_delay),
+        ):
+            if value is None:
+                continue
+
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                msg = f"{name} must be a number, got {type(value).__name__}"
+                raise TypeError(msg)
+
+            if not math.isfinite(value):
+                msg = f"{name} must be finite, got {value!r}"
+                raise ValueError(msg)
+
         if delay.delay <= 0:
             msg = f"delay must be > 0, got {delay.delay!r}"
             raise ValueError(msg)
@@ -626,7 +660,7 @@ class OptionsValidator:
             unknown = set(callbacks) - CALLBACK_NAMES
 
             if unknown:
-                names = ", ".join(map(repr, sorted(unknown)))
+                names = ", ".join(map(repr, sorted(unknown, key=repr)))
                 expected = ", ".join(map(repr, sorted(CALLBACK_NAMES)))
                 msg = f"unknown callback name(s): {names}; expected one of {expected}"
                 raise ValueError(msg)
