@@ -4,21 +4,18 @@ import types
 from collections.abc import (
     Coroutine,
 )
-from typing import (
-    Any,
-)
 
 from fastretry._compat.sentinels import (
     UnsetType,
 )
 
-type Coro[R] = Coroutine[Any, Any, R]
+type Coro[R] = Coroutine[object, object, R]
 """Anything that can be awaited with result ``R``, as accepted by the decorators."""
 
-type CoroType[R] = types.CoroutineType[Any, Any, R]
+type CoroType[R] = types.CoroutineType[object, object, R]
 """Concrete coroutine object, as returned by calling an ``async def`` function."""
 
-type WrappedCoro[R] = Coroutine[Any, Any, R | UnsetType]
+type WrappedCoro[R] = Coroutine[object, object, R | UnsetType]
 """
 Coroutine returned by a wrapper function.
 

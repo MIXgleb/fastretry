@@ -8,9 +8,6 @@ from collections.abc import (
 from concurrent.futures import (
     Executor,
 )
-from typing import (
-    Any,
-)
 
 from fastretry._compat.sentinels import (
     UNSET,
@@ -29,7 +26,7 @@ from fastretry._utils.shared_loop import (
 )
 
 
-@dc.dataclass(frozen=True, slots=True)
+@dc.dataclass(slots=True, frozen=True)
 class DecoratorOptions:
     """
     Options fixed at decorator construction.
@@ -38,7 +35,7 @@ class DecoratorOptions:
     ----------
     attempts : int
         Total number of attempts.
-    return_default_value : Any
+    return_default_value : object
         Value returned on failure, or ``UNSET`` if the wrapper re-raises.
     delay : Delay
         Delay configuration: fixed seconds, exponential or custom.
@@ -62,7 +59,7 @@ class DecoratorOptions:
     """
 
     attempts: int
-    return_default_value: Any
+    return_default_value: object
     delay: Delay
     jitter: JitterStrategy
     disable_logging: bool
@@ -73,7 +70,7 @@ class DecoratorOptions:
     executor: Executor | None
 
 
-@dc.dataclass(frozen=True, slots=True)
+@dc.dataclass(slots=True, frozen=True)
 class GlobalOptions:
     """
     Application-wide options resolved from global defaults.
@@ -109,22 +106,22 @@ class GlobalOptions:
     unwrap_single_exception: bool
 
 
-@dc.dataclass(frozen=True, slots=True, repr=False)
+@dc.dataclass(slots=True, frozen=True, repr=False)
 class CallOptions:
     """
     Arguments of the wrapped call.
 
     Attributes
     ----------
-    args : tuple[Any, ...]
+    args : tuple[object, ...]
         Positional arguments of the call.
-    kwargs : Mapping[str, Any]
+    kwargs : Mapping[str, object]
         Keyword arguments of the call.
 
     """
 
-    args: tuple[Any, ...] = ()
-    kwargs: Mapping[str, Any] = dc.field(default_factory=dict[str, Any])
+    args: tuple[object, ...] = ()
+    kwargs: Mapping[str, object] = dc.field(default_factory=dict[str, object])
 
 
 @dc.dataclass(slots=True)
@@ -234,7 +231,7 @@ class AttemptState:
         )
 
 
-@dc.dataclass(slots=True)
+@dc.dataclass(slots=True, frozen=True)
 class RetryStats:
     """
     State passed to retry callbacks.
@@ -336,8 +333,8 @@ class RetryStats:
     def for_call(
         self,
         *,
-        args: tuple[Any, ...],
-        kwargs: Mapping[str, Any],
+        args: tuple[object, ...],
+        kwargs: Mapping[str, object],
         fname: str,
         started_at: float,
     ) -> "RetryStats":
@@ -346,9 +343,9 @@ class RetryStats:
 
         Parameters
         ----------
-        args : tuple[Any, ...]
+        args : tuple[object, ...]
             Positional arguments of the call.
-        kwargs : Mapping[str, Any]
+        kwargs : Mapping[str, object]
             Keyword arguments of the call.
         fname : str
             Qualified name of the wrapped function.

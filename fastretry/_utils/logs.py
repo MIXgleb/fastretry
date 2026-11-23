@@ -113,7 +113,7 @@ class LogLevel(IntEnum):
     """Critical level."""
 
 
-@dc.dataclass(frozen=True, slots=True)
+@dc.dataclass(slots=True, frozen=True)
 class LoggerConfig:
     """
     Immutable snapshot of logging configuration.
@@ -181,6 +181,7 @@ class Log:
 
     def __init__(
         self,
+        *,
         config: LoggerConfig,
     ) -> None:
         self._config = config
@@ -233,7 +234,7 @@ class Log:
         *,
         log_kind: _LogKind,
         message: str,
-        args: tuple[Any, ...],
+        args: tuple[object, ...],
         last_exception: BaseException | None = None,
         extra: Mapping[str, object] | None = None,
     ) -> bool:
@@ -250,7 +251,7 @@ class Log:
             Logger kind.
         message : str
             ``%``-style format string.
-        args : tuple[Any, ...]
+        args : tuple[object, ...]
             Format arguments.
         last_exception : BaseException | None, ``optional``
             Exception to attach as ``exc_info`` when the message's level is

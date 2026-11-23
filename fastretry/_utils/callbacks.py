@@ -82,7 +82,7 @@ class RetryCallbacks(TypedDict, total=False):
     on_failure: ReadOnly[CallbackType | None]
 
 
-@dc.dataclass(frozen=True, slots=True)
+@dc.dataclass(slots=True, frozen=True)
 class ResolvedRetryCallbacks:
     """
     Fully resolved retry callbacks.

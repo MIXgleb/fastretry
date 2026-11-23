@@ -19,6 +19,7 @@ copy is needed.
 """
 
 import contextvars
+import dataclasses as dc
 import functools
 import itertools
 import threading
@@ -29,7 +30,6 @@ from collections.abc import (
 )
 from typing import (
     Final,
-    NamedTuple,
     Self,
 )
 
@@ -42,8 +42,19 @@ from fastretry._utils.stats import (
 )
 
 
-class _CurrentRun(NamedTuple):
-    """Retry run installed in the current context: its stats and registry id."""
+@dc.dataclass(slots=True, frozen=True)
+class _CurrentRun:
+    """
+    Retry run installed in the current context.
+
+    Attributes
+    ----------
+    stats : RetryStats
+        Statistics of the run in progress.
+    run_id : int
+        Registry id of the run, unique within the process.
+
+    """
 
     stats: RetryStats
     run_id: int

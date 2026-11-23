@@ -94,7 +94,7 @@ def test_frozen() -> None:
 @pytest.fixture
 def log() -> Log:
     return Log(
-        LoggerConfig(
+        config=LoggerConfig(
             level_success=LogLevel.OFF,
             level_retry=LogLevel.WARNING,
             level_failure=LogLevel.ERROR,
@@ -162,7 +162,7 @@ def test_record_below_traceback_level(mocker: MockerFixture) -> None:
         disable_logging=False,
         install_default_handler=True,
     )
-    log = Log(cfg)
+    log = Log(config=cfg)
     mock_log = mocker.patch.object(_DEFAULT_LOGGER, "log")
     _ = log.record(log_kind="failure", message="m", args=(), last_exception=ValueError())
     _, kwargs = mock_log.call_args
@@ -193,7 +193,7 @@ def test_disable_logging(mocker: MockerFixture) -> None:
         disable_logging=True,
         install_default_handler=True,
     )
-    log = Log(cfg)
+    log = Log(config=cfg)
     mock_log = mocker.patch.object(_DEFAULT_LOGGER, "log")
     assert log.record(log_kind="retry", message="m", args=()) is False
     mock_log.assert_not_called()
@@ -285,7 +285,7 @@ def test_default_handler_not_installed_when_ancestor_configured(
 @pytest.mark.usefixtures("_isolate_retry_logger")
 def test_default_handler_disabled(mocker: MockerFixture) -> None:
     log = Log(
-        LoggerConfig(
+        config=LoggerConfig(
             level_success=LogLevel.OFF,
             level_retry=LogLevel.WARNING,
             level_failure=LogLevel.ERROR,
@@ -369,7 +369,7 @@ def test_incorrect_log_kind() -> None:
         disable_logging=True,
         install_default_handler=True,
     )
-    log = Log(cfg)
+    log = Log(config=cfg)
 
     with pytest.raises(AssertionError):
         log.record(log_kind="incorrect_log_kind", message="test", args=())
