@@ -282,6 +282,14 @@ def retry[**P, R](
     path runs (``on_failure`` callback, then re-raise or return
     ``return_default_value``).
 
+    An aborted exception that is **not** an :exc:`Exception` subclass is
+    always re-raised unchanged, even when ``return_default_value`` is set:
+    ``KeyboardInterrupt``, ``SystemExit``, ``GeneratorExit`` and
+    ``asyncio.CancelledError`` keep the meaning the interpreter and the
+    event loop rely on. Grouping ``CancelledError`` would leave the task
+    uncancelled, so :func:`asyncio.timeout`, :func:`asyncio.wait_for` and
+    structured-concurrency helpers would stop working.
+
     .. warning::
 
         Passing a :exc:`BaseException` subclass (such as

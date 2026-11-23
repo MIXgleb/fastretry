@@ -663,6 +663,15 @@ class BaseRetrying[
         is enabled, that exception is raised as is. Otherwise all collected
         exceptions are raised together, in the order they were raised.
 
+        A retry aborted by an exception that is not an :exc:`Exception`
+        subclass — ``KeyboardInterrupt``, ``SystemExit``, ``GeneratorExit``
+        or :exc:`asyncio.CancelledError` — re-raises that exception
+        unchanged, even when ``return_default_value`` is set. Wrapping or
+        replacing it would break the protocol the interpreter and the event
+        loop rely on: a grouped :exc:`asyncio.CancelledError` leaves the task
+        uncancelled, so :func:`asyncio.timeout`, :func:`asyncio.wait_for` and
+        every structured-concurrency helper stop working.
+
         Parameters
         ----------
         stats_attempt : AttemptState
@@ -677,7 +686,15 @@ class BaseRetrying[
             exceptions are subclasses of :exc:`Exception`.
 
         """
-        if not self._re_raise_exception or not stats_attempt.exceptions:
+        if not stats_attempt.exceptions:
+            return
+
+        last_exception = stats_attempt.exceptions[-1]
+
+        if stats_attempt.retry_aborted and not isinstance(last_exception, Exception):
+            raise last_exception
+
+        if not self._re_raise_exception:
             return
 
         if len(stats_attempt.exceptions) == 1 and self._unwrap_single_exception:
