@@ -88,6 +88,36 @@ class ExponentialDelay(NamedTuple):
     max_delay: float | None = None
 
 
+def _grow(
+    delay: ExponentialDelay,
+    retry_index: int,
+) -> float:
+    """
+    Return the unbounded delay for an attempt.
+
+    A large exponent raises :exc:`OverflowError` from the power: the result is
+    reported as infinity instead, so a configured ``max_delay`` still caps it
+    and the overflow cannot replace the exception that is being retried.
+
+    Parameters
+    ----------
+    delay : ExponentialDelay
+        Exponential backoff configuration.
+    retry_index : int
+        1-based attempt index.
+
+    Returns
+    -------
+    float
+        Delay before the ``max_delay`` cap, possibly infinite.
+
+    """
+    try:
+        return delay.delay * (delay.backoff_factor ** (retry_index - 1))
+    except OverflowError:
+        return math.inf
+
+
 class DelayCalculator:
     """
     Compute effective delays for retry attempts, with jitter.
@@ -170,7 +200,7 @@ class DelayCalculator:
         delay = self._delay
 
         if isinstance(delay, ExponentialDelay):
-            computed = delay.delay * (delay.backoff_factor ** (retry_index - 1))
+            computed = _grow(delay, retry_index)
 
             if delay.max_delay is not None:
                 computed = min(computed, delay.max_delay)
