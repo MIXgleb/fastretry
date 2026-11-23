@@ -1,4 +1,5 @@
-"""``config.retry`` and ``config.logging`` must not configure each other.
+"""
+``config.retry`` and ``config.logging`` must not configure each other.
 
 Both write into one ``Defaults`` instance, so ``config.logging(attempts=5)``
 used to reconfigure retrying for the whole process without a word, and a

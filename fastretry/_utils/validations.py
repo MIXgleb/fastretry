@@ -61,6 +61,7 @@ RETRY_OPTIONS: Final[frozenset[str]] = frozenset(
         "disable_logging",
         "disable_warnings",
         "jitter",
+        "max_time",
         "no_retry_on",
         "retry_on",
         "return_default_value",
@@ -242,6 +243,7 @@ class OptionsValidator:
         """
         attempts = self._validate_attempts(attempts=options.attempts)
         delay = self._validate_delay(delay=options.delay)
+        max_time = self._validate_max_time(max_time=options.max_time)
 
         self._validate_selection(
             values={"jitter": options.jitter},
@@ -266,6 +268,7 @@ class OptionsValidator:
             options,
             attempts=attempts,
             delay=delay,
+            max_time=max_time,
         )
 
     def validate_defaults_options(
@@ -412,10 +415,7 @@ class OptionsValidator:
             return delay
 
         if isinstance(delay, bool):
-            msg = (
-                "delay must be a number of seconds, an ExponentialDelay or a callable, "
-                "got bool"
-            )
+            msg = "delay must be a number of seconds, an ExponentialDelay or a callable, got bool"
             raise TypeError(msg)
 
         if isinstance(delay, (int, float)):
@@ -440,6 +440,49 @@ class OptionsValidator:
             f"got {type(delay).__name__}"
         )
         raise TypeError(msg)
+
+    @staticmethod
+    def _validate_max_time(
+        *,
+        max_time: object,
+    ) -> float | None:
+        """
+        Validate the time budget of a call.
+
+        Parameters
+        ----------
+        max_time : float | None
+            Configured time budget in seconds, or ``None`` for no budget.
+
+        Returns
+        -------
+        float | None
+            Budget to use, normalized to a :class:`float`.
+
+        Raises
+        ------
+        TypeError
+            If ``max_time`` is neither a number nor ``None``.
+        ValueError
+            If ``max_time`` is not a finite positive number of seconds.
+
+        """
+        if max_time is None:
+            return None
+
+        if isinstance(max_time, bool) or not isinstance(max_time, (int, float)):
+            msg = f"max_time must be a number of seconds or None, got {type(max_time).__name__}"
+            raise TypeError(msg)
+
+        if not math.isfinite(max_time):
+            msg = f"max_time must be finite, got {max_time!r}"
+            raise ValueError(msg)
+
+        if max_time <= 0:
+            msg = f"max_time must be > 0, got {max_time!r}"
+            raise ValueError(msg)
+
+        return float(max_time)
 
     @staticmethod
     def _validate_exponential_delay(

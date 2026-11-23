@@ -176,6 +176,8 @@ def default_on_failure(stats: RetryStats) -> None:
 
     if stats_attempt.retry_aborted:
         message = "Retry aborted after %d attempt(s): exception is not retryable."
+    elif stats_attempt.deadline_reached:
+        message = "Time budget exhausted after %d attempt(s)."
     else:
         message = "Failed the execution of the function after %d attempts."
 

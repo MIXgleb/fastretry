@@ -1,4 +1,5 @@
-"""Interruption and cancellation must keep their meaning.
+"""
+Interruption and cancellation must keep their meaning.
 
 ``KeyboardInterrupt``, ``SystemExit``, ``GeneratorExit`` and
 :exc:`asyncio.CancelledError` are not :exc:`Exception` subclasses: wrapping
@@ -7,9 +8,6 @@ breaks the protocol the interpreter and the event loop rely on.
 """
 
 import asyncio
-from collections.abc import (
-    Generator,
-)
 from typing import (
     Literal,
     NoReturn,
@@ -19,6 +17,12 @@ import pytest
 
 from fastretry._decorators.retry import (
     retry,
+)
+from fastretry._retryings.sync_retrying import (
+    SyncRetrying,
+)
+from fastretry._utils.stats import (
+    AttemptState,
 )
 from fastretry.introspection import (
     get_active_runs,
@@ -37,7 +41,8 @@ def test_keyboard_interrupt_reaches_the_caller() -> None:
 def test_system_exit_reaches_the_caller() -> None:
     @retry(attempts=3, delay=0)
     def fn() -> NoReturn:
-        raise SystemExit(3)
+        code = 3
+        raise SystemExit(code)
 
     with pytest.raises(SystemExit) as exc_info:
         fn()
@@ -86,7 +91,8 @@ def test_failure_callback_runs_before_the_interruption_propagates() -> None:
 def test_single_non_retryable_exception_is_still_grouped() -> None:
     @retry(attempts=2, delay=0, retry_on=(TimeoutError,))
     def fn() -> NoReturn:
-        raise ValueError("not retryable")
+        msg = "not retryable"
+        raise ValueError(msg)
 
     with pytest.RaisesGroup(ValueError, match="Retry aborted"):
         fn()
@@ -152,7 +158,8 @@ async def test_cancellation_during_the_delay_is_not_retried() -> None:
     @retry(attempts=5, delay=5.0)
     async def fn() -> None:
         calls.append(1)
-        raise ValueError("retryable")
+        msg = "retryable"
+        raise ValueError(msg)
 
     task = asyncio.ensure_future(fn())
     await asyncio.sleep(0.01)
@@ -172,3 +179,13 @@ def test_sync_cancelled_error_is_re_raised() -> None:
 
     with pytest.raises(asyncio.CancelledError):
         fn()
+
+
+def test_raise_if_needed_without_exceptions_returns() -> None:
+    retrying = SyncRetrying(attempts=2)
+    retrying._raise_if_needed(stats_attempt=AttemptState())
+
+
+def test_raise_if_needed_returns_when_nothing_is_re_raised() -> None:
+    retrying = SyncRetrying(attempts=2, return_default_value="default")
+    retrying._raise_if_needed(stats_attempt=AttemptState(exceptions=[ValueError("x")]))

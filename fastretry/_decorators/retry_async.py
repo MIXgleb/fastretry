@@ -110,6 +110,7 @@ def retry_async[D](
     *,
     return_default_value: D,
     attempts: int | UnsetType = UNSET,
+    max_time: float | UnsetType | None = UNSET,
     delay: Delay | UnsetType = UNSET,
     jitter: JitterStrategy | UnsetType = UNSET,
     disable_logging: bool | UnsetType = UNSET,
@@ -125,6 +126,7 @@ def retry_async[D](
 def retry_async(
     *,
     attempts: int | UnsetType = UNSET,
+    max_time: float | UnsetType | None = UNSET,
     return_default_value: UnsetType = UNSET,
     delay: Delay | UnsetType = UNSET,
     jitter: JitterStrategy | UnsetType = UNSET,
@@ -184,6 +186,10 @@ def retry_async[**P, R](
         Number of attempts (factory default: 1). Values below 1 are replaced
         with 1 and reported with a :exc:`UserWarning`, so the function is
         still called once.
+    max_time : float | None, ``optional``
+        Time budget for one call, in seconds (factory default: None, no
+        budget). A retry that could not start within the remaining budget is
+        not scheduled; see :func:`~fastretry.retry`.
     return_default_value : Any, ``optional``
         Default value returned if the function fails after all attempts.
         When provided, the wrapper returns it instead of re-raising the

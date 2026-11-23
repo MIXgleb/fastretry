@@ -306,10 +306,9 @@ class SharedLoop:
             unless it is still running.
 
         """
-        if coro.cr_running:
-            return
-
-        with contextlib.suppress(RuntimeError):
+        with contextlib.suppress(RuntimeError, ValueError):
+            # ValueError: the loop stopped while the callback was executing,
+            # so the coroutine is still running and cannot be closed.
             coro.close()
 
     @staticmethod

@@ -86,6 +86,7 @@ All options are optional and fall back to global defaults.
 | Option | Description |
 |---|---|
 | `attempts` | Number of attempts. Default: `1`. |
+| `max_time` | Time budget for one call, in seconds. Default: `None` (no budget). |
 | `delay` | Delay between attempts. `float` for a fixed delay, `ExponentialDelay` for exponential backoff. Default: `0`. |
 | `jitter` | Jitter strategy: `"none"`, `"full"`, `"equal"`, `"decorrelated"`. |
 | `return_default_value` | Value returned on failure instead of raising. |
@@ -149,6 +150,24 @@ When all attempts fail, the wrapper returns `return_default_value`
 instead of raising. The return type is widened statically with the type of
 the default value, so type checkers see `fetch` above as
 `Callable[[], bytes | None]` — no changes are needed on your side.
+
+### Bound the total wait time
+
+`max_time` caps the whole call instead of the number of attempts, which is what
+you want when the caller has a deadline of its own:
+
+```python
+@retry(attempts=10, delay=ExponentialDelay(delay=0.5, max_delay=8.0), max_time=15.0)
+def fetch() -> bytes: ...
+```
+
+The budget is counted from the start of the call with a monotonic clock, and it
+includes the delays: a retry that could not start before the deadline is not
+scheduled at all, so the call never sleeps past it. The function is always
+called at least once, an attempt that is already running is allowed to finish,
+and a call that stops this way is reported like a call that ran out of
+attempts: the failure message names the budget, and
+`stats.attempt.deadline_reached` is set for callbacks and introspection.
 
 ### Retry on specific exceptions
 

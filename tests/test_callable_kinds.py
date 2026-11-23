@@ -1,4 +1,5 @@
-"""The retrying strategy must follow what calling the callable returns.
+"""
+The retrying strategy must follow what calling the callable returns.
 
 ``inspect.iscoroutinefunction`` is False for an instance whose ``__call__`` is
 async, so such a callable took the sync path: the wrapper returned the
@@ -7,6 +8,7 @@ escaped un-wrapped.
 """
 
 import asyncio
+import dataclasses as dc
 from typing import (
     Literal,
 )
@@ -21,12 +23,12 @@ from fastretry._decorators.retry_async import (
 )
 
 
+@dc.dataclass
 class FlakyJob:
     """Async callable that fails ``failures`` times before succeeding."""
 
-    def __init__(self, failures: int) -> None:
-        self.failures = failures
-        self.calls = 0
+    failures: int
+    calls: int = 0
 
     async def __call__(self, value: int = 1) -> int:
         self.calls += 1
@@ -38,11 +40,11 @@ class FlakyJob:
         return value * 2
 
 
+@dc.dataclass
 class SyncJob:
     """Sync callable that fails once before succeeding."""
 
-    def __init__(self) -> None:
-        self.calls = 0
+    calls: int = 0
 
     def __call__(self) -> Literal["ok"]:
         self.calls += 1
@@ -83,7 +85,7 @@ def test_async_callable_object_failure_is_grouped() -> None:
     async def run() -> None:
         await wrapped()
 
-    with pytest.raises(ExceptionGroup):
+    with pytest.RaisesGroup(ValueError, ValueError):
         asyncio.run(run())
 
     assert job.calls == 2
@@ -98,9 +100,9 @@ def test_sync_callable_object_is_still_synchronous() -> None:
 
 
 def test_class_object_is_not_treated_as_a_coroutine_function() -> None:
+    @dc.dataclass
     class Plain:
-        def __init__(self, value: int = 1) -> None:
-            self.value = value
+        value: int = 1
 
     built = retry(attempts=1, delay=0)(Plain)
 

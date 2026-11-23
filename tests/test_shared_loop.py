@@ -245,7 +245,7 @@ def test_loop_stopped_while_the_callback_runs_reports_runtime_error() -> None:
     def caller() -> None:
         try:
             loop.run_callback(callback())
-        except BaseException as exc:  # noqa: BLE001
+        except BaseException as exc:  # ruff: ignore[blind-except]
             errors.append(exc)
 
     thread = threading.Thread(target=caller)

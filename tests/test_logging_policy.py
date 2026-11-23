@@ -1,4 +1,5 @@
-"""The built-in handler must respect the application's logging configuration.
+"""
+The built-in handler must respect the application's logging configuration.
 
 ``Log.record`` claims to report whether a message was dispatched. It used to
 return ``True`` as soon as ``logger.log`` was called, so a record the logger
@@ -36,7 +37,15 @@ from fastretry._utils.logs import (
 
 @pytest.fixture
 def retry_logger() -> Generator[logging.Logger]:
-    """Isolate the shared logger and the lazy handler state."""
+    """
+    Isolate the shared logger and the lazy handler state.
+
+    Yields
+    ------
+    logging.Logger
+        The ``fastretry`` logger with no handlers and no level.
+
+    """
     logger = logging.getLogger(FASTRETRY_LOGGER_NAME)
     handlers = list(logger.handlers)
     level = logger.level
@@ -73,9 +82,10 @@ def test_application_logger_level_is_kept(
 
     @retry(attempts=2, delay=0, disable_warnings=True)
     def fn() -> NoReturn:
-        raise ValueError("boom")
+        msg = "boom"
+        raise ValueError(msg)
 
-    with pytest.raises(BaseException):
+    with pytest.RaisesGroup(ValueError, ValueError):
         fn()
 
     messages = [record.getMessage() for record in caplog.records]
@@ -98,11 +108,12 @@ def test_explicit_level_survives_the_built_in_handler(
 
         @retry(attempts=2, delay=0, disable_warnings=True)
         def fn() -> NoReturn:
-            raise ValueError("boom")
+            msg = "boom"
+            raise ValueError(msg)
 
         out = io.StringIO()
 
-        with redirect_stderr(out), pytest.raises(BaseException):
+        with redirect_stderr(out), pytest.RaisesGroup(ValueError, ValueError):
             fn()
     finally:
         root.handlers = saved_handlers
@@ -149,7 +160,7 @@ def test_swallowed_callback_error_is_not_lost_when_logging_is_disabled(
 ) -> None:
     assert retry_logger.name == FASTRETRY_LOGGER_NAME
 
-    def broken(stats: object) -> None:
+    def broken(_stats: object) -> None:
         msg = "callback broke"
         raise RuntimeError(msg)
 

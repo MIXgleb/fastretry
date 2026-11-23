@@ -35,6 +35,8 @@ class DecoratorOptions:
     ----------
     attempts : int
         Total number of attempts.
+    max_time : float | None
+        Time budget of a call in seconds, or ``None`` for no budget.
     return_default_value : object
         Value returned on failure, or ``UNSET`` if the wrapper re-raises.
     delay : Delay
@@ -59,6 +61,7 @@ class DecoratorOptions:
     """
 
     attempts: int
+    max_time: float | None
     return_default_value: object
     delay: Delay
     jitter: JitterStrategy
@@ -155,8 +158,9 @@ class AttemptState:
         Delay computed for the upcoming attempt, or ``UNSET`` if not yet
         computed.
     result : object | UnsetType
-        Result of the successful call, or ``UNSET`` if the call has not
-        succeeded.
+        Result of the successful call, the value returned in its place by
+        ``return_default_value`` after the failure-handling path, or
+        ``UNSET`` while the call is still running.
     last_exception : BaseException | None
         Exception from the most recent attempt, or ``None`` if no attempt
         has failed yet.
@@ -167,6 +171,10 @@ class AttemptState:
         ``True`` when the retry loop was aborted before exhausting all
         attempts, because the caught exception did not match ``retry_on``
         or matched ``no_retry_on``.
+    deadline_reached : bool
+        ``True`` when the retry loop stopped before exhausting all attempts
+        because the next attempt could not start within the configured
+        ``max_time`` budget.
 
     """
 
@@ -183,6 +191,7 @@ class AttemptState:
     last_exception: BaseException | None = dc.field(default=None, repr=False)
     exceptions: list[BaseException] = dc.field(default_factory=list[BaseException], repr=False)
     retry_aborted: bool = False
+    deadline_reached: bool = False
 
     @property
     def exceptions_with_traceback(self) -> tuple[str, ...]:
@@ -300,6 +309,7 @@ class RetryStats:
                 else None
             ),
             "retry_aborted": attempt.retry_aborted,
+            "deadline_reached": attempt.deadline_reached,
         }
 
     def snapshot(self) -> "RetryStats":

@@ -41,6 +41,6 @@ def is_coroutine_function[**P, R](
     if isinstance(func, type):
         return False
 
-    call = getattr(func, "__call__", None)  # noqa: B004  # not every callable is a function
+    call = getattr(func, "__call__", None)  # ruff: ignore[unreliable-callable-check]
 
     return inspect.iscoroutinefunction(call)

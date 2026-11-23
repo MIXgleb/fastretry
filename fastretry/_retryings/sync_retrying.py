@@ -84,7 +84,7 @@ class SyncRetrying[**P, R](
                             exc=exc,
                         )
 
-                        if stats_attempt.retry_aborted:
+                        if stats_attempt.retry_aborted or stats_attempt.deadline_reached:
                             break
 
                         self._safe_call_callback(callback=on_retry, stats=stats)

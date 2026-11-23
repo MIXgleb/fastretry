@@ -1,4 +1,5 @@
-"""A live run must be findable by every target the lookups accept.
+"""
+A live run must be findable by every target the lookups accept.
 
 The retry wrappers record the call name, and the introspection lookups resolve
 the target they are given, so both sides share one resolver. A decorated
@@ -12,6 +13,8 @@ from typing import (
     Literal,
     NoReturn,
 )
+
+import pytest
 
 from fastretry._decorators.retry import (
     retry,
@@ -96,12 +99,11 @@ def test_plain_function_run_is_findable() -> None:
     @retry(attempts=2, delay=0)
     def fn() -> NoReturn:
         seen.append(len(get_stats_for(fn)))
-        raise ValueError("boom")
+        msg = "boom"
+        raise ValueError(msg)
 
-    try:
+    with pytest.RaisesGroup(ValueError, ValueError):
         fn()
-    except BaseException:
-        pass
 
     assert seen == [1, 1]
 
@@ -150,6 +152,27 @@ def test_task_target_resolves_to_the_wrapped_coroutine() -> None:
     seen: dict[str, object] = {}
     asyncio.run(run())
     assert seen == {"by_task": True, "stats": 1}
+
+
+def test_cyclic_wrapped_chain_terminates() -> None:
+    seen: dict[str, object] = {}
+
+    class Loop:
+        def __init__(self) -> None:
+            self.__wrapped__ = self
+
+        def __call__(self) -> Literal["ok"]:
+            current = get_current_stats()
+            assert current is not None
+            seen["fname"] = current.attempt.fname
+            seen["by_self"] = is_retrying(loop)
+            return "ok"
+
+    loop = Loop()
+    wrapped = retry(attempts=1, delay=0)(loop)
+
+    assert wrapped() == "ok"
+    assert seen == {"fname": "<anonymous>", "by_self": True}
 
 
 def test_retry_async_run_is_findable() -> None:

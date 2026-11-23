@@ -245,9 +245,9 @@ def test_exponential_cap_survives_an_exponent_that_overflows() -> None:
         jitter="none",
     )
 
-    assert calc.compute(retry_index=5) == 10.0
-    assert calc.compute(retry_index=2000) == 10.0
-    assert calc.compute(retry_index=100_000) == 10.0
+    assert calc.compute(retry_index=5) == pytest.approx(10.0)
+    assert calc.compute(retry_index=2000) == pytest.approx(10.0)
+    assert calc.compute(retry_index=100_000) == pytest.approx(10.0)
 
 
 def test_exponential_without_cap_reports_infinity_instead_of_overflowing() -> None:

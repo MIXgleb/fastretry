@@ -1,4 +1,5 @@
-"""Option values that used to be accepted and then crashed the retry loop.
+"""
+Option values that used to be accepted and then crashed the retry loop.
 
 A fixed delay of ``nan`` or ``inf``, and an ``ExponentialDelay`` whose fields
 are not finite numbers, passed validation and then failed inside the loop
@@ -97,7 +98,8 @@ def test_rejected_options_never_reach_the_call() -> None:
 
     def fn() -> NoReturn:
         calls.append(1)
-        raise ValueError("boom")
+        msg = "boom"
+        raise ValueError(msg)
 
     with pytest.raises(ValueError, match="finite"):
         retry(attempts=2, delay=float("nan"))(fn)

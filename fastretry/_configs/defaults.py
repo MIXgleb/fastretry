@@ -44,6 +44,9 @@ class Defaults:
     ----------
     attempts : int
         Default number of attempts, 1 by default.
+    max_time : float | None
+        Default time budget for a call in seconds, ``None`` (no budget) by
+        default.
     delay : Delay
         Default delay between attempts, 0 by default.
     disable_logging : bool
@@ -92,6 +95,7 @@ class Defaults:
 
     # --- retry options (per-decorator, with global defaults) ---
     attempts: int = 1
+    max_time: float | None = None
     delay: Delay = 0
     disable_logging: bool = False
     disable_warnings: bool = False

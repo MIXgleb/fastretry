@@ -24,6 +24,7 @@ def _make_stats(attempt: AttemptState, attempts: int = 3) -> RetryStats:
         log=None,
         decorator=DecoratorOptions(
             attempts=attempts,
+            max_time=None,
             return_default_value=None,
             delay=0.0,
             jitter="none",
@@ -50,6 +51,7 @@ def _make_stats(attempt: AttemptState, attempts: int = 3) -> RetryStats:
 def test_decorator_fields() -> None:
     opts = DecoratorOptions(
         attempts=3,
+        max_time=None,
         return_default_value=None,
         delay=1.0,
         jitter="none",
@@ -68,6 +70,7 @@ def test_decorator_fields() -> None:
 def test_decorator_frozen() -> None:
     opts = DecoratorOptions(
         attempts=3,
+        max_time=None,
         return_default_value=None,
         delay=1.0,
         jitter="none",
