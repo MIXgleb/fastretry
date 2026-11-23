@@ -72,6 +72,29 @@ if TYPE_CHECKING:
     )
 
 
+def _callback_or_noop(callback: CallbackType | None) -> CallbackType:
+    """
+    Resolve one callback.
+
+    A missing or explicitly disabled callback becomes the no-op callback.
+    Any other callable is used as is: a callable object may define
+    ``__bool__`` or ``__len__`` and be falsy, and dropping it because of that
+    would silently disable a callback the user passed.
+
+    Parameters
+    ----------
+    callback : CallbackType | None
+        Configured callback, or ``None`` when it is disabled.
+
+    Returns
+    -------
+    CallbackType
+        Callback to invoke.
+
+    """
+    return noop_callback if callback is None else callback
+
+
 class BaseRetrying[
     R,
     Wrapped: Callable[..., object],
@@ -768,34 +791,26 @@ class BaseRetrying[
             Fully resolved callbacks with all three fields populated.
 
         """
+        defaults = self._effective_defaults
+
         if callbacks is None:
             return ResolvedRetryCallbacks(
                 on_success=noop_callback,
                 on_retry=noop_callback,
                 on_failure=noop_callback,
             )
+
         if isinstance(callbacks, UnsetType):
             return ResolvedRetryCallbacks(
-                on_success=self._effective_defaults.on_success or noop_callback,
-                on_retry=self._effective_defaults.on_retry or noop_callback,
-                on_failure=self._effective_defaults.on_failure or noop_callback,
+                on_success=_callback_or_noop(defaults.on_success),
+                on_retry=_callback_or_noop(defaults.on_retry),
+                on_failure=_callback_or_noop(defaults.on_failure),
             )
+
         return ResolvedRetryCallbacks(
-            on_success=callbacks.get(
-                "on_success",
-                self._effective_defaults.on_success,
-            )
-            or noop_callback,
-            on_retry=callbacks.get(
-                "on_retry",
-                self._effective_defaults.on_retry,
-            )
-            or noop_callback,
-            on_failure=callbacks.get(
-                "on_failure",
-                self._effective_defaults.on_failure,
-            )
-            or noop_callback,
+            on_success=_callback_or_noop(callbacks.get("on_success", defaults.on_success)),
+            on_retry=_callback_or_noop(callbacks.get("on_retry", defaults.on_retry)),
+            on_failure=_callback_or_noop(callbacks.get("on_failure", defaults.on_failure)),
         )
 
     @staticmethod
