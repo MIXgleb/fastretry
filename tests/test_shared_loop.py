@@ -229,3 +229,35 @@ def test_shutdown_with_stopped_loop_skips_stop_call() -> None:
         idle_loop.close()
 
     assert instance._thread is None
+
+
+def test_loop_stopped_while_the_callback_runs_reports_runtime_error() -> None:
+    """Closing an executing coroutine raises ValueError and hides the error."""
+    loop = SharedLoop()
+    started = threading.Event()
+    release = threading.Event()
+    errors: list[BaseException] = []
+
+    async def callback() -> None:
+        started.set()
+        release.wait(2.0)
+
+    def caller() -> None:
+        try:
+            loop.run_callback(callback())
+        except BaseException as exc:  # ruff: ignore[blind-except]
+            errors.append(exc)
+
+    thread = threading.Thread(target=caller)
+    thread.start()
+
+    try:
+        assert started.wait(2.0)
+        loop.shutdown()
+        thread.join(10.0)
+    finally:
+        release.set()
+
+    assert len(errors) == 1
+    assert isinstance(errors[0], RuntimeError)
+    assert "stopped before the callback completed" in str(errors[0])

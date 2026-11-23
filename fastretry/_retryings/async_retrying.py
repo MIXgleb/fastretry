@@ -30,6 +30,7 @@ from fastretry._utils.callbacks import (
 )
 from fastretry._utils.introspection import (
     RetryContext,
+    resolve_fname,
 )
 from fastretry._utils.stats import (
     RetryStats,
@@ -68,7 +69,7 @@ class AsyncRetrying[**P, R](
         on_retry = self.callbacks.on_retry
         on_failure = self.callbacks.on_failure
 
-        fname = getattr(func, "__qualname__", "<anonymous>")
+        fname = resolve_fname(func)
         invoke = (
             func
             if is_coroutine_function(func)
@@ -101,7 +102,7 @@ class AsyncRetrying[**P, R](
                             exc=exc,
                         )
 
-                        if stats_attempt.retry_aborted:
+                        if stats_attempt.retry_aborted or stats_attempt.deadline_reached:
                             break
 
                         await self._safe_call_callback(callback=on_retry, stats=stats)

@@ -43,6 +43,7 @@ def test_retry_kwargs_inherits_options() -> None:
     d = get_type_hints(RetryKwargs)
 
     assert "attempts" in d
+    assert "max_time" in d
     assert "return_default_value" in d
     assert "delay" in d
     assert "jitter" in d
@@ -57,6 +58,7 @@ def test_retry_with_executor_kwargs_inherits_options() -> None:
     d = get_type_hints(RetryWithExecutorKwargs)
 
     assert "attempts" in d
+    assert "max_time" in d
     assert "return_default_value" in d
     assert "delay" in d
     assert "jitter" in d
@@ -123,6 +125,7 @@ def test_defaults_kwargs_combines() -> None:
 def test_retry_options_all_keys_readonly() -> None:
     assert _RetryOptions.__readonly_keys__ == frozenset({
         "attempts",
+        "max_time",
         "return_default_value",
         "delay",
         "jitter",
@@ -138,6 +141,7 @@ def test_retry_options_all_keys_readonly() -> None:
 def test_retry_default_options_all_keys_readonly() -> None:
     assert _RetryDefaultOptions.__readonly_keys__ == frozenset({
         "attempts",
+        "max_time",
         "delay",
         "disable_logging",
         "disable_warnings",

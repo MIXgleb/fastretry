@@ -18,6 +18,7 @@ live instances as well; call :meth:`RetryStats.snapshot` when a detached
 copy is needed.
 """
 
+import asyncio
 import contextvars
 import dataclasses as dc
 import functools
@@ -80,9 +81,11 @@ def _qualname_of(target: object) -> str | None:
     """
     Return the qualified name of a callable, task or partial.
 
-    Tasks and partials do not expose ``__qualname__`` themselves, so they
-    are unwrapped: a task contributes the qualified name of its coroutine,
-    and a partial the one of its wrapped callable.
+    Wrappers, tasks and partials do not expose the name of the callable
+    they stand for, so they are unwrapped: a function decorated with
+    :func:`functools.wraps` contributes its ``__wrapped__`` callable, a
+    partial the one of its wrapped callable, and a task the qualified name
+    of its coroutine.
 
     Parameters
     ----------
@@ -96,18 +99,34 @@ def _qualname_of(target: object) -> str | None:
         Qualified name, or ``None`` if the target cannot be resolved.
 
     """
-    while isinstance(target, functools.partial):
-        target = target.func
+    seen: set[int] = set()
 
-    get_coro = getattr(target, "get_coro", None)
-    if callable(get_coro):
-        target = get_coro()
+    while id(target) not in seen:
+        seen.add(id(target))
+
+        if isinstance(target, functools.partial):
+            target = target.func
+            continue
+
+        wrapped = getattr(target, "__wrapped__", None)
+
+        if wrapped is not None:
+            target = wrapped
+            continue
+
+        get_coro = getattr(target, "get_coro", None)
+
+        if callable(get_coro):
+            target = get_coro()
+            continue
+
+        break
 
     name = getattr(target, "__qualname__", None)
     return name if isinstance(name, str) else None
 
 
-def _resolve_fname(target: str | Callable[..., object]) -> str:
+def resolve_fname(target: str | Callable[..., object] | asyncio.Task[object]) -> str:
     """
     Return the registry key for a qualified name or a decorated callable.
 
@@ -115,6 +134,12 @@ def _resolve_fname(target: str | Callable[..., object]) -> str:
     :class:`asyncio.Task` through the qualified name of its coroutine, and
     a :class:`functools.partial` through the wrapped callable, so a run
     can be found by any of them.
+
+    The retry wrappers record the name of the call they start with this
+    same function, so the key of a live run and the key a lookup resolves
+    can never disagree: a decorated :class:`functools.partial` or an
+    instance of a callable class is found by the callable itself, by the
+    partial it was created from, and by its qualified name.
 
     Parameters
     ----------
@@ -135,7 +160,9 @@ def _resolve_fname(target: str | Callable[..., object]) -> str:
     return name if name is not None else "<anonymous>"
 
 
-def is_retrying(target: str | Callable[..., object] | UnsetType = UNSET) -> bool:
+def is_retrying(
+    target: str | Callable[..., object] | asyncio.Task[object] | UnsetType = UNSET,
+) -> bool:
     """
     Check whether a retry loop is active.
 
@@ -160,7 +187,7 @@ def is_retrying(target: str | Callable[..., object] | UnsetType = UNSET) -> bool
     if isinstance(target, UnsetType):
         return get_current_stats() is not None
 
-    fname = _resolve_fname(target)
+    fname = resolve_fname(target)
 
     with _lock:
         return any(stats.attempt.fname == fname for stats in _active_runs.values())
@@ -206,7 +233,9 @@ def get_current_run_id() -> int | None:
     return None if run is None else run.run_id
 
 
-def get_stats_for(target: str | Callable[..., object]) -> Mapping[int, RetryStats]:
+def get_stats_for(
+    target: str | Callable[..., object] | asyncio.Task[object],
+) -> Mapping[int, RetryStats]:
     """
     Return active retry runs of a callable.
 
@@ -235,7 +264,7 @@ def get_stats_for(target: str | Callable[..., object]) -> Mapping[int, RetryStat
         progress. Call :meth:`RetryStats.snapshot` for a detached copy.
 
     """
-    fname = _resolve_fname(target)
+    fname = resolve_fname(target)
 
     with _lock:
         return {

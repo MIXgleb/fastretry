@@ -56,6 +56,7 @@ def _make_stats(fname: str = "fn") -> RetryStats:
         log=MagicMock(spec=Log),
         decorator=DecoratorOptions(
             attempts=1,
+            max_time=None,
             return_default_value=None,
             delay=0.0,
             jitter="none",

@@ -34,6 +34,7 @@ from fastretry._utils.shared_loop import (
 
 class _RetryOptions[R](TypedDict, total=False):
     attempts: ReadOnly[int | UnsetType]
+    max_time: ReadOnly[float | UnsetType | None]
     return_default_value: ReadOnly[R | UnsetType]
     delay: ReadOnly[Delay | UnsetType]
     jitter: ReadOnly[JitterStrategy | UnsetType]
@@ -46,6 +47,7 @@ class _RetryOptions[R](TypedDict, total=False):
 
 class _RetryDefaultOptions(TypedDict, total=False):
     attempts: ReadOnly[int]
+    max_time: ReadOnly[float | None]
     delay: ReadOnly[Delay]
     disable_logging: ReadOnly[bool]
     disable_warnings: ReadOnly[bool]

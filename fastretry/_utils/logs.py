@@ -266,8 +266,11 @@ class Log:
         -------
         bool
             - ``True`` if the message was dispatched,
-            - ``False`` if logging is disabled or the level for
-            ``log_kind`` is ``OFF``.
+            - ``False`` if logging is disabled, the level for ``log_kind``
+              is ``OFF``, or the logger itself filters the record out
+              (``logging.disable``, a disabled logger, or a level raised by
+              the application). Callers rely on ``False`` to report a
+              swallowed error another way.
 
         """
         log_level = self._resolve_log_kind(log_kind)
@@ -284,6 +287,9 @@ class Log:
 
         if extra:
             kwargs["extra"] = dict(extra)
+
+        if not _DEFAULT_LOGGER.isEnabledFor(log_level):
+            return False
 
         _DEFAULT_LOGGER.log(log_level, message, *args, **kwargs)
         return True
@@ -320,7 +326,13 @@ class Log:
             return
 
         _DEFAULT_LOGGER.addHandler(self._build_default_handler())
-        _DEFAULT_LOGGER.setLevel(logging.DEBUG)
+
+        if _DEFAULT_LOGGER.level == logging.NOTSET:
+            # A level the application set before the first record stays in
+            # force; DEBUG is only needed to keep an unconfigured logger from
+            # inheriting the root logger's WARNING.
+            _DEFAULT_LOGGER.setLevel(logging.DEBUG)
+
         self._install_handler()
 
     @staticmethod

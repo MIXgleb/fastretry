@@ -4,6 +4,10 @@ import dataclasses as dc
 from collections.abc import (
     Callable,
 )
+from typing import (
+    Literal,
+    NoReturn,
+)
 from unittest.mock import (
     MagicMock,
 )
@@ -13,6 +17,12 @@ import pytest
 from fastretry._compat.sentinels import (
     UNSET,
     UnsetType,
+)
+from fastretry._configs.config import (
+    config,
+)
+from fastretry._decorators.retry import (
+    retry,
 )
 from fastretry._utils.callbacks import (
     ResolvedRetryCallbacks,
@@ -62,6 +72,7 @@ def stats_factory() -> _STATS_FACTORY_TYPE:
             log=log,
             decorator=DecoratorOptions(
                 attempts=attempts,
+                max_time=None,
                 return_default_value=None,
                 delay=0.0,
                 jitter="none",
@@ -209,3 +220,60 @@ def test_callbacks_all_keys_readonly() -> None:
         "on_failure",
     })
     assert RetryCallbacks.__mutable_keys__ == frozenset()
+
+
+def test_falsy_callable_is_not_replaced_by_the_noop() -> None:
+    """A callable object may define __len__/__bool__ and be falsy."""
+    calls: list[int] = []
+
+    class Collector:
+        def __call__(self, _stats: object) -> None:
+            calls.append(1)
+
+        def __len__(self) -> int:
+            return 0
+
+    assert not Collector()
+
+    @retry(attempts=2, delay=0, callbacks={"on_retry": Collector()})  # type: ignore[dict-item]
+    def fn() -> NoReturn:
+        msg = "boom"
+        raise ValueError(msg)
+
+    with pytest.RaisesGroup(ValueError, ValueError):
+        fn()
+
+    assert calls == [1, 1]
+
+
+def test_explicit_none_still_disables_a_callback() -> None:
+    on_success = MagicMock()
+
+    @retry(attempts=2, delay=0, callbacks={"on_retry": MagicMock(), "on_success": None})
+    def fn() -> Literal[1]:
+        on_success()
+        return 1
+
+    assert fn() == 1
+    on_success.assert_called_once_with()
+
+
+def test_falsy_default_callback_is_kept() -> None:
+    calls: list[int] = []
+
+    class Collector:
+        def __call__(self, _stats: object) -> None:
+            calls.append(1)
+
+        def __bool__(self) -> bool:
+            return False
+
+    assert not Collector()
+    config.retry(on_success=Collector())  # type: ignore[arg-type]
+
+    @retry(attempts=1, delay=0)
+    def fn() -> Literal[1]:
+        return 1
+
+    assert fn() == 1
+    assert calls == [1]

@@ -39,7 +39,9 @@ Randomization applied to the computed delay.
 - ``"full"`` — ``random(0, computed)``.
 - ``"equal"`` — ``computed / 2 + random(0, computed / 2)``.
 - ``"decorrelated"`` — ``random(base, previous * 3)``, which spreads retries of
-  concurrent callers; falls back to ``"full"`` when there is no previous delay.
+  concurrent callers. Without a previous delay the computed delay stands in for
+  it, so the first retry is drawn from ``random(base, computed * 3)``; the upper
+  bound is never below ``base``.
 """
 
 JITTER_STRATEGIES: Final[frozenset[str]] = frozenset(
@@ -86,6 +88,36 @@ class ExponentialDelay(NamedTuple):
     delay: float
     backoff_factor: float = 2.0
     max_delay: float | None = None
+
+
+def _grow(
+    delay: ExponentialDelay,
+    retry_index: int,
+) -> float:
+    """
+    Return the unbounded delay for an attempt.
+
+    A large exponent raises :exc:`OverflowError` from the power: the result is
+    reported as infinity instead, so a configured ``max_delay`` still caps it
+    and the overflow cannot replace the exception that is being retried.
+
+    Parameters
+    ----------
+    delay : ExponentialDelay
+        Exponential backoff configuration.
+    retry_index : int
+        1-based attempt index.
+
+    Returns
+    -------
+    float
+        Delay before the ``max_delay`` cap, possibly infinite.
+
+    """
+    try:
+        return delay.delay * (delay.backoff_factor ** (retry_index - 1))
+    except OverflowError:
+        return math.inf
 
 
 class DelayCalculator:
@@ -138,8 +170,10 @@ class DelayCalculator:
         - ``"equal"``: ``computed / 2 + random(0, computed / 2)``.
         - ``"decorrelated"``: ``random(base, previous * 3)``, where
           ``base`` is the configured base delay and ``previous`` is the
-          delay used on the previous attempt. Falls back to ``"full"``
-          when there is no previous delay.
+          delay used on the previous attempt. Without a previous delay the
+          computed delay stands in for it, so the first retry is drawn from
+          ``random(base, computed * 3)``; the upper bound is never below
+          ``base``.
 
         Parameters
         ----------
@@ -170,7 +204,7 @@ class DelayCalculator:
         delay = self._delay
 
         if isinstance(delay, ExponentialDelay):
-            computed = delay.delay * (delay.backoff_factor ** (retry_index - 1))
+            computed = _grow(delay, retry_index)
 
             if delay.max_delay is not None:
                 computed = min(computed, delay.max_delay)

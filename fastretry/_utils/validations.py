@@ -13,6 +13,7 @@ decorator options, and replaces recoverable mistakes with their fallbacks.
 
 import dataclasses as dc
 import difflib
+import math
 from collections.abc import (
     Mapping,
 )
@@ -60,6 +61,7 @@ RETRY_OPTIONS: Final[frozenset[str]] = frozenset(
         "disable_logging",
         "disable_warnings",
         "jitter",
+        "max_time",
         "no_retry_on",
         "retry_on",
         "return_default_value",
@@ -97,6 +99,12 @@ GLOBAL_LOGGING_OPTIONS: Final[frozenset[str]] = frozenset(
     },
 )
 """Logging options that are configurable only through :attr:`~fastretry.config.logging`."""
+
+RETRY_DEFAULTS_NAMES: Final[frozenset[str]] = (RETRY_OPTIONS - {"callbacks"}) | GLOBAL_RETRY_OPTIONS
+"""Defaults accepted by :attr:`~fastretry.config.retry`."""
+
+LOGGING_DEFAULTS_NAMES: Final[frozenset[str]] = GLOBAL_LOGGING_OPTIONS
+"""Defaults accepted by :attr:`~fastretry.config.logging`."""
 
 _GLOBAL_SCOPES: Final[dict[str, str]] = {
     **dict.fromkeys(sorted(GLOBAL_RETRY_OPTIONS), "config.retry(...)"),
@@ -235,6 +243,7 @@ class OptionsValidator:
         """
         attempts = self._validate_attempts(attempts=options.attempts)
         delay = self._validate_delay(delay=options.delay)
+        max_time = self._validate_max_time(max_time=options.max_time)
 
         self._validate_selection(
             values={"jitter": options.jitter},
@@ -259,6 +268,7 @@ class OptionsValidator:
             options,
             attempts=attempts,
             delay=delay,
+            max_time=max_time,
         )
 
     def validate_defaults_options(
@@ -345,10 +355,12 @@ class OptionsValidator:
         Raises
         ------
         TypeError
-            If ``attempts`` is not an :class:`int`.
+            If ``attempts`` is not an :class:`int`. A :class:`bool` is
+            rejected even though it is an :class:`int` subclass, because
+            ``attempts=True`` says nothing about the number of attempts.
 
         """
-        if not isinstance(attempts, int):
+        if isinstance(attempts, bool) or not isinstance(attempts, int):
             msg = f"attempts must be an int, got {type(attempts).__name__}"
             raise TypeError(msg)
 
@@ -388,6 +400,8 @@ class OptionsValidator:
         TypeError
             If ``delay`` is neither a number, an
             :class:`~fastretry.delays.ExponentialDelay` nor a callable.
+        ValueError
+            If a fixed delay is not a finite number of seconds.
 
         Notes
         -----
@@ -400,7 +414,15 @@ class OptionsValidator:
             self._validate_exponential_delay(delay=delay)
             return delay
 
+        if isinstance(delay, bool):
+            msg = "delay must be a number of seconds, an ExponentialDelay or a callable, got bool"
+            raise TypeError(msg)
+
         if isinstance(delay, (int, float)):
+            if not math.isfinite(delay):
+                msg = f"delay must be a finite number of seconds, got {delay!r}"
+                raise ValueError(msg)
+
             if delay < 0:
                 self._warnings.warn(
                     f"\n\tDelay must be >= 0, got {delay!r}. Falling back to 0.",
@@ -420,6 +442,49 @@ class OptionsValidator:
         raise TypeError(msg)
 
     @staticmethod
+    def _validate_max_time(
+        *,
+        max_time: object,
+    ) -> float | None:
+        """
+        Validate the time budget of a call.
+
+        Parameters
+        ----------
+        max_time : float | None
+            Configured time budget in seconds, or ``None`` for no budget.
+
+        Returns
+        -------
+        float | None
+            Budget to use, normalized to a :class:`float`.
+
+        Raises
+        ------
+        TypeError
+            If ``max_time`` is neither a number nor ``None``.
+        ValueError
+            If ``max_time`` is not a finite positive number of seconds.
+
+        """
+        if max_time is None:
+            return None
+
+        if isinstance(max_time, bool) or not isinstance(max_time, (int, float)):
+            msg = f"max_time must be a number of seconds or None, got {type(max_time).__name__}"
+            raise TypeError(msg)
+
+        if not math.isfinite(max_time):
+            msg = f"max_time must be finite, got {max_time!r}"
+            raise ValueError(msg)
+
+        if max_time <= 0:
+            msg = f"max_time must be > 0, got {max_time!r}"
+            raise ValueError(msg)
+
+        return float(max_time)
+
+    @staticmethod
     def _validate_exponential_delay(
         *,
         delay: ExponentialDelay,
@@ -434,10 +499,28 @@ class OptionsValidator:
 
         Raises
         ------
+        TypeError
+            If a parameter is not a number.
         ValueError
-            If a parameter is out of range.
+            If a parameter is out of range or not finite.
 
         """
+        for name, value in (
+            ("delay", delay.delay),
+            ("backoff factor", delay.backoff_factor),
+            ("maximum delay", delay.max_delay),
+        ):
+            if value is None:
+                continue
+
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                msg = f"{name} must be a number, got {type(value).__name__}"
+                raise TypeError(msg)
+
+            if not math.isfinite(value):
+                msg = f"{name} must be finite, got {value!r}"
+                raise ValueError(msg)
+
         if delay.delay <= 0:
             msg = f"delay must be > 0, got {delay.delay!r}"
             raise ValueError(msg)
@@ -626,7 +709,7 @@ class OptionsValidator:
             unknown = set(callbacks) - CALLBACK_NAMES
 
             if unknown:
-                names = ", ".join(map(repr, sorted(unknown)))
+                names = ", ".join(map(repr, sorted(unknown, key=repr)))
                 expected = ", ".join(map(repr, sorted(CALLBACK_NAMES)))
                 msg = f"unknown callback name(s): {names}; expected one of {expected}"
                 raise ValueError(msg)

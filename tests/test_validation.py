@@ -191,6 +191,7 @@ def test_validator_replaces_recoverable_mistakes() -> None:
     validated = validator.validate_decorator_options(
         options=DecoratorOptions(
             attempts=0,
+            max_time=None,
             return_default_value=UNSET,
             delay=-1.0,
             jitter="none",
@@ -221,6 +222,7 @@ def test_async_callback_modes_match_literal() -> None:
 #: produce when a decorator is created.
 INVALID_DEFAULTS = (
     ("retry", "attempts", "3", TypeError, "attempts must be an int, got str"),
+    ("retry", "max_time", "5", TypeError, "max_time must be a number of seconds"),
     ("retry", "delay", "1", TypeError, "delay must be a number of seconds"),
     ("retry", "disable_logging", 1, TypeError, "disable_logging must be a bool"),
     ("retry", "disable_warnings", "no", TypeError, "disable_warnings must be a bool"),

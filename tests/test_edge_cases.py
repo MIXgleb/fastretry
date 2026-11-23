@@ -49,7 +49,7 @@ def test_keyboard_interrupt_not_retried() -> None:
         calls.append(1)
         raise KeyboardInterrupt
 
-    with pytest.RaisesGroup(KeyboardInterrupt):
+    with pytest.raises(KeyboardInterrupt):
         fn()
 
     assert len(calls) == 1
@@ -63,7 +63,7 @@ async def test_cancelled_error_not_retried() -> None:
         calls.append(1)
         raise asyncio.CancelledError
 
-    with pytest.RaisesGroup(asyncio.CancelledError):
+    with pytest.raises(asyncio.CancelledError):
         await fn()
 
     assert len(calls) == 1

@@ -183,6 +183,37 @@ if flag is None:
 Prefer an explicit "degraded mode" value over a bare `None` when the caller
 would have to guess what `None` means.
 
+## A deadline for the whole call
+
+`max_time` is the counterpart of `attempts` for a caller that has a deadline
+rather than a retry count: a web request, a CLI invocation, a health check.
+The budget covers the attempts *and* the delays, and a retry that could not
+start inside it is not scheduled at all:
+
+```python
+from fastretry import retry
+from fastretry.delays import ExponentialDelay
+
+
+@retry(
+    attempts=10,
+    delay=ExponentialDelay(delay=0.5, max_delay=8.0),
+    jitter="full",
+    max_time=15.0,
+)
+def fetch_export(export_id: str) -> bytes:
+    return client.exports.get(export_id).read()
+```
+
+The function is always called at least once, and an attempt that already
+started is allowed to finish, so `max_time` bounds the waiting, not the
+duration of a single call. When the budget runs out the failure is reported
+like an exhausted retry: the exception group names the budget and
+`stats.deadline_reached` is `True` for callbacks and introspection.
+
+Use it together with `attempts` when both limits matter: whichever comes first
+stops the loop.
+
 ## Custom delay
 
 `delay` also accepts a callable, so a schedule that is neither fixed nor

@@ -44,6 +44,9 @@ class Defaults:
     ----------
     attempts : int
         Default number of attempts, 1 by default.
+    max_time : float | None
+        Default time budget for a call in seconds, ``None`` (no budget) by
+        default.
     delay : Delay
         Default delay between attempts, 0 by default.
     disable_logging : bool
@@ -92,6 +95,7 @@ class Defaults:
 
     # --- retry options (per-decorator, with global defaults) ---
     attempts: int = 1
+    max_time: float | None = None
     delay: Delay = 0
     disable_logging: bool = False
     disable_warnings: bool = False
@@ -127,16 +131,19 @@ class Defaults:
         Raises
         ------
         AttributeError
-            Unknown default key
+            Unknown default key. Nothing is applied in that case: the whole
+            batch is checked before the first value is written, so a rejected
+            call leaves the defaults untouched.
 
         """
         all_keys = {f.name for f in dc.fields(self)}
+        unknown = [key for key in kwargs if key not in all_keys]
+
+        if unknown:
+            msg = f"Unknown default: {unknown[0]!r}"
+            raise AttributeError(msg)
 
         for key, value in kwargs.items():
-            if key not in all_keys:
-                msg = f"Unknown default: {key!r}"
-                raise AttributeError(msg)
-
             setattr(self, key, value)
 
     @final

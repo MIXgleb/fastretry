@@ -294,15 +294,21 @@ class SharedLoop:
 
         The chained future is intentionally left alone: cancelling it would
         schedule a cancellation on the already closed loop and log a spurious
-        ``RuntimeError: Event loop is closed`` traceback.
+        ``RuntimeError: Event loop is closed`` traceback. A coroutine that is
+        still executing is not closed either: closing a running coroutine
+        raises ``ValueError``, which would replace the documented
+        :exc:`RuntimeError` of :meth:`run_callback`.
 
         Parameters
         ----------
         coro : Coro[None]
-            Callback coroutine, closed to avoid "never awaited" warnings.
+            Callback coroutine, closed to avoid "never awaited" warnings
+            unless it is still running.
 
         """
-        with contextlib.suppress(RuntimeError):
+        with contextlib.suppress(RuntimeError, ValueError):
+            # ValueError: the loop stopped while the callback was executing,
+            # so the coroutine is still running and cannot be closed.
             coro.close()
 
     @staticmethod

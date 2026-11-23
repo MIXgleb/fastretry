@@ -72,6 +72,29 @@ if TYPE_CHECKING:
     )
 
 
+def _callback_or_noop(callback: CallbackType | None) -> CallbackType:
+    """
+    Resolve one callback.
+
+    A missing or explicitly disabled callback becomes the no-op callback.
+    Any other callable is used as is: a callable object may define
+    ``__bool__`` or ``__len__`` and be falsy, and dropping it because of that
+    would silently disable a callback the user passed.
+
+    Parameters
+    ----------
+    callback : CallbackType | None
+        Configured callback, or ``None`` when it is disabled.
+
+    Returns
+    -------
+    CallbackType
+        Callback to invoke.
+
+    """
+    return noop_callback if callback is None else callback
+
+
 class BaseRetrying[
     R,
     Wrapped: Callable[..., object],
@@ -129,6 +152,7 @@ class BaseRetrying[
         self,
         *,
         attempts: int | UnsetType = UNSET,
+        max_time: float | UnsetType | None = UNSET,
         return_default_value: R | UnsetType = UNSET,
         delay: Delay | UnsetType = UNSET,
         jitter: JitterStrategy | UnsetType = UNSET,
@@ -147,6 +171,12 @@ class BaseRetrying[
         attempts : int, ``optional``
             Number of attempts. Values below 1 are replaced with 1 and
             reported with a :exc:`UserWarning`.
+        max_time : float | None, ``optional``
+            Time budget of one call in seconds, measured with a monotonic
+            clock from the start of the call. A retry that could not start
+            within the remaining budget is not scheduled: the loop stops and
+            the failure is reported as usual. ``None`` disables the budget.
+            Must be a finite positive number, otherwise :exc:`ValueError`.
         return_default_value : Any, ``optional``
             Default value returned if the function fails after all attempts,
         delay : Delay, ``optional``
@@ -201,6 +231,10 @@ class BaseRetrying[
         delay_value: Delay = self._resolve(
             passed=delay,
             default=self._effective_defaults.delay,
+        )
+        max_time_value: float | None = self._resolve(
+            passed=max_time,
+            default=self._effective_defaults.max_time,
         )
 
         # --- immutable ---
@@ -262,6 +296,7 @@ class BaseRetrying[
             self._validator.validate_decorator_options(
                 options=DecoratorOptions(
                     attempts=attempts_value,
+                    max_time=max_time_value,
                     return_default_value=self.return_default_value,
                     delay=delay_value,
                     jitter=self.jitter,
@@ -314,6 +349,7 @@ class BaseRetrying[
             f"{type(self).__name__}(\n\t"
             f"wrapper_kind={self.wrapper_kind!r},\n\t"
             f"attempts={self.attempts!r},\n\t"
+            f"max_time={self.max_time!r},\n\t"
             f"return_default_value={self.return_default_value!r},\n\t"
             f"delay={self.delay!r},\n\t"
             f"jitter={self.jitter!r},\n\t"
@@ -349,6 +385,21 @@ class BaseRetrying[
 
         """
         return self._validated_options.attempts
+
+    @final
+    @property
+    def max_time(self) -> float | None:
+        """
+        Effective time budget of one call.
+
+        Returns
+        -------
+        float | None
+            Budget in seconds after validation, or ``None`` when the call is
+            not bounded by time. The property is read-only.
+
+        """
+        return self._validated_options.max_time
 
     @final
     @property
@@ -624,10 +675,52 @@ class BaseRetrying[
             return
 
         if stats_attempt.retry_index < self.attempts:
-            stats_attempt.computed_delay = self._delay_calculator.compute(
+            computed_delay = self._delay_calculator.compute(
                 retry_index=stats_attempt.retry_index,
                 previous_delay=stats_attempt.previous_delay,
             )
+
+            if self._budget_exhausted(stats_attempt=stats_attempt, delay=computed_delay):
+                stats_attempt.deadline_reached = True
+                return
+
+            stats_attempt.computed_delay = computed_delay
+
+    @final
+    def _budget_exhausted(
+        self,
+        *,
+        stats_attempt: AttemptState,
+        delay: float,
+    ) -> bool:
+        """
+        Check whether the next attempt fits into the time budget.
+
+        The budget is spent by the finished attempts and by the delay that
+        would be slept before the next one, so a retry that would only start
+        after the deadline is not scheduled at all.
+
+        Parameters
+        ----------
+        stats_attempt : AttemptState
+            Per-attempt state.
+        delay : float
+            Delay that would be slept before the next attempt.
+
+        Returns
+        -------
+        bool
+            ``True`` when the next attempt cannot start within ``max_time``.
+
+        """
+        max_time = self._validated_options.max_time
+
+        if max_time is None:
+            return False
+
+        elapsed = time.monotonic() - stats_attempt.started_at
+
+        return elapsed + delay >= max_time
 
     @final
     def _prepare_failure(
@@ -663,6 +756,15 @@ class BaseRetrying[
         is enabled, that exception is raised as is. Otherwise all collected
         exceptions are raised together, in the order they were raised.
 
+        A retry aborted by an exception that is not an :exc:`Exception`
+        subclass — ``KeyboardInterrupt``, ``SystemExit``, ``GeneratorExit``
+        or :exc:`asyncio.CancelledError` — re-raises that exception
+        unchanged, even when ``return_default_value`` is set. Wrapping or
+        replacing it would break the protocol the interpreter and the event
+        loop rely on: a grouped :exc:`asyncio.CancelledError` leaves the task
+        uncancelled, so :func:`asyncio.timeout`, :func:`asyncio.wait_for` and
+        every structured-concurrency helper stop working.
+
         Parameters
         ----------
         stats_attempt : AttemptState
@@ -677,7 +779,15 @@ class BaseRetrying[
             exceptions are subclasses of :exc:`Exception`.
 
         """
-        if not self._re_raise_exception or not stats_attempt.exceptions:
+        if not stats_attempt.exceptions:
+            return
+
+        last_exception = stats_attempt.exceptions[-1]
+
+        if stats_attempt.retry_aborted and not isinstance(last_exception, Exception):
+            raise last_exception
+
+        if not self._re_raise_exception:
             return
 
         if len(stats_attempt.exceptions) == 1 and self._unwrap_single_exception:
@@ -687,6 +797,11 @@ class BaseRetrying[
             msg = (
                 f"Retry aborted after {stats_attempt.retry_index} attempt(s): "
                 f"exception is not retryable"
+            )
+        elif stats_attempt.deadline_reached:
+            msg = (
+                f"Time budget of {self.max_time:g}s exhausted after "
+                f"{stats_attempt.retry_index} attempt(s)"
             )
         else:
             msg = f"All {stats_attempt.retry_index} attempts failed"
@@ -751,34 +866,26 @@ class BaseRetrying[
             Fully resolved callbacks with all three fields populated.
 
         """
+        defaults = self._effective_defaults
+
         if callbacks is None:
             return ResolvedRetryCallbacks(
                 on_success=noop_callback,
                 on_retry=noop_callback,
                 on_failure=noop_callback,
             )
+
         if isinstance(callbacks, UnsetType):
             return ResolvedRetryCallbacks(
-                on_success=self._effective_defaults.on_success or noop_callback,
-                on_retry=self._effective_defaults.on_retry or noop_callback,
-                on_failure=self._effective_defaults.on_failure or noop_callback,
+                on_success=_callback_or_noop(defaults.on_success),
+                on_retry=_callback_or_noop(defaults.on_retry),
+                on_failure=_callback_or_noop(defaults.on_failure),
             )
+
         return ResolvedRetryCallbacks(
-            on_success=callbacks.get(
-                "on_success",
-                self._effective_defaults.on_success,
-            )
-            or noop_callback,
-            on_retry=callbacks.get(
-                "on_retry",
-                self._effective_defaults.on_retry,
-            )
-            or noop_callback,
-            on_failure=callbacks.get(
-                "on_failure",
-                self._effective_defaults.on_failure,
-            )
-            or noop_callback,
+            on_success=_callback_or_noop(callbacks.get("on_success", defaults.on_success)),
+            on_retry=_callback_or_noop(callbacks.get("on_retry", defaults.on_retry)),
+            on_failure=_callback_or_noop(callbacks.get("on_failure", defaults.on_failure)),
         )
 
     @staticmethod

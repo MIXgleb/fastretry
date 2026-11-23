@@ -102,6 +102,7 @@ def retry[D](
     *,
     return_default_value: D,
     attempts: int | UnsetType = UNSET,
+    max_time: float | UnsetType | None = UNSET,
     delay: Delay | UnsetType = UNSET,
     jitter: JitterStrategy | UnsetType = UNSET,
     disable_logging: bool | UnsetType = UNSET,
@@ -116,6 +117,7 @@ def retry[D](
 def retry(
     *,
     attempts: int | UnsetType = UNSET,
+    max_time: float | UnsetType | None = UNSET,
     return_default_value: UnsetType = UNSET,
     delay: Delay | UnsetType = UNSET,
     jitter: JitterStrategy | UnsetType = UNSET,
@@ -156,6 +158,13 @@ def retry[**P, R](
         Number of attempts (factory default: 1). Values below 1 are replaced
         with 1 and reported with a :exc:`UserWarning`, so the function is
         still called once.
+    max_time : float | None, ``optional``
+        Time budget for one call, in seconds (factory default: None, no
+        budget). The retry loop stops when the next attempt could not start
+        within the remaining budget, counted from the start of the call with
+        a monotonic clock and including the delay that would be slept. The
+        function is always called at least once. Must be a finite positive
+        number, otherwise :exc:`ValueError`.
     return_default_value : Any, ``optional``
         Default value returned if the function fails after all attempts.
         When provided, the wrapper returns it instead of re-raising the
@@ -246,6 +255,17 @@ def retry[**P, R](
     ``config.logging(...)``. Invalid option values raise :exc:`TypeError` or
     :exc:`ValueError` when the decorator is applied to a function.
 
+    **Time budget**
+
+    ``max_time`` bounds the whole call, not a single attempt: a slow attempt
+    is always allowed to finish, and a retry that would only start after the
+    budget is spent is not scheduled at all. A call that stops this way is
+    reported like a call that exhausted its attempts: ``AttemptState`` has
+    ``deadline_reached`` set and the failure message names the budget::
+
+        @retry(attempts=10, delay=ExponentialDelay(0.1, max_delay=2.0), max_time=5.0)
+        def fetch() -> bytes: ...
+
     **Failure handling**
 
     When all attempts fail:
@@ -281,6 +301,14 @@ def retry[**P, R](
     stops, ``on_retry`` callback is not invoked, and the failure-handling
     path runs (``on_failure`` callback, then re-raise or return
     ``return_default_value``).
+
+    An aborted exception that is **not** an :exc:`Exception` subclass is
+    always re-raised unchanged, even when ``return_default_value`` is set:
+    ``KeyboardInterrupt``, ``SystemExit``, ``GeneratorExit`` and
+    ``asyncio.CancelledError`` keep the meaning the interpreter and the
+    event loop rely on. Grouping ``CancelledError`` would leave the task
+    uncancelled, so :func:`asyncio.timeout`, :func:`asyncio.wait_for` and
+    structured-concurrency helpers would stop working.
 
     .. warning::
 

@@ -7,6 +7,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `max_time` option (also a global default) bounding the total time of one
+  call, in seconds. The budget includes the delays, a retry that could not
+  start within the remaining budget is not scheduled, and
+  `AttemptState.deadline_reached` reports the outcome to callbacks and
+  introspection.
+- `resolve_fname()` (internal) as the single resolver of a call name, shared by
+  the wrappers and the introspection lookups.
+
+### Changed
+
+- An aborted retry re-raises `KeyboardInterrupt`, `SystemExit`,
+  `GeneratorExit` and `asyncio.CancelledError` unchanged, even when
+  `return_default_value` is set. They are no longer wrapped in a
+  `BaseExceptionGroup`, which left `asyncio` tasks uncancelled and broke
+  `asyncio.timeout()`, `asyncio.wait_for()` and `Task.cancel()`.
+
+### Fixed
+
+- `config.logging(...)` no longer accepts retry options (and `config.retry(...)`
+  no longer accepts logging options); a rejected call changes nothing.
+- `delay=nan`/`inf`, and `ExponentialDelay` fields that are not finite numbers
+  or not numbers at all, are rejected when the decorator is applied instead of
+  raising from `time.sleep()` inside the retry loop. `attempts` and `delay`
+  reject `bool`.
+- A decorator applied to a `functools.partial` or to an instance of a callable
+  class is now registered under the name the introspection lookups resolve, so
+  `is_retrying()`/`get_stats_for()` find the run.
+- A callable whose `__call__` is `async` is awaited instead of being treated as
+  a sync callable (which returned an un-awaited coroutine and retried nothing).
+- `ExponentialDelay` applies `max_delay` before the exponent overflows.
+- A falsy callable object is used as a callback instead of being replaced by the
+  no-op callback.
+- The built-in console handler no longer overwrites a logger level set by the
+  application, and `Log.record()` reports a record the logger filters out, so a
+  swallowed callback error is warned about instead of being lost.
+- `SharedLoop.run_callback()` reports a loop stopped by ``shutdown()`` as the
+  documented `RuntimeError`, not as `ValueError: coroutine already executing`.
+
 ## [0.7.0] - 2026-11-17
 
 ### Added

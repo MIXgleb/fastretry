@@ -24,6 +24,7 @@ from fastretry._utils.callbacks import (
 )
 from fastretry._utils.introspection import (
     RetryContext,
+    resolve_fname,
 )
 from fastretry._utils.shared_loop import (
     shared_loop,
@@ -58,7 +59,7 @@ class SyncRetrying[**P, R](
         on_retry = self.callbacks.on_retry
         on_failure = self.callbacks.on_failure
 
-        fname = getattr(func, "__qualname__", "<anonymous>")
+        fname = resolve_fname(func)
 
         @functools.wraps(func)
         def wrapper(*args: P.args, **kwargs: P.kwargs) -> R | UnsetType:
@@ -83,7 +84,7 @@ class SyncRetrying[**P, R](
                             exc=exc,
                         )
 
-                        if stats_attempt.retry_aborted:
+                        if stats_attempt.retry_aborted or stats_attempt.deadline_reached:
                             break
 
                         self._safe_call_callback(callback=on_retry, stats=stats)
