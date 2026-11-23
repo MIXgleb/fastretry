@@ -152,7 +152,7 @@ def test_validate_custom_delay() -> None:
 
 
 def test_validate_delay_invalid_type() -> None:
-    with pytest.raises(AssertionError, match="Expected code to be unreachable"):
+    with pytest.raises(TypeError, match="delay must be a number of seconds"):
         _ = SyncRetrying(delay="1")
 
 
@@ -283,3 +283,77 @@ def test_return_default_value_is_not_checked_at_runtime() -> None:
         raise ValueError
 
     assert fn() is None
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "exception", "match"),
+    [
+        (
+            {"attempts": "3"},
+            TypeError,
+            "attempts must be an int, got str",
+        ),
+        (
+            {"disable_logging": 1},
+            TypeError,
+            "disable_logging must be a bool, got int",
+        ),
+        (
+            {"disable_warnings": "no"},
+            TypeError,
+            "disable_warnings must be a bool, got str",
+        ),
+        (
+            {"jitter": "sometimes"},
+            ValueError,
+            "jitter must be one of",
+        ),
+        (
+            {"retry_on": "ValueError"},
+            TypeError,
+            "retry_on must be an exception class",
+        ),
+        (
+            {"retry_on": (ValueError, "TypeError")},
+            TypeError,
+            "retry_on must be an exception class",
+        ),
+        (
+            {"no_retry_on": 42},
+            TypeError,
+            "no_retry_on must be an exception class",
+        ),
+        (
+            {"executor": "pool"},
+            TypeError,
+            "executor must be a concurrent.futures.Executor",
+        ),
+        (
+            {"callbacks": 42},
+            TypeError,
+            "callbacks must be a mapping, got int",
+        ),
+        (
+            {"callbacks": {"on_retryy": None}},
+            ValueError,
+            r"unknown callback name\(s\): 'on_retryy'; expected one of",
+        ),
+        (
+            {"callbacks": {"on_retry": "cb"}},
+            TypeError,
+            "callback 'on_retry' must be callable or None, got str",
+        ),
+        (
+            {"delay": "1"},
+            TypeError,
+            "delay must be a number of seconds, an ExponentialDelay or a callable",
+        ),
+    ],
+)
+def test_validate_invalid_options(
+    kwargs: dict[str, object],
+    exception: type[Exception],
+    match: str,
+) -> None:
+    with pytest.raises(exception, match=match):
+        _ = SyncRetrying(**kwargs)

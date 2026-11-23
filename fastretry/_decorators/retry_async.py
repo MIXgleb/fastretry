@@ -54,6 +54,9 @@ from fastretry._utils.delays import (
     Delay,
     JitterStrategy,
 )
+from fastretry._utils.validations import (
+    validate_decorator_kwargs,
+)
 
 
 class _RetryAsyncDecorator(Protocol):
@@ -228,9 +231,9 @@ def retry_async[**P, R](
     Notes
     -----
     See :func:`~fastretry.retry` for failure handling, exception group
-    semantics, and the typing of ``return_default_value``. This decorator
-    only changes how the wrapped callable is invoked, not how retries are
-    handled.
+    semantics, the typing of ``return_default_value``, and option
+    validation. This decorator only changes how the wrapped callable is
+    invoked, not how retries are handled.
 
     """
 
@@ -238,6 +241,12 @@ def retry_async[**P, R](
         func: Callable[P, R] | Callable[P, Coro[R]],
     ) -> Callable[P, WrappedCoro[R]]:
         return AsyncRetrying[P, R](**kwargs).wraps(func)
+
+    validate_decorator_kwargs(
+        kwargs=kwargs,
+        decorator_name="retry_async",
+        allow_executor=True,
+    )
 
     if func is not None:
         return wrap(func)

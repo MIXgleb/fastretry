@@ -55,6 +55,9 @@ from fastretry._utils.delays import (
     Delay,
     JitterStrategy,
 )
+from fastretry._utils.validations import (
+    validate_decorator_kwargs,
+)
 
 
 class _RetryDecorator(Protocol):
@@ -234,6 +237,15 @@ def retry[**P, R](
 
     Notes
     -----
+    **Option validation**
+
+    Keyword arguments are validated when the decorator is created:
+    unknown options, options that exist only globally, and options that this
+    decorator does not support raise :exc:`TypeError` immediately. Options
+    that only exist globally point at ``config.retry(...)`` or
+    ``config.logging(...)``. Invalid option values raise :exc:`TypeError` or
+    :exc:`ValueError` when the decorator is applied to a function.
+
     **Failure handling**
 
     When all attempts fail:
@@ -315,6 +327,11 @@ def retry[**P, R](
         if is_coroutine_function(func):
             return AsyncRetrying[P, R](**kwargs).wraps(func)
         return SyncRetrying[P, R](**kwargs).wraps(func)  # pyright: ignore[reportArgumentType]
+
+    validate_decorator_kwargs(
+        kwargs=kwargs,
+        decorator_name="retry",
+    )
 
     if func is not None:
         return wrap(func)

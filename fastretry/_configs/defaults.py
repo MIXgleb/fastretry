@@ -33,8 +33,62 @@ from fastretry._utils.shared_loop import (
 
 
 @dc.dataclass(slots=True)
-class _Defaults:
-    """Container for all default values."""
+class Defaults:
+    """
+    Container for all default values.
+
+    A fresh instance is created by :attr:`config.context` for every block,
+    so writing to a context instance never affects the process-wide one.
+
+    Attributes
+    ----------
+    attempts : int
+        Default number of attempts, 1 by default.
+    delay : Delay
+        Default delay between attempts, 0 by default.
+    disable_logging : bool
+        If ``True``, logging is disabled for every decorator, by default False.
+    disable_warnings : bool
+        If ``True``, warnings are suppressed for every decorator, by default False.
+    on_success : CallbackType | None
+        Default callback invoked after a successful attempt.
+    on_retry : CallbackType | None
+        Default callback invoked after a failed attempt, before sleeping.
+    on_failure : CallbackType | None
+        Default callback invoked after all attempts have failed.
+    retry_on : RetryOnExceptionType
+        Exception types that trigger a retry, ``Exception`` by default.
+    no_retry_on : RetryOnExceptionType
+        Exception types that are never retried, ``()`` by default.
+    jitter_for_exponential : JitterStrategy
+        Jitter strategy used when the delay is an
+        :class:`~fastretry.delays.ExponentialDelay`, ``"none"`` by default.
+    jitter_for_fixed : JitterStrategy
+        Jitter strategy used for a fixed or custom delay, ``"none"`` by default.
+    async_callback_mode : AsyncCallbackMode
+        How async callbacks of synchronous functions are dispatched,
+        ``"thread_per_call"`` by default.
+    unwrap_single_exception : bool
+        If ``True``, a single collected exception is re-raised as is instead
+        of being wrapped in an exception group, by default False.
+    level_success : LogLevel
+        Level for success messages, :attr:`~fastretry.logging.LogLevel.OFF` by default.
+    level_retry : LogLevel
+        Level for retry messages,
+        :attr:`~fastretry.logging.LogLevel.WARNING` by default.
+    level_failure : LogLevel
+        Level for failure messages,
+        :attr:`~fastretry.logging.LogLevel.ERROR` by default.
+    level_sleep : LogLevel
+        Level for sleep messages, :attr:`~fastretry.logging.LogLevel.OFF` by default.
+    traceback_min_level : LogLevel
+        Minimum level at which a traceback is attached to the log record,
+        :attr:`~fastretry.logging.LogLevel.ERROR` by default.
+    install_default_handler : bool
+        Whether to install the built-in console handler on the ``"fastretry"``
+        logger, by default True.
+
+    """
 
     # --- retry options (per-decorator, with global defaults) ---
     attempts: int = 1
@@ -94,23 +148,23 @@ class _Defaults:
             setattr(self, f.name, getattr(fresh, f.name))
 
 
-global_defaults: Final[_Defaults] = _Defaults()
+global_defaults: Final[Defaults] = Defaults()
 """Process-wide defaults, set by ``config.retry`` and ``config.logging``."""
 
-context_defaults: contextvars.ContextVar[_Defaults | None] = contextvars.ContextVar(
+context_defaults: contextvars.ContextVar[Defaults | None] = contextvars.ContextVar(
     "retry_defaults",
     default=None,
 )
 """Per-context defaults set by ``config.context``; ``None`` outside of the block."""
 
 
-def get_defaults() -> _Defaults:
+def get_defaults() -> Defaults:
     """
     Return the effective defaults for the current context.
 
     Returns
     -------
-    _Defaults
+    Defaults
         Effective defaults for the current context.
 
     """

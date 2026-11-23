@@ -28,6 +28,23 @@ from fastretry._utils.stats import (
     RetryStats,
 )
 
+type CallbackType = Callable[[RetryStats], CoroType[None] | None]
+"""
+Retry lifecycle callback.
+
+Receives the current :class:`~fastretry.callbacks.RetryStats` and returns
+either nothing or a coroutine, in which case it is awaited.
+"""
+
+CALLBACK_NAMES: Final[frozenset[str]] = frozenset(
+    {
+        "on_success",
+        "on_retry",
+        "on_failure",
+    },
+)
+"""Every callback name accepted in a :class:`RetryCallbacks` mapping."""
+
 _PRIMITIVE_TYPES: Final[tuple[type, ...]] = (
     int,
     float,
@@ -39,14 +56,6 @@ _PRIMITIVE_TYPES: Final[tuple[type, ...]] = (
     type(None),
 )
 """Types whose value is logged as is; other results are logged by type name."""
-
-type CallbackType = Callable[[RetryStats], CoroType[None] | None]
-"""
-Retry lifecycle callback.
-
-Receives the current :class:`~fastretry.callbacks.RetryStats` and returns
-either nothing or a coroutine, in which case it is awaited.
-"""
 
 
 class RetryCallbacks(TypedDict, total=False):

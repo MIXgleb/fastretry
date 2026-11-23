@@ -57,6 +57,15 @@ serialized in one thread, they run in a dedicated daemon thread rather than
 the calling one, and the loop lifecycle is shared by the whole process.
 """
 
+ASYNC_CALLBACK_MODES: Final[frozenset[str]] = frozenset(
+    {
+        "thread_per_call",
+        "shared_loop_when_running",
+        "shared_loop_always",
+    },
+)
+"""Every supported :data:`AsyncCallbackMode` value."""
+
 _WAIT_SLICE: Final[float] = 0.25
 """Seconds a caller waits for a callback before re-checking the loop health."""
 

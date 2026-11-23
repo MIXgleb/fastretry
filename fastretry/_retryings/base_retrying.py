@@ -15,11 +15,9 @@ from concurrent.futures import (
 )
 from typing import (
     TYPE_CHECKING,
-    Any,
     ClassVar,
     Final,
     Self,
-    assert_never,
     final,
     override,
 )
@@ -58,6 +56,9 @@ from fastretry._utils.stats import (
     GlobalOptions,
     RetryStats,
 )
+from fastretry._utils.validations import (
+    OptionsValidator,
+)
 from fastretry._utils.warnings import (
     Warnings,
 )
@@ -73,15 +74,13 @@ if TYPE_CHECKING:
 
 class BaseRetrying[
     R,
-    Wrapped: Callable[..., Any],
-    Wrapper: Callable[..., Any | UnsetType],
+    Wrapped: Callable[..., object],
+    Wrapper: Callable[..., object | UnsetType],
 ](ABC):
     """Base class for retry strategy implementations."""
 
     __slots__ = (
         "_async_callback_mode",
-        "_attempts",
-        "_delay",
         "_delay_calculator",
         "_effective_defaults",
         "_install_default_handler",
@@ -94,6 +93,8 @@ class BaseRetrying[
         "_stats",
         "_traceback_min_level",
         "_unwrap_single_exception",
+        "_validated_options",
+        "_validator",
         "_warnings",
         "callbacks",
         "disable_logging",
@@ -179,17 +180,25 @@ class BaseRetrying[
             Executor used to run sync functions in an async context.
             Only relevant for :class:`~fastretry._retryings.async_retrying.AsyncRetrying`.
 
+        Notes
+        -----
+        Options are validated during initialization. An option of the wrong
+        type — raises :exc:`TypeError`. An unknown name, strategy parameter
+        — raises :exc:`ValueError`.
+
+        The defaults resolved into the decorator are validated at the same
+        moment.
+
         """
         # --- effective defaults ---
         self._effective_defaults: Final = get_defaults()
 
-        # --- per-decorator options ---
-        # --- mutable while validating, exposed as read-only properties ---
-        self._attempts: int = self._resolve(
+        # --- per-decorator options resolved from the arguments and the defaults ---
+        attempts_value: int = self._resolve(
             passed=attempts,
             default=self._effective_defaults.attempts,
         )
-        self._delay: Delay = self._resolve(
+        delay_value: Delay = self._resolve(
             passed=delay,
             default=self._effective_defaults.delay,
         )
@@ -203,9 +212,6 @@ class BaseRetrying[
         self.disable_warnings: Final[bool] = self._resolve(
             passed=disable_warnings,
             default=self._effective_defaults.disable_warnings,
-        )
-        self.callbacks: Final[ResolvedRetryCallbacks] = self._resolve_callbacks(
-            callbacks=callbacks,
         )
         self.retry_on: Final[RetryOnExceptionType] = self._resolve(
             passed=retry_on,
@@ -239,33 +245,48 @@ class BaseRetrying[
         self._traceback_min_level: Final[LogLevel] = self._effective_defaults.traceback_min_level
 
         # --- internal helpers ---
-        self._log: Final[Log] = Log(self.logger_config)
+        self._log: Final[Log] = Log(config=self.logger_config)
         self._warnings: Final[Warnings] = Warnings(disable_warnings=self.disable_warnings)
-
-        # --- validate before deriving ---
-        self._validate_options()
+        self._validator: Final[OptionsValidator] = OptionsValidator(warnings=self._warnings)
 
         # --- derived options ---
-        self.jitter: Final[JitterStrategy] = self._derive_jitter(jitter=jitter)
+        self._re_raise_exception: Final[bool] = isinstance(self.return_default_value, UnsetType)
+        self.jitter: Final[JitterStrategy] = self._derive_jitter(
+            jitter=jitter,
+            delay=delay_value,
+        )
+
+        # --- validated options ---
+        self._validator.validate_defaults_options(defaults=self._effective_defaults)
+        self._validated_options: Final[DecoratorOptions] = (
+            self._validator.validate_decorator_options(
+                options=DecoratorOptions(
+                    attempts=attempts_value,
+                    return_default_value=self.return_default_value,
+                    delay=delay_value,
+                    jitter=self.jitter,
+                    disable_logging=self.disable_logging,
+                    disable_warnings=self.disable_warnings,
+                    re_raise_exception=self._re_raise_exception,
+                    retry_on=self.retry_on,
+                    no_retry_on=self.no_retry_on,
+                    executor=self.executor,
+                ),
+                callbacks=callbacks,
+            )
+        )
+
+        # --- callbacks ---
+        self.callbacks: Final[ResolvedRetryCallbacks] = self._resolve_callbacks(callbacks=callbacks)
+
+        # --- external helpers ---
         self._delay_calculator: Final[DelayCalculator] = DelayCalculator(
             delay=self.delay,
             jitter=self.jitter,
         )
-        self._re_raise_exception: Final[bool] = isinstance(self.return_default_value, UnsetType)
         self._stats: Final[RetryStats] = RetryStats(
             log=self._log,
-            decorator=DecoratorOptions(
-                attempts=self.attempts,
-                return_default_value=self.return_default_value,
-                delay=self.delay,
-                jitter=self.jitter,
-                disable_logging=self.disable_logging,
-                disable_warnings=self.disable_warnings,
-                re_raise_exception=self._re_raise_exception,
-                executor=self.executor,
-                retry_on=self.retry_on,
-                no_retry_on=self.no_retry_on,
-            ),
+            decorator=self._validated_options,
             global_options=GlobalOptions(
                 jitter_for_exponential=self._effective_defaults.jitter_for_exponential,
                 jitter_for_fixed=self._effective_defaults.jitter_for_fixed,
@@ -324,10 +345,10 @@ class BaseRetrying[
         -------
         int
             Number of attempts after validation: a value below 1 is replaced
-            with 1 during initialization. The property is read-only.
+            with 1 when the decorator is created. The property is read-only.
 
         """
-        return self._attempts
+        return self._validated_options.attempts
 
     @final
     @property
@@ -339,10 +360,11 @@ class BaseRetrying[
         -------
         Delay
             Delay configuration after validation: a negative fixed delay is
-            replaced with 0 during initialization. The property is read-only.
+            replaced with 0 when the decorator is created. The property is
+            read-only.
 
         """
-        return self._delay
+        return self._validated_options.delay
 
     @final
     @property
@@ -494,56 +516,6 @@ class BaseRetrying[
 
         """
         raise NotImplementedError
-
-    @final
-    def _validate_options(self) -> None:
-        """Validate resolved options, warning or raising on invalid values."""
-        self._validate_attempts()
-        self._validate_delay()
-
-    @final
-    def _validate_attempts(self) -> None:
-        if self._attempts < 1:
-            self._warnings.warn(
-                f"\n\tNumber of attempts must be >= 1, got {self._attempts!r}. Falling back to 1.",
-                stacklevel=7,
-            )
-            self._attempts = 1
-
-    @final
-    def _validate_delay(self) -> None:
-        delay = self._delay
-
-        match delay:
-            case ExponentialDelay():
-                if delay.delay <= 0:
-                    msg = f"delay must be > 0, got {delay.delay!r}"
-                    raise ValueError(msg)
-                if delay.backoff_factor <= 0:
-                    msg = f"backoff factor must be > 0, got {delay.backoff_factor!r}"
-                    raise ValueError(msg)
-                if delay.max_delay is None:
-                    return
-                if delay.max_delay <= 0:
-                    msg = f"maximum delay must be > 0, got {delay.max_delay!r}"
-                    raise ValueError(msg)
-                if delay.max_delay < delay.delay:
-                    msg = (
-                        f"maximum delay ({delay.max_delay!r}) must be >= "
-                        f"base delay ({delay.delay!r})"
-                    )
-                    raise ValueError(msg)
-            case int() | float():
-                if delay < 0:
-                    self._warnings.warn(
-                        f"\n\tDelay must be >= 0, got {delay!r}. Falling back to 0.",
-                        stacklevel=8,
-                    )
-                    self._delay = 0
-            case Callable():
-                ...
-            case _:
-                assert_never(delay)
 
     @final
     def _log_swallowed(
@@ -726,9 +698,10 @@ class BaseRetrying[
         self,
         *,
         jitter: JitterStrategy | UnsetType,
+        delay: Delay,
     ) -> JitterStrategy:
         """
-        Resolve the jitter strategy after initialization.
+        Resolve the jitter strategy.
 
         If ``jitter`` is not provided, the strategy is chosen based on the
         delay type: ``jitter_for_exponential`` for
@@ -741,6 +714,8 @@ class BaseRetrying[
         jitter : JitterStrategy | UnsetType
             Explicit jitter strategy, or ``UNSET`` to fall back to the
             default for the configured delay type.
+        delay : Delay
+            Delay configuration the strategy is derived for.
 
         Returns
         -------
@@ -751,7 +726,7 @@ class BaseRetrying[
         if not isinstance(jitter, UnsetType):
             return jitter
 
-        if isinstance(self.delay, ExponentialDelay):
+        if isinstance(delay, ExponentialDelay):
             return self._effective_defaults.jitter_for_exponential
         return self._effective_defaults.jitter_for_fixed
 

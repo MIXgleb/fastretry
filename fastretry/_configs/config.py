@@ -104,6 +104,14 @@ class _RetryNamespace:
             - ``"shared_loop_always"`` submits the callback to the shared loop in
               every case.
 
+        Notes
+        -----
+        Values are not validated here: an invalid default is reported when a
+        decorator using these defaults is created, under the name it was
+        configured with. The application-wide and logging settings are
+        checked at the same moment, so a mistake in the configuration is
+        caught before the first retry.
+
         """
         get_defaults().set(**kwargs)
 
@@ -164,6 +172,12 @@ class _LoggingNamespace:
             :class:`logging.NullHandler` is attached instead, so the package
             emits nothing until :mod:`logging` is configured by the
             application. By default True.
+
+        Notes
+        -----
+        Levels are not validated here: an invalid level is reported when a
+        decorator using these defaults is created, under the name it was
+        configured with.
 
         """
         get_defaults().set(**kwargs)

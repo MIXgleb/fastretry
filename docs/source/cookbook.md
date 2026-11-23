@@ -298,6 +298,36 @@ A decorator reads the defaults when it is created, so create the decorated
 function inside the `with` block (as above) or pass the options to
 `@retry(...)` directly.
 
+## Configuration mistakes
+
+Keyword arguments are validated as soon as the decorator is created, and values
+are validated when it is applied to a function, so a typo never hides until the
+retry loop is already running:
+
+```python
+from fastretry import retry
+
+retry(attempt=4)
+# TypeError: retry() got an unexpected keyword argument 'attempt';
+# did you mean `attempts`?
+
+retry(unwrap_single_exception=True)
+# TypeError: `unwrap_single_exception` is a global option,
+# configure it via `config.retry(...)`
+
+
+@retry(attempts="3")
+def fetch() -> bytes: ...
+
+
+# TypeError: attempts must be an int, got str
+```
+
+Global defaults follow the same rules: `config.retry(attempts="3")` is accepted,
+and the error is raised when the next decorator is created. That makes a
+misconfigured decorator fail in the test that imports the module, not in
+production after the third timeout.
+
 ## Inspecting retries at runtime
 
 Introspection answers three questions without threading state through the call

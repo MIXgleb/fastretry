@@ -232,6 +232,58 @@ config.logging(level_success=LogLevel.INFO)
 Per-decorator options passed to `@retry(...)` take precedence over
 global defaults.
 
+### Validation
+
+Options are checked as early as possible, so a typo is reported at the line
+that contains it instead of surfacing inside a retry loop.
+
+Keyword arguments are validated when the decorator is created:
+
+```python
+from fastretry import retry
+
+retry(attempt=4)
+# TypeError: retry() got an unexpected keyword argument 'attempt';
+# did you mean `attempts`?
+
+retry(unwrap_single_exception=True)
+# TypeError: `unwrap_single_exception` is a global option,
+# configure it via `config.retry(...)`
+```
+
+Values are validated when the decorator is applied to a function, before the
+first call:
+
+```python
+from fastretry import retry
+
+
+@retry(attempts="3")
+def fetch() -> bytes: ...
+
+
+# TypeError: attempts must be an int, got str
+```
+
+The same rules apply to the defaults: `config.retry(attempts="3")` is accepted,
+and the error is raised when the next decorator is created. Values that never
+reach a decorator argument are checked at the same moment, and the error names
+the option that was configured:
+
+```python
+from fastretry import config, retry
+
+config.retry(jitter_for_fixed="sometimes")
+
+
+@retry()
+def fetch() -> bytes: ...
+
+
+# ValueError: jitter_for_fixed must be one of 'decorrelated', 'equal',
+# 'full', 'none', got 'sometimes'
+```
+
 ### Per-context overrides
 
 `config.context` installs a fresh copy of the defaults for the duration

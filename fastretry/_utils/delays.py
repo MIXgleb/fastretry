@@ -6,6 +6,7 @@ from collections.abc import (
     Callable,
 )
 from typing import (
+    Final,
     Literal,
     NamedTuple,
     assert_never,
@@ -40,6 +41,16 @@ Randomization applied to the computed delay.
 - ``"decorrelated"`` — ``random(base, previous * 3)``, which spreads retries of
   concurrent callers; falls back to ``"full"`` when there is no previous delay.
 """
+
+JITTER_STRATEGIES: Final[frozenset[str]] = frozenset(
+    {
+        "full",
+        "equal",
+        "decorrelated",
+        "none",
+    },
+)
+"""Every supported jitter strategy, in the order of the :data:`JitterStrategy` literal."""
 
 
 class ExponentialDelay(NamedTuple):
